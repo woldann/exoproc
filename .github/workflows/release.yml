@@ -15,6 +15,16 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    env:
+      # changesets/action pushes commits/tags directly via git after a
+      # successful `changeset publish`. Without this, that push runs
+      # `.husky/pre-push` (typecheck + full Wine test suite), which this
+      # bare Linux job never sets up Wine for -- it fails every Wine-
+      # dependent test and aborts the push *after* npm publish already
+      # succeeded, making a genuinely successful release look like a
+      # failed run. CI (ci.yml) already covers testing before merge to
+      # main; this job must not repeat it.
+      HUSKY: '0'
     steps:
       - uses: actions/checkout@v4
         with:
