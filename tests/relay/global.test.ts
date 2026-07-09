@@ -1,19 +1,23 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
+  DEFAULT_RELAY_PORT,
   RelayClient,
+  RelayServer,
   ensureGlobalRelayStarted,
   getGlobalRelay,
+  isPrimaryRelayInstance,
   resetGlobalRelayForTests,
 } from '../../packages/relay/src/index.js';
 
 describe('bun-relay global singleton', () => {
-  afterEach(() => {
+  // bun-relay auto-starts the global singleton as soon as it's loaded (see
+  // global.ts), so it may already be bound by the time the first test here
+  // runs -- reset before and after each test for a clean slate either way.
+  beforeEach(() => {
     resetGlobalRelayForTests();
   });
-
-  test('getGlobalRelay() does not bind a socket by itself', () => {
-    const relay = getGlobalRelay();
-    expect(relay.isStarted).toBe(false);
+  afterEach(() => {
+    resetGlobalRelayForTests();
   });
 
   test('getGlobalRelay() always returns the same instance', () => {
@@ -27,6 +31,23 @@ describe('bun-relay global singleton', () => {
     ]);
     expect(portA).toBe(portB);
     expect(getGlobalRelay().isStarted).toBe(true);
+  });
+
+  test('isPrimaryRelayInstance() resolves true when this process holds the default port', async () => {
+    expect(await isPrimaryRelayInstance()).toBe(true);
+    expect(getGlobalRelay().port).toBe(DEFAULT_RELAY_PORT);
+  });
+
+  test('isPrimaryRelayInstance() resolves false when another instance already holds the default port', async () => {
+    const holder = new RelayServer({ port: DEFAULT_RELAY_PORT });
+    await holder.start();
+
+    try {
+      expect(await isPrimaryRelayInstance()).toBe(false);
+      expect(getGlobalRelay().port).not.toBe(DEFAULT_RELAY_PORT);
+    } finally {
+      holder.close();
+    }
   });
 
   test('a package can register on the global relay and a client can reach it', async () => {

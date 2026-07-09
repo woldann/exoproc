@@ -1,11 +1,20 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import {
   DEFAULT_RELAY_PORT,
   RelayClient,
   RelayServer,
+  resetGlobalRelayForTests,
 } from '../../packages/relay/src/index.js';
 
 describe('bun-relay', () => {
+  // Importing bun-relay auto-starts the global singleton on DEFAULT_RELAY_PORT
+  // (see global.ts) -- these tests exercise RelayServer's own default-port
+  // logic directly, so they need that port free rather than fighting the
+  // singleton for it.
+  beforeEach(() => {
+    resetGlobalRelayForTests();
+  });
+
   test('binds to the default port when none is given', async () => {
     const server = new RelayServer();
     try {

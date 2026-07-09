@@ -76,7 +76,12 @@ export * from './cmacro.js';
 export * from './win/memmem.js';
 export * from './win/scanner.js';
 export * from './win/load.js';
-export * from './instance.js';
+
+// Re-exporting bun-relay here (rather than xffi having its own wrapper
+// around it) also pulls it into the module graph as soon as xffi loads --
+// bun-relay's own module-load side effect is what actually tries to bind
+// the well-known relay port, not anything in this package.
+export * from 'bun-relay';
 
 import { addCJitDefault } from './cjit.js';
 import { Kernel32Library } from './win/kernel32.js';
