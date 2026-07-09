@@ -76,6 +76,7 @@ export * from './cmacro.js';
 export * from './win/memmem.js';
 export * from './win/scanner.js';
 export * from './win/load.js';
+export * from './instance.js';
 
 import { addCJitDefault } from './cjit.js';
 import { Kernel32Library } from './win/kernel32.js';
