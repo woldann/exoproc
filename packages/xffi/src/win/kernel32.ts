@@ -1,0 +1,209 @@
+import { cimport } from '../cimport.js';
+import { CType } from '../types.js';
+
+/**
+ * Kernel32 Native Bindings
+ */
+const lib = cimport(
+  {
+    GetLastError: { args: [], returns: CType.DWORD },
+    CreateFileA: {
+      args: [
+        CType.ptr,
+        CType.DWORD,
+        CType.DWORD,
+        CType.LPVOID,
+        CType.DWORD,
+        CType.DWORD,
+        CType.HANDLE,
+      ],
+      returns: CType.HANDLE,
+    },
+    WriteFile: {
+      args: [CType.HANDLE, CType.ptr, CType.DWORD, CType.ptr, CType.LPVOID],
+      returns: CType.BOOL,
+    },
+    ReadFile: {
+      args: [CType.HANDLE, CType.LPVOID, CType.DWORD, CType.ptr, CType.LPVOID],
+      returns: CType.BOOL,
+    },
+    ReadProcessMemory: {
+      args: [CType.HANDLE, CType.ptr, CType.LPVOID, CType.SIZE_T, CType.ptr],
+      returns: CType.BOOL,
+    },
+    WriteProcessMemory: {
+      args: [CType.HANDLE, CType.LPVOID, CType.ptr, CType.SIZE_T, CType.ptr],
+      returns: CType.BOOL,
+    },
+    VirtualAlloc: {
+      args: [CType.LPVOID, CType.SIZE_T, CType.DWORD, CType.DWORD],
+      returns: CType.LPVOID,
+    },
+    VirtualAllocEx: {
+      args: [
+        CType.HANDLE,
+        CType.LPVOID,
+        CType.SIZE_T,
+        CType.DWORD,
+        CType.DWORD,
+      ],
+      returns: CType.LPVOID,
+    },
+    VirtualFree: {
+      args: [CType.LPVOID, CType.SIZE_T, CType.DWORD],
+      returns: CType.BOOL,
+    },
+    VirtualFreeEx: {
+      args: [CType.HANDLE, CType.LPVOID, CType.SIZE_T, CType.DWORD],
+      returns: CType.BOOL,
+    },
+    VirtualProtect: {
+      args: [CType.LPVOID, CType.SIZE_T, CType.DWORD, CType.LPDWORD],
+      returns: CType.BOOL,
+    },
+    VirtualProtectEx: {
+      args: [
+        CType.HANDLE,
+        CType.LPVOID,
+        CType.SIZE_T,
+        CType.DWORD,
+        CType.LPDWORD,
+      ],
+      returns: CType.BOOL,
+    },
+    VirtualQuery: {
+      args: [CType.ptr, CType.ptr, CType.SIZE_T],
+      returns: CType.SIZE_T,
+    },
+    VirtualQueryEx: {
+      args: [CType.HANDLE, CType.ptr, CType.ptr, CType.SIZE_T],
+      returns: CType.SIZE_T,
+    },
+    GetCurrentThread: { args: [], returns: CType.HANDLE },
+    GetCurrentThreadId: { args: [], returns: CType.DWORD },
+    GetThreadId: { args: [CType.HANDLE], returns: CType.DWORD },
+    OpenThread: {
+      args: [CType.DWORD, CType.BOOL, CType.DWORD],
+      returns: CType.HANDLE,
+    },
+    SuspendThread: { args: [CType.HANDLE], returns: CType.DWORD },
+    ResumeThread: { args: [CType.HANDLE], returns: CType.DWORD },
+    GetExitCodeThread: {
+      args: [CType.HANDLE, CType.LPDWORD],
+      returns: CType.BOOL,
+    },
+    GetThreadContext: {
+      args: [CType.HANDLE, CType.ptr],
+      returns: CType.BOOL,
+    },
+    SetThreadContext: {
+      args: [CType.HANDLE, CType.ptr],
+      returns: CType.BOOL,
+    },
+    GetCurrentProcess: { args: [], returns: CType.HANDLE },
+    GetCurrentProcessId: { args: [], returns: CType.DWORD },
+    GetProcessId: { args: [CType.HANDLE], returns: CType.DWORD },
+    OpenProcess: {
+      args: [CType.DWORD, CType.BOOL, CType.DWORD],
+      returns: CType.HANDLE,
+    },
+    CloseHandle: { args: [CType.HANDLE], returns: CType.BOOL },
+    Sleep: { args: [CType.DWORD], returns: CType.void },
+    WaitForSingleObject: {
+      args: [CType.HANDLE, CType.DWORD],
+      returns: CType.DWORD,
+    },
+    GetModuleHandleW: { args: ['cwstring'], returns: CType.HMODULE },
+    GetModuleHandleA: { args: [CType.cstring], returns: CType.HMODULE },
+    GetModuleHandleExW: {
+      args: [CType.DWORD, 'cwstring', CType.ptr],
+      returns: CType.BOOL,
+    },
+    GetModuleHandleExA: {
+      args: [CType.DWORD, CType.cstring, CType.ptr],
+      returns: CType.BOOL,
+    },
+    GetProcAddress: {
+      args: [CType.HMODULE, CType.cstring],
+      returns: CType.ptr,
+    },
+    CreateThread: {
+      args: [
+        CType.ptr,
+        CType.SIZE_T,
+        CType.ptr,
+        CType.LPVOID,
+        CType.DWORD,
+        CType.LPDWORD,
+      ],
+      returns: CType.HANDLE,
+    },
+    QueueUserWorkItem: {
+      args: [CType.ptr, CType.ptr, CType.DWORD],
+      returns: CType.BOOL,
+    },
+    CreateRemoteThread: {
+      args: [
+        CType.HANDLE,
+        CType.ptr,
+        CType.SIZE_T,
+        CType.ptr,
+        CType.LPVOID,
+        CType.DWORD,
+        CType.LPDWORD,
+      ],
+      returns: CType.HANDLE,
+    },
+    TerminateThread: {
+      args: [CType.HANDLE, CType.DWORD],
+      returns: CType.BOOL,
+    },
+    ExitThread: { args: [CType.DWORD], returns: CType.void },
+    LoadLibraryA: { args: [CType.cstring], returns: CType.HMODULE },
+    LoadLibraryW: { args: ['cwstring'], returns: CType.HMODULE },
+    FreeLibrary: { args: [CType.HMODULE], returns: CType.BOOL },
+    CreateToolhelp32Snapshot: {
+      args: [CType.DWORD, CType.DWORD],
+      returns: CType.HANDLE,
+    },
+    Process32FirstW: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Process32First: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Process32NextW: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Process32Next: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Module32FirstW: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Module32First: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Module32NextW: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Module32Next: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Thread32First: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Thread32Next: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Heap32ListFirst: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Heap32ListNext: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    Heap32First: {
+      args: [CType.ptr, CType.DWORD, CType.SIZE_T],
+      returns: CType.BOOL,
+    },
+    Heap32Next: { args: [CType.ptr], returns: CType.BOOL },
+    IsWow64Process: { args: [CType.HANDLE, CType.ptr], returns: CType.BOOL },
+    GetProcessHeap: { args: [], returns: CType.HANDLE },
+    HeapAlloc: {
+      args: [CType.HANDLE, CType.DWORD, CType.SIZE_T],
+      returns: CType.LPVOID,
+    },
+    HeapFree: {
+      args: [CType.HANDLE, CType.DWORD, CType.LPVOID],
+      returns: CType.BOOL,
+    },
+    GetCurrentDirectoryW: {
+      args: [CType.DWORD, CType.ptr],
+      returns: CType.DWORD,
+    },
+  },
+  { library: ['kernel32'] },
+);
+
+export const Kernel32Impl = lib.symbols;
+
+import { NativePointer, type IPointer } from '../pointer.js';
+export const Kernel32Library = Object.assign(lib, {
+  baseAddress: new NativePointer(Kernel32Impl.GetModuleHandleA('kernel32.dll')),
+}) as typeof lib & { baseAddress: IPointer };

@@ -1,0 +1,63 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "types": ["bun"],
+    "typeRoots": ["./node_modules/@types", "./node_modules/bun-types"],
+    "allowJs": false,
+    "checkJs": false,
+
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "useUnknownInCatchVariables": true,
+
+    "composite": true,
+    "plugins": [{ "name": "typescript-eslint" }],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "incremental": true,
+    "ignoreDeprecations": "5.0",
+
+    "baseUrl": ".",
+    "paths": {
+      "exoproc-utils": ["packages/utils/src/index.ts"],
+      "bun-xffi": ["packages/xffi/src/index.ts"],
+      "bun-capstone": ["packages/capstone/src/index.ts"],
+      "bun-winapi": ["packages/winapi/src/index.ts"],
+      "bun-nthread": ["packages/nthread/src/index.ts"],
+      "bun-nhook": ["packages/nhook/src/index.ts"],
+      "bun-minhook": ["packages/minhook/src/index.ts"],
+      "exoproc": ["packages/exoproc/src/index.ts"]
+    }
+  },
+  "files": [],
+  "references": [
+    { "path": "./packages/utils" },
+    { "path": "./packages/xffi" },
+    { "path": "./packages/capstone" },
+    { "path": "./packages/winapi" },
+    { "path": "./packages/nthread" },
+    { "path": "./packages/nhook" },
+    { "path": "./packages/minhook" },
+    { "path": "./packages/exoproc" }
+  ]
+}

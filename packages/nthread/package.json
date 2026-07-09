@@ -1,0 +1,50 @@
+{
+  "name": "bun-nthread",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.1.0",
+  "description": "Non-invasive x64 Windows thread redirection library for Bun — delegate execution to existing threads without machineCode, remote allocation, or CreateRemoteThread.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "exoproc",
+    "thread-redirection",
+    "windows",
+    "x64",
+    "native",
+    "context-redirection",
+    "rop-stub",
+    "memset",
+    "msvcrt"
+  ],
+  "author": "Serkan",
+  "homepage": "https://github.com/woldann/exoproc#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/woldann/exoproc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/woldann/exoproc/issues"
+  },
+  "dependencies": {
+    "bun-winapi": "workspace:*",
+    "bun-xffi": "workspace:*",
+    "exoproc-utils": "workspace:*"
+  }
+}

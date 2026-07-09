@@ -1,0 +1,15 @@
+# Build outputs
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+
+# Generated files
+CHANGELOG.md

@@ -1,0 +1,87 @@
+import { expect, test, describe } from 'bun:test';
+import * as Native from 'bun-winapi';
+import {
+  Kernel32Impl,
+  MemoryProtection,
+  MemoryState,
+  resolveAddress,
+} from 'bun-xffi';
+import { IndirectNThreadHostAccessor } from 'bun-nthread';
+import { TestProcess } from '../helpers.js';
+
+// Pre-wired form of the manual chain in nthread.test.ts: a full indirect host
+// (IndirectCallRedirector + memset/memcmp/file-transfer/marshalling) sitting on
+// an NThread backend, so every remote call is executed by hijacking a live
+// thread in the target -- no CreateRemoteThread, no injected pipe-loop.
+describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', () => {
+  test('runs remote calls on the hijacked thread and does indirect alloc/write/read', async () => {
+    const proc = new TestProcess();
+    const thread = Native.Thread.getThreads(proc.pid)[0];
+    if (!thread) throw new Error('No thread found in the spawned process');
+
+    const memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
+      timeoutMs: 15000,
+    });
+
+    try {
+      // A call executes *on the hijacked thread itself*: GetCurrentThreadId
+      // returns exactly the thread we parked at the jmp$ stub.
+      const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
+      expect(Number(remoteTid)).toBe(thread.tid);
+
+      // Indirect alloc/write/read round-trip inside the target process.
+      const addr = await memory.alloc(64);
+      expect(Number(resolveAddress(addr))).toBeGreaterThan(0);
+
+      const data = Buffer.from('nthread-backed indirect chain!');
+      await memory.write(addr, data);
+      const back = await memory.read(addr, data.byteLength);
+      expect(back.toString()).toBe(data.toString());
+      await memory.free(addr);
+    } finally {
+      await memory.deinit();
+      await proc.stop();
+    }
+  }, 30000);
+
+  // allocNear over the full indirect chain + NThread is correct but heavy: each
+  // probe (malloc + VirtualQuery + read + free) is amplified by the indirect
+  // middlewares into several hijack calls, so this needs a long-lived target
+  // and a generous timeout. It's the operation minhook leans on for trampoline
+  // space, so proving it works here is what makes minhook-over-indirect viable.
+  test('allocNear finds executable space near an anchor entirely via the hijacked thread', async () => {
+    const proc = new TestProcess();
+    const thread = Native.Thread.getThreads(proc.pid)[0];
+    if (!thread) throw new Error('No thread found in the spawned process');
+
+    const memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
+      timeoutMs: 20000,
+    });
+
+    try {
+      const anchor = await memory.alloc(
+        0x1000,
+        null,
+        MemoryProtection.EXECUTE_READWRITE,
+      );
+      const anchorAddr = BigInt(resolveAddress(anchor));
+
+      const near = await memory.allocNear(anchor, 64, {
+        protection: MemoryProtection.EXECUTE_READWRITE,
+      });
+      const nearAddr = BigInt(resolveAddress(near));
+      const dist =
+        nearAddr > anchorAddr ? nearAddr - anchorAddr : anchorAddr - nearAddr;
+      expect(dist <= 0x7fff0000n).toBe(true);
+
+      const info = await memory.query(near);
+      expect(info.State).toBe(MemoryState.COMMIT);
+
+      await memory.free(near);
+      await memory.free(anchor);
+    } finally {
+      await memory.deinit();
+      await proc.stop();
+    }
+  }, 120000);
+});

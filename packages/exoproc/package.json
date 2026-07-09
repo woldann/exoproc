@@ -1,0 +1,56 @@
+{
+  "name": "exoproc",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.1.0",
+  "description": "Exoproc - Cross-process systems programming and runtime instrumentation framework for Bun x64 Windows environments.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "bun",
+    "ffi",
+    "windows",
+    "x64",
+    "systems-programming",
+    "instrumentation",
+    "hooking",
+    "thread-redirection",
+    "memory-manipulation",
+    "disassembly",
+    "jit"
+  ],
+  "author": "Serkan",
+  "homepage": "https://github.com/woldann/exoproc#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/woldann/exoproc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/woldann/exoproc/issues"
+  },
+  "dependencies": {
+    "bun-winapi": "workspace:*",
+    "bun-xffi": "workspace:*",
+    "bun-nthread": "workspace:*",
+    "bun-nhook": "workspace:*",
+    "bun-minhook": "workspace:*",
+    "bun-capstone": "workspace:*",
+    "exoproc-utils": "workspace:*"
+  }
+}

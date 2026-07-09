@@ -1,0 +1,13 @@
+#!/bin/sh
+# Wine wrapper for the Windows bun binary.
+# Usage: bun-wine <bun args...>
+#   e.g. bun-wine test tests/ffi-core/stub.test.ts
+#        bun-wine run scripts/build.ts
+#        bun-wine x tsc --noEmit
+#
+# BUN_WIN_DIR: override the Windows bun directory (default: $HOME/Downloads/bun-windows-x64)
+
+BUN_WIN_DIR="${BUN_WIN_DIR:-$HOME/Downloads/bun-windows-x64}"
+BUN_WIN_PATH="Z:$(echo "$BUN_WIN_DIR" | tr '/' '\\')"
+
+exec wine cmd /c "set PATH=%PATH%;${BUN_WIN_PATH}\\ && bun $*"

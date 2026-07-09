@@ -1,0 +1,665 @@
+import {
+  InittableMiddlewareAccessor,
+  HostAccessor,
+  RemoteCallableMemoryAccessor,
+  type ICallableMemoryAccessor,
+  type CCallResult,
+  type CFunction,
+  parseCallResult,
+  normalizeType,
+  ContextFlags,
+  INFINITE,
+  MemoryProtection,
+  WaitReturn,
+  resolveAddress,
+  stackAlign16,
+} from 'bun-xffi';
+import {
+  getRandomSpinStub,
+  getRandomPushretStub,
+  getRandomJumpStub,
+  getRandomRetStub,
+  getRandomAddRsp28RetStub,
+  type ThreadStubs,
+} from './stubs.js';
+import * as Native from 'bun-winapi';
+import {
+  NoSleepAddressError,
+  NoPushretAddressError,
+  NoJumpAddressError,
+  NoRetAddressError,
+  NoAddRsp28RetAddressError,
+  CallTimeoutError,
+  CallThreadDiedError,
+  WaitAbortedError,
+} from './errors.js';
+import { log } from './logger.js';
+
+const nthreadLog = log.add('NThread');
+
+/**
+ * Stack slack below the captured RSP reserved for the call-dispatch return chain.
+ *
+ * This must stay well clear of ordinary stack usage: after `releaseThread()` restores
+ * the original RIP/RSP and resumes, ordinary execution (nested calls, function-local
+ * frames) can push RSP down past this offset *before* any of its own `call`s overwrite
+ * that memory with real return addresses. If a `ret` later executes with RSP still at
+ * or below `callRsp`, it pops one of our stale dispatch-chain pointers (addRsp28RetStub/
+ * spinStub) instead of a real return address and crashes. 256 bytes proved too small —
+ * plausible internal call chains (loader lock, string conversion buffers, etc.) blow
+ * past it — so this reserves a full page instead.
+ */
+const STACK_ADD = -4096n;
+
+/**
+ * Context register groups we fetch/apply for redirection. INTEGER (GP regs) +
+ * CONTROL (Rip/Rsp/EFlags/segments) + FLOATING_POINT (XMM). Fetching and
+ * restoring with this set keeps the saved snapshot faithful enough that
+ * releasing the thread lands it back exactly where it was.
+ */
+const CTX_FLAGS =
+  ContextFlags.INTEGER | ContextFlags.CONTROL | ContextFlags.FLOATING_POINT;
+
+export interface NThreadOptions {
+  /** Maximum ms to wait for the operation to complete. Default: 5000. */
+  timeoutMs?: number;
+  /** Poll interval (ms) used during redirection wait. Default: 50. */
+  pollIntervalMs?: number;
+  /** Whether to automatically suspend/resume when fetching or applying context. Default: true. */
+  autoSuspend?: boolean;
+  /** Optional cancellation signal. */
+  signal?: AbortSignal;
+}
+
+export type InjectOptions = NThreadOptions;
+export type ThreadCallOptions = NThreadOptions;
+
+/**
+ * Thread redirection without `CreateRemoteThread` or machineCode allocation.
+ *
+ * A single `NThread` always manages exactly one redirected OS thread (there is
+ * no separate "manager" tracking many captured threads at once), so the
+ * redirected-thread state and its suspend/resume/context primitives live
+ * directly on `NThread` itself as instance fields/methods, operating on a
+ * plain `Native.Thread` held in `nativeThread` -- there used to be a separate
+ * `CapturedThread extends Native.Thread` wrapper class for this, but since
+ * it's always 1:1 with an `NThread`, folding it in here removes a layer with
+ * no remaining benefit.
+ */
+export class NThread extends InittableMiddlewareAccessor {
+  // ── Captured-thread state (folded in from the former CapturedThread) ──────
+  private nativeThread?: Native.Thread;
+  private suspendCount = 0;
+  /** Full-fidelity snapshot of the pre-redirection context, restored on release. */
+  public savedContext!: Native.ThreadContext;
+  private _ctxFetched = false;
+  public callRsp: bigint = 0n;
+  public expectedRsp: bigint = 0n;
+  public pollIntervalMs: number = 2;
+  public autoSuspend: boolean;
+
+  public stubs: Partial<ThreadStubs> = {};
+  public debug = false;
+  private _stackArgStubs = new Map<number, bigint>();
+
+  constructor(
+    backend: ICallableMemoryAccessor | number,
+    public readonly threadId: number,
+    public readonly options: NThreadOptions = {},
+    root: HostAccessor,
+  ) {
+    const actualBackend =
+      typeof backend === 'number'
+        ? new RemoteCallableMemoryAccessor(backend)
+        : backend;
+    super(actualBackend, root);
+    this.autoSuspend = options.autoSuspend ?? false;
+  }
+
+  /** The OS thread ID of the redirected thread. Only valid once initialized. */
+  get tid(): number {
+    return this.nativeThread!.tid;
+  }
+
+  /** The live CONTEXT buffer of the redirected thread (read/write in place). */
+  private get ctx(): Native.ThreadContext {
+    return this.nativeThread!.context;
+  }
+
+  isCallRspSet(): boolean {
+    return this.callRsp !== 0n;
+  }
+
+  isExpectedRspSet(): boolean {
+    return this.expectedRsp !== 0n;
+  }
+
+  calcStackBegin(baseRsp: bigint = this.getContext().Rsp): bigint {
+    return stackAlign16(baseRsp + STACK_ADD);
+  }
+
+  getPushRetStubReg(): bigint {
+    return (this.getContext() as any)[
+      (this.stubs as ThreadStubs).pushRetRegKey
+    ];
+  }
+
+  setPushRetStubReg(reg: bigint): void {
+    (this.ctx as any)[(this.stubs as ThreadStubs).pushRetRegKey] = reg;
+  }
+
+  getJumpStubReg(): bigint {
+    return (this.getContext() as any)[(this.stubs as ThreadStubs).jumpRegKey];
+  }
+
+  setJumpStubReg(reg: bigint): void {
+    (this.ctx as any)[(this.stubs as ThreadStubs).jumpRegKey] = reg;
+  }
+
+  getRSP(): bigint {
+    return this.getContext().Rsp;
+  }
+
+  setRSP(rsp: bigint): void {
+    this.ctx.Rsp = rsp;
+  }
+
+  getRIP(): bigint {
+    return this.getContext().Rip;
+  }
+
+  setRIP(rip: bigint): void {
+    this.ctx.Rip = rip;
+  }
+
+  getXmmFloat(n: 0 | 1 | 2 | 3): number {
+    return this.ctx.getXmmFloat(n);
+  }
+  setXmmFloat(n: 0 | 1 | 2 | 3, v: number): void {
+    this.ctx.setXmmFloat(n, v);
+  }
+  getXmmDouble(n: 0 | 1 | 2 | 3): number {
+    return this.ctx.getXmmDouble(n);
+  }
+  setXmmDouble(n: 0 | 1 | 2 | 3, v: number): void {
+    this.ctx.setXmmDouble(n, v);
+  }
+
+  /**
+   * Returns the live context buffer, fetching it once if it hasn't been read
+   * yet. Callers read/write register properties on it directly and then call
+   * {@link applyContext} to push changes to the thread.
+   */
+  getContext(): Native.ThreadContext {
+    if (!this._ctxFetched) {
+      this.fetchContext();
+    }
+    return this.ctx;
+  }
+
+  /**
+   * Copies a foreign context snapshot into the live buffer. A no-op when passed
+   * the live context itself (callers usually mutate it in place).
+   */
+  setContext(ctx: Native.ThreadContext): void {
+    if (ctx !== this.ctx) {
+      this.ctx.copyFrom(ctx);
+    }
+  }
+
+  fetchContext(): void {
+    const shouldSuspend = this.autoSuspend && this.suspendCount === 0;
+    if (shouldSuspend) this.suspendThread();
+    try {
+      this.ctx.fetch(CTX_FLAGS);
+      this._ctxFetched = true;
+    } finally {
+      if (shouldSuspend) this.resumeThread();
+    }
+  }
+
+  applyContext(): void {
+    const shouldSuspend = this.autoSuspend && this.suspendCount === 0;
+    if (shouldSuspend) this.suspendThread();
+    try {
+      this.ctx.apply();
+    } finally {
+      if (shouldSuspend) this.resumeThread();
+    }
+  }
+
+  private suspendThread(): number {
+    const result = this.nativeThread!.suspend();
+    this.suspendCount++;
+    return result;
+  }
+
+  private onceSuspendThread(): void {
+    if (this.suspendCount === 0) {
+      this.suspendThread();
+    }
+  }
+
+  private resumeThread(): number {
+    const result = this.nativeThread!.resume();
+    if (result) {
+      this.suspendCount--;
+    }
+    return result;
+  }
+
+  private resumeAllThread(remaining: number = 0): void {
+    while (this.suspendCount > remaining) {
+      this.resumeThread();
+    }
+  }
+
+  private releaseThread(): void {
+    if (this.savedContext) {
+      // Restore the full pre-redirection buffer (GP + control + XMM) so the thread
+      // resumes exactly where it was, then let it run.
+      this.ctx.copyFrom(this.savedContext);
+      this.applyContext();
+    }
+    this.resumeAllThread();
+  }
+
+  private closeThread(): void {
+    try {
+      this.releaseThread();
+    } catch {
+      // ignore
+    }
+    this.nativeThread?.close();
+  }
+
+  /** Waits for the redirected thread to land back at the sleep stub. */
+  private async waitForLanding(
+    timeoutMs: number = INFINITE as number,
+    signal?: AbortSignal,
+  ): Promise<WaitReturn> {
+    const pollIntervalMs = Math.max(0, this.pollIntervalMs | 0);
+    const deadline =
+      timeoutMs === (INFINITE as number)
+        ? Number.POSITIVE_INFINITY
+        : Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      if (signal?.aborted) {
+        throw new WaitAbortedError();
+      }
+
+      try {
+        this.fetchContext();
+        const rip = this.getContext().Rip;
+        if (
+          BigInt(rip) === BigInt((this.stubs as ThreadStubs).spinStub.address)
+        ) {
+          this.suspendThread();
+          return WaitReturn.OBJECT_0;
+        }
+      } catch (_) {
+        const res = await this.nativeThread!.wait(0);
+        if (res === WaitReturn.OBJECT_0) {
+          return WaitReturn.FAILED;
+        }
+        return res;
+      }
+
+      if (pollIntervalMs === 0) {
+        await this.sleepAbortable(0, signal);
+        continue;
+      }
+
+      const remainingMs = deadline - Date.now();
+      const sleepMs = Math.min(pollIntervalMs, remainingMs);
+      await this.sleepAbortable(sleepMs, signal);
+    }
+
+    return WaitReturn.TIMEOUT;
+  }
+
+  private async sleepAbortable(
+    ms: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (!signal) {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+      return;
+    }
+
+    if (signal.aborted) {
+      throw new WaitAbortedError();
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timer);
+        signal.removeEventListener('abort', onAbort);
+        reject(new WaitAbortedError());
+      };
+
+      const timer = setTimeout(() => {
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
+  }
+
+  // ── Accessor lifecycle ──────────────────────────────────────────────────
+
+  protected override async onInit(): Promise<void> {
+    if (this.options.pollIntervalMs) {
+      const pollIntervalMs = Math.max(0, this.options.pollIntervalMs);
+      this.pollIntervalMs = pollIntervalMs;
+    }
+
+    if (!this.stubs.spinStub) {
+      const sleep = getRandomSpinStub();
+      if (!sleep) throw new NoSleepAddressError();
+      this.stubs.spinStub = sleep;
+    }
+    if (!this.stubs.pushRetStub || !this.stubs.pushRetRegKey) {
+      const randomPushret = getRandomPushretStub(this.stubs.pushRetRegKey);
+      if (!randomPushret) throw new NoPushretAddressError();
+      this.stubs.pushRetStub = randomPushret.stub;
+      this.stubs.pushRetRegKey = randomPushret.regKey;
+    }
+    if (!this.stubs.jumpStub || !this.stubs.jumpRegKey) {
+      const randomJump = getRandomJumpStub(this.stubs.jumpRegKey);
+      if (!randomJump) throw new NoJumpAddressError();
+      this.stubs.jumpStub = randomJump.stub;
+      this.stubs.jumpRegKey = randomJump.regKey;
+    }
+    if (!this.stubs.retStub) {
+      const ret = getRandomRetStub();
+      if (!ret) throw new NoRetAddressError();
+      this.stubs.retStub = ret;
+    }
+    if (!this.stubs.addRsp28RetStub) {
+      const addRsp = getRandomAddRsp28RetStub();
+      if (!addRsp) throw new NoAddRsp28RetAddressError();
+      this.stubs.addRsp28RetStub = addRsp;
+    }
+
+    const stubs = this.stubs as ThreadStubs;
+    this.nativeThread = Native.Thread.open(this.threadId);
+
+    try {
+      this.onceSuspendThread();
+
+      // Capture initial state while thread is suspended
+      this.fetchContext();
+      this.savedContext = this.ctx.clone();
+
+      const originalRip = this.savedContext.Rip;
+      const originalJumpReg = (this.savedContext as any)[stubs.jumpRegKey];
+
+      // Pre-set the jump register to point at spinStub
+      this.setJumpStubReg(BigInt(stubs.spinStub.address));
+
+      nthreadLog.debug(
+        `Parking thread ${this.tid} at spinStub 0x${stubs.spinStub.address.toString(16)}...`,
+      );
+
+      // call sets RIP = jumpStub, applies context, waits for spinStub
+      await this.root.call(stubs.jumpStub as any);
+
+      // Thread is parked. Snapshot the parked buffer as the restore point, but
+      // put back the pre-redirection RIP and jump register so releasing the thread
+      // resumes the original code, not the sleep stub.
+      this.fetchContext();
+      this.savedContext = this.ctx.clone();
+      (this.savedContext as any)[stubs.jumpRegKey] = originalJumpReg;
+      this.savedContext.Rip = originalRip;
+
+      if (!this.isCallRspSet()) {
+        const baseRsp = BigInt(this.getContext().Rsp);
+        const stackBegin = this.calcStackBegin();
+        const callRsp = stackBegin - 136n;
+        nthreadLog.trace(
+          `[NThread.onInit] baseRsp: 0x${baseRsp.toString(16)}, stackBegin: 0x${stackBegin.toString(16)}, callRsp: 0x${callRsp.toString(16)}`,
+        );
+
+        // Stage A: Write spinStub address at [callRsp + 48]
+        this.setPushRetStubReg(BigInt(stubs.spinStub.address));
+        this.setRSP(callRsp + 56n);
+        await this.root.call(stubs.pushRetStub as any);
+
+        nthreadLog.trace(
+          `Stage A complete. callRsp: 0x${callRsp.toString(16)}`,
+        );
+
+        // Stage B: Write addRsp28RetStub address at [callRsp]
+        this.setPushRetStubReg(BigInt(stubs.addRsp28RetStub.address));
+        this.setRSP(callRsp + 8n);
+        await this.root.call(stubs.pushRetStub as any);
+
+        nthreadLog.trace(
+          `Stage B complete. callRsp: 0x${callRsp.toString(16)}`,
+        );
+
+        this.callRsp = callRsp;
+      }
+    } catch (err) {
+      this.closeThread();
+      this.nativeThread = undefined;
+      throw err;
+    }
+  }
+
+  protected override async onDeinit(): Promise<void> {
+    for (const [, addr] of this._stackArgStubs) {
+      try {
+        await this.free(addr);
+      } catch {
+        /* ignore */
+      }
+    }
+    this._stackArgStubs.clear();
+    if (this.nativeThread) {
+      this.closeThread();
+      this.nativeThread = undefined;
+    }
+  }
+
+  protected override async callAfterInit(
+    func: CFunction,
+    args: any[],
+  ): Promise<CCallResult> {
+    if (!this.nativeThread) {
+      throw new Error('NThread is not initialized.');
+    }
+
+    if (
+      typeof (func as any).shouldCloneForAccessor === 'function' &&
+      (func as any).shouldCloneForAccessor(this)
+    ) {
+      const addr = await this.machineCode(func as any);
+      func = (func as any).cloneForAddress(addr);
+    }
+
+    const timeoutMs = this.options.timeoutMs ?? 5000;
+    const normalizedArgTypes = (func.args ?? []).map((t) => normalizeType(t));
+    const returnsType = normalizeType(func.returns);
+    const targetAddr = BigInt(func.ptr);
+    const N_stack = Math.max(0, args.length - 4);
+    const stubs = this.stubs as ThreadStubs;
+
+    // For calls with stack args (> 4), adjust the return chain and write
+    // stack args into the remote thread's stack before resuming.
+    if (N_stack > 0) {
+      const callRsp = this.callRsp;
+
+      // Get or allocate a per-N_stack stub: add rsp,(0x28+N_stack*8); ret
+      let stubAddr = this._stackArgStubs.get(N_stack);
+      if (!stubAddr) {
+        const N = 0x28 + N_stack * 8;
+        const stubBytes: number[] =
+          N <= 0x7f
+            ? [0x48, 0x83, 0xc4, N, 0xc3]
+            : [
+                0x48,
+                0x81,
+                0xc4,
+                N & 0xff,
+                (N >> 8) & 0xff,
+                (N >> 16) & 0xff,
+                (N >> 24) & 0xff,
+                0xc3,
+              ];
+        while (stubBytes.length < 16) stubBytes.push(0x90);
+        const allocAddr = await this.alloc(
+          16,
+          null,
+          MemoryProtection.EXECUTE_READWRITE,
+        );
+        await this.write(allocAddr, Buffer.from(stubBytes));
+        stubAddr = BigInt(resolveAddress(allocAddr));
+        this._stackArgStubs.set(N_stack, stubAddr);
+      }
+
+      // Overwrite [callRsp] with stub address (replaces addRsp28RetStub)
+      const retBuf = Buffer.allocUnsafe(8);
+      retBuf.writeBigUInt64LE(stubAddr);
+      await this.write(callRsp, retBuf);
+
+      // Write each stack arg at [callRsp + 40 + i*8]
+      for (let i = 4; i < args.length; i++) {
+        const n = i - 4;
+        const slotBuf = Buffer.alloc(8, 0);
+        const argType = normalizedArgTypes[i] ?? 'ptr';
+        const v = args[i];
+        if (argType === 'f32') {
+          slotBuf.writeFloatLE(Number(v), 0);
+        } else if (argType === 'f64') {
+          slotBuf.writeDoubleLE(Number(v), 0);
+        } else {
+          slotBuf.writeBigUInt64LE(BigInt(resolveAddress(v)));
+        }
+        await this.write(callRsp + 40n + BigInt(n * 8), slotBuf);
+      }
+
+      // Write spinStub at [callRsp + 48 + N_stack*8]
+      // (where stub's ret lands: callRsp+8 + 0x28+N_stack*8 = callRsp+48+N_stack*8)
+      const sleepBuf = Buffer.allocUnsafe(8);
+      sleepBuf.writeBigUInt64LE(BigInt(stubs.spinStub.address));
+      await this.write(callRsp + 48n + BigInt(N_stack * 8), sleepBuf);
+    }
+
+    const ctx = this.getContext();
+
+    for (let i = 0; i < Math.min(args.length, 4); i++) {
+      const argType = normalizedArgTypes[i] ?? 'ptr';
+      const v = args[i];
+      if (argType === 'f32') {
+        this.setXmmFloat(i as 0 | 1 | 2 | 3, Number(v));
+        const buf = Buffer.allocUnsafe(4);
+        buf.writeFloatLE(Number(v), 0);
+        const bits = BigInt(buf.readUInt32LE(0));
+        if (i === 0) ctx.Rcx = bits;
+        else if (i === 1) ctx.Rdx = bits;
+        else if (i === 2) ctx.R8 = bits;
+        else ctx.R9 = bits;
+      } else if (argType === 'f64') {
+        this.setXmmDouble(i as 0 | 1 | 2 | 3, Number(v));
+        const buf = Buffer.allocUnsafe(8);
+        buf.writeDoubleLE(Number(v), 0);
+        const bits = buf.readBigUInt64LE(0);
+        if (i === 0) ctx.Rcx = bits;
+        else if (i === 1) ctx.Rdx = bits;
+        else if (i === 2) ctx.R8 = bits;
+        else ctx.R9 = bits;
+      } else {
+        const bits = BigInt(resolveAddress(v));
+        if (i === 0) ctx.Rcx = bits;
+        else if (i === 1) ctx.Rdx = bits;
+        else if (i === 2) ctx.R8 = bits;
+        else ctx.R9 = bits;
+      }
+    }
+
+    ctx.Rip = targetAddr;
+    if (this.isCallRspSet()) {
+      ctx.Rsp = this.callRsp;
+    }
+
+    nthreadLog.trace(
+      `[call] BEFORE target: 0x${targetAddr.toString(16)}, RIP: 0x${BigInt(ctx.Rip).toString(16)}, RSP: 0x${BigInt(ctx.Rsp).toString(16)}, RCX: 0x${BigInt(ctx.Rcx).toString(16)}, RDX: 0x${BigInt(ctx.Rdx).toString(16)}`,
+    );
+    if (this.debug) {
+      nthreadLog.debug(
+        `[call] BEFORE target: 0x${targetAddr.toString(16)}, RIP: 0x${BigInt(ctx.Rip).toString(16)}, RSP: 0x${BigInt(ctx.Rsp).toString(16)}, RCX: 0x${BigInt(ctx.Rcx).toString(16)}, RDX: 0x${BigInt(ctx.Rdx).toString(16)}`,
+      );
+    }
+
+    this.setContext(ctx);
+    this.applyContext();
+    this.resumeThread();
+
+    let waitResult: WaitReturn = WaitReturn.FAILED;
+    try {
+      waitResult = await this.waitForLanding(timeoutMs, this.options.signal);
+    } finally {
+      // Restore the original return chain after a stack-arg call so subsequent
+      // 0-stack-arg calls find addRsp28RetStub and spinStub in place.
+      if (N_stack > 0) {
+        try {
+          const callRsp = this.callRsp;
+          const retBuf = Buffer.allocUnsafe(8);
+          retBuf.writeBigUInt64LE(BigInt(stubs.addRsp28RetStub.address));
+          await this.write(callRsp, retBuf);
+          const sleepBuf = Buffer.allocUnsafe(8);
+          sleepBuf.writeBigUInt64LE(BigInt(stubs.spinStub.address));
+          await this.write(callRsp + 48n, sleepBuf);
+        } catch {
+          /* ignore restore errors */
+        }
+      }
+    }
+
+    if (waitResult === WaitReturn.FAILED) {
+      throw new CallThreadDiedError(targetAddr);
+    }
+    if (waitResult !== WaitReturn.OBJECT_0) {
+      throw new CallTimeoutError(targetAddr, waitResult);
+    }
+
+    const finalContext = this.getContext();
+    const finalRsp = BigInt(finalContext.Rsp);
+    const finalRax = BigInt(finalContext.Rax);
+    const finalRip = BigInt(finalContext.Rip);
+    nthreadLog.trace(
+      `[call] AFTER target: 0x${targetAddr.toString(16)}, RIP: 0x${finalRip.toString(16)}, RSP: 0x${finalRsp.toString(16)}, RAX: 0x${finalRax.toString(16)}`,
+    );
+    if (this.debug) {
+      nthreadLog.debug(
+        `[call] AFTER target: 0x${targetAddr.toString(16)}, RIP: 0x${finalRip.toString(16)}, RSP: 0x${finalRsp.toString(16)}, RAX: 0x${finalRax.toString(16)}`,
+      );
+    }
+
+    if (this.isExpectedRspSet()) {
+      const expectedRsp = this.expectedRsp;
+      if (finalRsp !== expectedRsp) {
+        nthreadLog.warn(
+          `Stack mismatch after call! Expected RSP: 0x${expectedRsp.toString(16)}, Actual: 0x${finalRsp.toString(16)}`,
+        );
+      }
+    }
+
+    let result: CCallResult;
+    if (returnsType === 'f32') result = this.getXmmFloat(0);
+    else if (returnsType === 'f64') result = this.getXmmDouble(0);
+    else result = parseCallResult(finalRax, func.returns);
+
+    return result;
+  }
+
+  public override callSync(_func: CFunction, ..._args: any[]): CCallResult {
+    throw new Error(
+      'Synchronous calls are not supported on NThread redirected threads.',
+    );
+  }
+}

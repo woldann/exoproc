@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {},
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "references": [
+    { "path": "../capstone" },
+    { "path": "../xffi" },
+    { "path": "../minhook" },
+    { "path": "../winapi" },
+    { "path": "../nhook" },
+    { "path": "../nthread" },
+    { "path": "../utils" }
+  ]
+}

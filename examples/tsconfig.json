@@ -1,0 +1,26 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // "paths" isn't merged across "extends" -- repeat the root tsconfig's
+    // workspace-package paths alongside the new "@/*" alias (for shadcn/ui's
+    // CLI-generated imports) rather than losing them.
+    "paths": {
+      "exoproc-utils": ["packages/utils/src/index.ts"],
+      "bun-xffi": ["packages/xffi/src/index.ts"],
+      "bun-capstone": ["packages/capstone/src/index.ts"],
+      "bun-winapi": ["packages/winapi/src/index.ts"],
+      "bun-nthread": ["packages/nthread/src/index.ts"],
+      "bun-nhook": ["packages/nhook/src/index.ts"],
+      "bun-minhook": ["packages/minhook/src/index.ts"],
+      "exoproc": ["packages/exoproc/src/index.ts"],
+      "@/*": ["examples/*"]
+    }
+  },
+
+  "include": [".", "../packages/**/*.ts", "../tests/helpers.ts"],
+  "exclude": ["../packages/*/node_modules"]
+}

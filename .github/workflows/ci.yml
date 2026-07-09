@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'claude/*']
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.0'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run ESLint
+        run: bun run lint
+
+      - name: Check formatting
+        run: bun run format:check
+
+  typecheck:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.0'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type check
+        run: bun run typecheck
+
+  test:
+    name: Test (Wine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BUN_VERSION: '1.3.0'
+      BUN_WIN_DIR: ${{ github.workspace }}/.bun-windows-x64
+      WINEDEBUG: '-all'
+      WINEDLLOVERRIDES: 'mscoree,mshtml='
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        # --linker=hoisted (CI-only, not project-wide via bunfig.toml): the
+        # default linker nests external deps behind a relative symlink two
+        # levels deep (packages/*/node_modules/<dep> -> ../../../node_modules/
+        # .bun/<dep>@<version>/node_modules/<dep>). Resolving that under Wine
+        # (bun.exe via the Z: drive translation) intermittently throws EISDIR
+        # or hangs entirely -- see tests/minhook/minhook-indirect-nthread.test.ts
+        # hanging on `winston` reached transitively through bun-nthread's logger.
+        run: bun install --frozen-lockfile --linker=hoisted
+
+      - name: Build all packages
+        run: bun run build
+
+      - name: Enable i386 architecture (Wine dependency)
+        run: sudo dpkg --add-architecture i386
+
+      # /var/cache/apt/archives is root-owned, but actions/cache/restore
+      # extracts as the unprivileged runner user -- restoring into it fails
+      # with "Permission denied" on every .deb (apt then just re-downloads
+      # them, silently defeating the cache). Point apt's archive cache at a
+      # runner-owned directory instead via Dir::Cache::Archives. Only the
+      # *.deb glob is cached, not the whole directory -- apt's own partial/
+      # and lock files inside it are root-owned/restrictive regardless of
+      # the parent directory's ownership, which broke the tar archive step.
+      - name: Restore apt archives cache
+        id: apt-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/apt-cache/*.deb
+          key: apt-wine-${{ runner.os }}-wine-wine64-xvfb-unzip-v3
+
+      - name: Install Wine
+        run: |
+          mkdir -p "${{ runner.temp }}/apt-cache"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            -o Dir::Cache::Archives="${{ runner.temp }}/apt-cache" \
+            wine wine64 xvfb unzip
+
+      - name: Restore Windows Bun binary cache
+        id: cache-bun-windows
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.BUN_WIN_DIR }}
+          key: bun-windows-x64-${{ env.BUN_VERSION }}
+
+      - name: Download Windows Bun binary
+        if: steps.cache-bun-windows.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$BUN_WIN_DIR"
+          curl -fsSL -o /tmp/bun-windows-x64.zip \
+            "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-windows-x64.zip"
+          unzip -j -o /tmp/bun-windows-x64.zip -d "$BUN_WIN_DIR"
+
+      - name: Run tests (via Wine)
+        run: timeout 8m xvfb-run --auto-servernum ./bun-wine test --timeout 30000
+
+      # `save-always` on the combined actions/cache action is deprecated and
+      # doesn't work (GitHub's own runtime warning confirms this) -- this job
+      # always ends in "failure" due to the 5 known tracked tests (#5), so
+      # without an explicit save step here, neither cache below ever
+      # populated and every run re-downloaded the ~105MB libwine package.
+      - name: Save apt archives cache
+        if: always() && steps.apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/apt-cache/*.deb
+          key: apt-wine-${{ runner.os }}-wine-wine64-xvfb-unzip-v3
+
+      - name: Save Windows Bun binary cache
+        if: always() && steps.cache-bun-windows.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.BUN_WIN_DIR }}
+          key: bun-windows-x64-${{ env.BUN_VERSION }}
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.0'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run security audit
+        run: bun audit
+        continue-on-error: true
