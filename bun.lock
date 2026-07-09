@@ -130,7 +130,6 @@
       "name": "bun-xffi",
       "version": "0.1.0",
       "dependencies": {
-        "bun-relay": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
       "devDependencies": {

@@ -46,7 +46,6 @@
     "@types/bun": "latest"
   },
   "dependencies": {
-    "bun-relay": "workspace:*",
     "exoproc-utils": "workspace:*"
   }
 }
