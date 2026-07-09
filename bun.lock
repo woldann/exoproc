@@ -97,6 +97,16 @@
         "exoproc-utils": "workspace:*",
       },
     },
+    "packages/relay": {
+      "name": "bun-relay",
+      "version": "0.1.0",
+      "dependencies": {
+        "exoproc-utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "packages/utils": {
       "name": "exoproc-utils",
       "version": "0.1.0",
@@ -509,6 +519,8 @@
     "bun-nhook": ["bun-nhook@workspace:packages/nhook"],
 
     "bun-nthread": ["bun-nthread@workspace:packages/nthread"],
+
+    "bun-relay": ["bun-relay@workspace:packages/relay"],
 
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 

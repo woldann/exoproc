@@ -40,6 +40,7 @@
     "baseUrl": ".",
     "paths": {
       "exoproc-utils": ["packages/utils/src/index.ts"],
+      "bun-relay": ["packages/relay/src/index.ts"],
       "bun-xffi": ["packages/xffi/src/index.ts"],
       "bun-capstone": ["packages/capstone/src/index.ts"],
       "bun-winapi": ["packages/winapi/src/index.ts"],
@@ -52,6 +53,7 @@
   "files": [],
   "references": [
     { "path": "./packages/utils" },
+    { "path": "./packages/relay" },
     { "path": "./packages/xffi" },
     { "path": "./packages/capstone" },
     { "path": "./packages/winapi" },
