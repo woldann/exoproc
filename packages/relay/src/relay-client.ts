@@ -1,3 +1,4 @@
+import * as dgram from 'dgram';
 import { decodeEnvelope, encodeEnvelope } from './protocol.js';
 
 export interface RelayClientOptions {
@@ -13,7 +14,7 @@ export interface RelayClientOptions {
  * touching xffi at all).
  */
 export class RelayClient {
-  private socket: Bun.udp.ConnectedSocket<'buffer'> | null = null;
+  private socket: dgram.Socket | null = null;
   private readonly pending = new Map<
     number,
     { resolve: (buf: Buffer) => void; reject: (err: Error) => void }
@@ -25,19 +26,30 @@ export class RelayClient {
   async connect(): Promise<void> {
     if (this.socket) return;
 
-    this.socket = await Bun.udpSocket({
-      hostname: this.options.hostname ?? '127.0.0.1',
-      binaryType: 'buffer',
-      connect: {
-        hostname: this.options.hostname ?? '127.0.0.1',
-        port: this.options.port,
-      },
-      socket: {
-        data: (_socket, data) => {
-          this.onDatagram(data);
+    const socket = dgram.createSocket('udp4');
+
+    await new Promise<void>((resolve, reject) => {
+      const onConnectError = (err: Error) => {
+        socket.close();
+        reject(err);
+      };
+      socket.once('error', onConnectError);
+      socket.connect(
+        this.options.port,
+        this.options.hostname ?? '127.0.0.1',
+        () => {
+          socket.removeListener('error', onConnectError);
+          resolve();
         },
-      },
+      );
     });
+
+    socket.on('message', (data) => this.onDatagram(data));
+    // Post-connect errors surface to callers via the pending call's timeout
+    // rather than an unhandled 'error' event crashing the process.
+    socket.on('error', () => {});
+
+    this.socket = socket;
   }
 
   close(): void {
@@ -68,6 +80,7 @@ export class RelayClient {
     if (!this.socket) {
       throw new Error('bun-relay: RelayClient is not connected.');
     }
+    const socket = this.socket;
     const callId = this.nextCallId++;
 
     return new Promise<Buffer>((resolve, reject) => {
@@ -91,7 +104,7 @@ export class RelayClient {
         },
       });
 
-      this.socket!.send(encodeEnvelope(opcode, callId, payload));
+      socket.send(encodeEnvelope(opcode, callId, payload));
     });
   }
 

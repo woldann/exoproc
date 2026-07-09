@@ -1,9 +1,51 @@
 import { describe, expect, test } from 'bun:test';
-import { RelayClient, RelayServer } from '../../packages/relay/src/index.js';
+import {
+  DEFAULT_RELAY_PORT,
+  RelayClient,
+  RelayServer,
+} from '../../packages/relay/src/index.js';
 
 describe('bun-relay', () => {
-  test('registers an opcode and answers a request/response call', async () => {
+  test('binds to the default port when none is given', async () => {
     const server = new RelayServer();
+    try {
+      await server.start();
+      expect(server.port).toBe(DEFAULT_RELAY_PORT);
+    } finally {
+      server.close();
+    }
+  });
+
+  test('falls back to an ephemeral port when the default is already taken', async () => {
+    const holder = new RelayServer();
+    await holder.start();
+    expect(holder.port).toBe(DEFAULT_RELAY_PORT);
+
+    const second = new RelayServer();
+    try {
+      await second.start();
+      expect(second.port).not.toBe(DEFAULT_RELAY_PORT);
+      expect(second.port).toBeGreaterThan(0);
+    } finally {
+      second.close();
+      holder.close();
+    }
+  });
+
+  test('surfaces a bind failure when an explicit port is already taken', async () => {
+    const holder = new RelayServer();
+    await holder.start();
+
+    const second = new RelayServer({ port: holder.port });
+    try {
+      await expect(second.start()).rejects.toThrow();
+    } finally {
+      holder.close();
+    }
+  });
+
+  test('registers an opcode and answers a request/response call', async () => {
+    const server = new RelayServer({ port: 0 });
     await server.start();
 
     server.register(1, (payload) => {
@@ -28,7 +70,7 @@ describe('bun-relay', () => {
   });
 
   test('supports fire-and-forget sends with no reply', async () => {
-    const server = new RelayServer();
+    const server = new RelayServer({ port: 0 });
     await server.start();
 
     const received: { value: number | null } = { value: null };
@@ -56,7 +98,7 @@ describe('bun-relay', () => {
   });
 
   test('routes concurrent calls by callId without cross-talk', async () => {
-    const server = new RelayServer();
+    const server = new RelayServer({ port: 0 });
     await server.start();
 
     server.register(3, async (payload) => {
@@ -88,7 +130,7 @@ describe('bun-relay', () => {
   });
 
   test('rejects a duplicate opcode registration', async () => {
-    const server = new RelayServer();
+    const server = new RelayServer({ port: 0 });
     await server.start();
     try {
       server.register(4, () => undefined);
@@ -99,7 +141,7 @@ describe('bun-relay', () => {
   });
 
   test('times out a call when no handler is registered for the opcode', async () => {
-    const server = new RelayServer();
+    const server = new RelayServer({ port: 0 });
     await server.start();
 
     const client = new RelayClient({ port: server.port });

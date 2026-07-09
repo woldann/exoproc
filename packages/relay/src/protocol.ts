@@ -8,6 +8,16 @@
  */
 export const RELAY_HEADER_SIZE = 8;
 
+/**
+ * Default well-known loopback port RelayServer binds to when no explicit
+ * port is given. Not an IANA-reserved port, just an arbitrary pick outside
+ * the common dev-tool range. RelayServer falls back to an OS-assigned
+ * ephemeral port if this one is already taken by another instance --
+ * unless a port was explicitly requested, in which case a bind failure
+ * is a real error and is surfaced as one.
+ */
+export const DEFAULT_RELAY_PORT = 47_101;
+
 export interface RelayEnvelope {
   readonly opcode: number;
   readonly callId: number;
