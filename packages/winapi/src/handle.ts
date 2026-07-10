@@ -1,10 +1,5 @@
 import { log } from './logger.js';
-import {
-  Kernel32Impl,
-  INFINITE,
-  WaitReturn,
-  asyncCallOverheadMs,
-} from 'bun-xffi';
+import { Kernel32Impl, INFINITE, WaitReturn, waitAsync } from 'bun-xffi';
 type HANDLE = bigint;
 import { NativePointer } from 'bun-xffi';
 import { InvalidHandleError } from './errors.js';
@@ -21,6 +16,13 @@ const handleLog = {
   fatal: (m: string, d?: unknown) => getHandleLog().fatal(m, d),
   trace: (m: string, d?: unknown) => getHandleLog().trace(m, d),
 };
+
+/**
+ * Waits at or below this threshold use a tight 1ms poll-sleep loop instead
+ * of `waitAsync`'s backoff ramp -- short enough that the ramp's instant
+ * checks + first backoff step would already overshoot the timeout.
+ */
+const SHORT_WAIT_POLL_THRESHOLD_MS = 15;
 
 /**
  * Base class for Win32 handles.
@@ -83,7 +85,7 @@ export class Handle extends NativePointer {
       return Kernel32Impl.WaitForSingleObject(this.rawHandle, 0) as WaitReturn;
     }
 
-    if (timeoutMs <= asyncCallOverheadMs) {
+    if (timeoutMs <= SHORT_WAIT_POLL_THRESHOLD_MS) {
       const start = performance.now();
       let res: WaitReturn = WaitReturn.TIMEOUT;
       while (performance.now() - start < timeoutMs) {
@@ -102,10 +104,11 @@ export class Handle extends NativePointer {
       return res;
     }
 
-    return (await Kernel32Impl.WaitForSingleObject.callAsync(
+    const outcome = await waitAsync(
       this.rawHandle,
-      timeoutMs,
-    )) as WaitReturn;
+      timeoutMs === INFINITE ? -1 : timeoutMs,
+    );
+    return outcome === 'signaled' ? WaitReturn.OBJECT_0 : WaitReturn.TIMEOUT;
   }
 
   override toString(): string {

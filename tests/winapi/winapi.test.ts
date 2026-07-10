@@ -158,72 +158,36 @@ describe('WinAPI Package Tests', () => {
   });
 
   describe('Handle & Wait API', () => {
-    test('should have customizable calibration variables and setters', () => {
-      // Test default values
-      console.log(
-        `\n[TEST LOG] Initial variables - defaultAsyncCallOverheadMs: ${Native.defaultAsyncCallOverheadMs} ms, asyncCallOverheadMs: ${Native.asyncCallOverheadMs} ms, defaultCalibrateIterations: ${Native.defaultCalibrateIterations}`,
-      );
-      expect(Native.defaultAsyncCallOverheadMs).toBe(3);
-      expect(Native.asyncCallOverheadMs).toBe(3);
-      expect(Native.defaultCalibrateIterations).toBe(3);
-
-      // Mutate using setters
-      Native.setAsyncCallOverheadMs(15);
-      Native.setDefaultCalibrateIterations(5);
-      Native.setDefaultAsyncCallOverheadMs(7);
-
-      console.log(
-        `[TEST LOG] Updated variables - defaultAsyncCallOverheadMs: ${Native.defaultAsyncCallOverheadMs} ms, asyncCallOverheadMs: ${Native.asyncCallOverheadMs} ms, defaultCalibrateIterations: ${Native.defaultCalibrateIterations}`,
-      );
-      expect(Native.asyncCallOverheadMs).toBe(15);
-      expect(Native.defaultCalibrateIterations).toBe(5);
-      expect(Native.defaultAsyncCallOverheadMs).toBe(7);
-
-      // Restore back to default configurations
-      Native.setAsyncCallOverheadMs(3);
-      Native.setDefaultCalibrateIterations(3);
-      Native.setDefaultAsyncCallOverheadMs(3);
-    });
-
-    test.skip('should run calibration and update asyncCallOverheadMs', async () => {
-      // Run with low iterations to be robust under Wine
-      const measured = await Native.calibrateAsyncOverhead(2);
-      console.log(
-        `[TEST LOG] Calibration output - Measured Async Call Overhead: ${measured} ms`,
-      );
-      expect(measured).toBeGreaterThanOrEqual(0);
-      expect(Native.asyncCallOverheadMs).toBe(measured);
-    }, 20000);
-
-    test.skip('should perform waits correctly using polling and callAsync', async () => {
+    test('should perform waits correctly using both short and long poll paths', async () => {
       const currentTid = Native.Thread.currentId();
       const currentThread = Native.Thread.open(currentTid);
       expect(currentThread.isValid()).toBe(true);
 
       try {
-        // Test short wait (hybrid polling)
+        // Short wait (tight 1ms poll-sleep loop)
         const startPoll = performance.now();
         const resPoll = await currentThread.wait(2);
         const durationPoll = performance.now() - startPoll;
         console.log(
-          `[TEST LOG] Short wait(2) duration (Polling, overhead limit ${Native.asyncCallOverheadMs} ms): ${durationPoll.toFixed(2)} ms`,
+          `[TEST LOG] Short wait(2) duration (tight poll): ${durationPoll.toFixed(2)} ms`,
         );
         expect(resPoll).toBe(Native.WaitReturn.TIMEOUT);
         expect(durationPoll).toBeGreaterThanOrEqual(0);
 
-        // Test long wait (callAsync) - Wrapped in try/catch to tolerate Wine thread pool instability
+        // Long wait (waitAsync backoff poll) - wrapped in try/catch to
+        // tolerate ordinary Wine flakiness.
         try {
           const startAsync = performance.now();
           const resAsync = await currentThread.wait(100);
           const durationAsync = performance.now() - startAsync;
           console.log(
-            `[TEST LOG] Long wait(100) duration (callAsync): ${durationAsync.toFixed(2)} ms`,
+            `[TEST LOG] Long wait(100) duration (waitAsync): ${durationAsync.toFixed(2)} ms`,
           );
           expect(resAsync).toBe(Native.WaitReturn.TIMEOUT);
           expect(durationAsync).toBeGreaterThanOrEqual(100);
         } catch (wineError) {
           console.warn(
-            '[TEST LOG] Tolerated Wine async thread pool error during wait(100) test:',
+            '[TEST LOG] Tolerated Wine error during wait(100) test:',
             wineError,
           );
         }

@@ -13,6 +13,7 @@ import {
   RemoteMemoryAccessor,
 } from './accessor.js';
 import { Kernel32Impl } from './win/kernel32.js';
+import { waitAsync } from './waiter.js';
 
 export abstract class AbstractCallableMemoryAccessor
   extends AbstractMemoryAccessor
@@ -191,12 +192,7 @@ export class RemoteCallableMemoryAccessor
     }
 
     try {
-      const deadline = Date.now() + this.waitTimeout;
-      while (Date.now() < deadline) {
-        const r = this.kernel32.WaitForSingleObject(thread, 5);
-        if (r === 0) break; // WAIT_OBJECT_0
-        await new Promise<void>((resolve) => setImmediate(resolve));
-      }
+      await waitAsync(BigInt(resolveAddress(thread)), this.waitTimeout);
       const exitCode = Buffer.alloc(4);
       const got = this.kernel32.GetExitCodeThread(thread, exitCode);
       if (!got) {

@@ -5,31 +5,33 @@ import { type Rect, type GUIThreadInfo } from 'bun-xffi';
 import { Handle } from './handle.js';
 import { decodeString } from './decoding.js';
 import { encodeStringW } from './encoding.js';
-import { nativeFn } from 'bun-xffi';
+import { cjitopen } from 'bun-xffi';
 import { currentProcess } from './process.js';
 
 // EnumWindowsProc callback — compiled via TCC (bun:ffi cc)
 // Args: rcx = hwnd, rdx = lParam (pointer to struct: { uint32 index, uint32 capacity, uint64 hwnds[] })
-const enumWindowsProcFn = nativeFn.compile(
-  { EnumWindowsProc: [FFIType.i32, [FFIType.ptr, FFIType.ptr]] },
-  `
-  typedef struct {
-      unsigned int index;
-      unsigned int capacity;
-      void* hwnds[1]; // simplified for TCC
-  } EnumCtx;
+const enumWindowsProcFn = cjitopen({
+  EnumWindowsProc: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+    source: `
+    typedef struct {
+        unsigned int index;
+        unsigned int capacity;
+        void* hwnds[1]; // simplified for TCC
+    } EnumCtx;
 
-  int EnumWindowsProc(void* hwnd, void* lParam) {
-      EnumCtx* ctx = (EnumCtx*)lParam;
-      if (ctx->index >= ctx->capacity) return 0;
-      // Indexing manually to avoid flexible array member issues in some TCC versions
-      void** hwnds = (void**)((char*)ctx + 8);
-      hwnds[ctx->index] = hwnd;
-      ctx->index++;
-      return 1;
-  }
-  `,
-);
+    int EnumWindowsProc(void* hwnd, void* lParam) {
+        EnumCtx* ctx = (EnumCtx*)lParam;
+        if (ctx->index >= ctx->capacity) return 0;
+        void** hwnds = (void**)((char*)ctx + 8);
+        hwnds[ctx->index] = hwnd;
+        ctx->index++;
+        return 1;
+    }
+    `,
+  },
+}).symbols.EnumWindowsProc;
 
 /**
  * Represents a Window handle (HWND).
@@ -194,7 +196,7 @@ export class Window extends Handle {
     currentProcess.memory.writeSync(addr, initBuf);
 
     // Execute User32 Native EnumWindows
-    User32Impl.EnumWindows(enumWindowsProcFn.toAddress(), addr as any);
+    User32Impl.EnumWindows(enumWindowsProcFn.ptr, addr as any);
 
     // Read mutated C memory back
     const readBuf = currentProcess.memory.readSync(addr, memSize);

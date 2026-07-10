@@ -49,15 +49,7 @@ BUN_WIN_DIR=/path/to/bun-windows-x64 ./bun-wine test
 
 ---
 
-## 3. CI/CD & Testing Constraints
-
-### `callAsync` under Wine
-
-The asynchronous call mechanism (`callAsync`) uses `QueueUserWorkItem` + `JSCallback` under the hood. This used to be blocked outright by security policy on GitHub's `windows-latest` runners, so `callAsync` tests were skipped in CI. CI now runs the suite under Wine on `ubuntu-latest` instead of a real Windows-hosted runner, so that block no longer applies and `callAsync` tests run in CI like everywhere else — just tolerate ordinary Wine flakiness (e.g. wrap the assertion in try/catch) rather than skipping.
-
----
-
-## 4. Coding & Quality Standards
+## 3. Coding & Quality Standards
 
 ### Linting & Formatting
 

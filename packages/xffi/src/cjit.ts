@@ -287,7 +287,6 @@ int ${name}_len() { return (int)((char*)${name}_end - (char*)${name}); }
     ccSymbols[name] = {
       args: argsList.map(mapToBunFFIType) as FFITypeOrString[],
       returns: mapToBunFFIType(sym.returns || 'void'),
-      threadsafe: sym.threadsafe,
     } as FFIFunction;
 
     ccSymbols[`${name}_ptr`] = { args: [], returns: 'ptr' };
