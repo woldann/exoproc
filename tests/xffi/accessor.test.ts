@@ -60,23 +60,49 @@ describe('xffi > MemoryAccessor and Custom Accessors', () => {
     await tp.stop();
   });
 
-  test('should support protect and query (Windows only)', () => {
-    const isWin = process.platform === 'win32';
-    if (!isWin) return;
+  test('should support protect and query (Windows only)', async () => {
+    if (process.platform !== 'win32') return;
 
-    const addr = localMemoryAccessor.allocSync(4096);
+    // Drive protect/query against a *real* dedicated page in a remote process
+    // rather than `localMemoryAccessor.allocSync(4096)`. A non-executable local
+    // allocation with no fixed address returns CRT `malloc()`'d heap memory
+    // (see LocalMemoryAccessor.allocSync in accessor.ts), and `malloc()`'d
+    // pointers are not page-aligned. Calling VirtualProtect on one toggles the
+    // protection of the entire heap *page* it happens to sit on -- a page
+    // shared with adjacent CRT allocations and metadata -- to READONLY and back,
+    // and then `free()`s it. That corrupts the local heap, and on GitHub
+    // Actions' virtualized Wine runners it is fatal (CLAUDE.md issue #5: local
+    // memory ops are unreliable there, never on real hardware or a local Wine).
+    // It was the deterministic segfault that always struck right here, after
+    // this file's remote test printed (pass) -- the crash is this test starting,
+    // not the previous test's teardown. `VirtualAllocEx` hands back a dedicated,
+    // page-aligned region, so protect/query/free touch nothing but that page,
+    // which is exactly the "drive it through a real process" pattern issue #5
+    // prescribes (and VirtualProtectEx/VirtualQueryEx are already proven on CI
+    // by the winapi remote-scan and struct tests).
+    const tp = new TestProcess();
 
-    // VirtualProtect to PAGE_READWRITE (4) or PAGE_READONLY (2)
-    const oldProtect = localMemoryAccessor.protectSync(addr, 4096, 2); // READONLY
+    const remote = new RemoteProcessMemoryAccessor(tp.pid, {
+      handle: tp.handle,
+      closeHandle: false,
+    });
+
+    const addr = remote.allocSync(4096); // VirtualAllocEx -> PAGE_READWRITE page
+
+    // VirtualProtectEx to PAGE_READONLY (2); returns the old protection.
+    const oldProtect = remote.protectSync(addr, 4096, 2);
     expect(oldProtect).toBeGreaterThan(0);
 
-    const info = localMemoryAccessor.querySync(addr);
+    const info = remote.querySync(addr);
     expect(info).not.toBeNull();
     expect(info.Protect).toBe(2);
 
-    // Restore protection and free
-    localMemoryAccessor.protectSync(addr, 4096, oldProtect);
-    localMemoryAccessor.freeSync(addr);
+    // Restore protection and free the region.
+    remote.protectSync(addr, 4096, oldProtect);
+    remote.freeSync(addr);
+
+    remote.close();
+    await tp.stop();
   });
 
   test('should seamlessly route struct operations through a custom/mock remote memory accessor', () => {
