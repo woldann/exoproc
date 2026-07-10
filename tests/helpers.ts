@@ -43,30 +43,57 @@ export class TestProcess {
     return this.child;
   }
 
-  // Waits for the spawned process to actually exit before returning --
-  // `child.kill()` alone only sends the signal and returns immediately,
-  // racing the still-in-flight Wine-side process teardown against whatever
-  // the caller (and the test runner) does next. That race is a likely
-  // contributor to the intermittent Bun/Wine segfault documented in
-  // CLAUDE.md (it recurs right after tests that spawn+kill a real process).
+  // Waits for the spawned process to *actually* be gone before returning.
+  //
+  // `child.kill()` alone only sends the signal and returns immediately, and
+  // node's `'exit'` event (plus any fixed fallback timeout) fires on node's
+  // own bookkeeping -- not on the real OS process object. On a fast machine
+  // Wine finishes tearing the process down before anything else runs, so this
+  // is invisible; on a slow/loaded CI runner the caller (and the next test)
+  // resume while Wine's ntdll is still mid-rundown of the killed process, and
+  // that overlap is a likely contributor to the intermittent Bun/Wine
+  // segfault documented in CLAUDE.md (it recurs right after tests that
+  // spawn+kill a real process, always at the same spot, only on CI).
+  //
+  // Fix: keep our process handle open, ask node to terminate the process,
+  // then poll-wait on the *actual* process object until it is signaled
+  // (terminated) before closing the handle and returning. `WaitForSingleObject`
+  // is called with a 0 timeout in a loop (never a blocking wait -- matching
+  // xffi's `waitAsync` philosophy so the event loop is never wedged), so
+  // teardown is deterministic regardless of CPU speed.
   async stop(): Promise<void> {
-    if (this.handle !== 0) {
-      Kernel32Impl.CloseHandle(this.handle);
-      this.handle = 0;
-    }
     const child = this.child;
-    if (child.exitCode !== null) return;
+    const handle = this.handle;
+    this.handle = 0;
 
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(resolve, 3000);
-      child.once('exit', () => {
-        clearTimeout(timeout);
-        // Small extra grace period for Wine's own process-death handling to
-        // settle, matching tests/setup.ts's afterAll grace period.
-        setTimeout(resolve, 250);
+    // Ask node to terminate the Wine process (maps to TerminateProcess).
+    if (child.exitCode === null) child.kill();
+
+    if (handle !== 0) {
+      // WAIT_OBJECT_0 = 0 (signaled/terminated); WAIT_TIMEOUT = 0x102 (still
+      // alive). Poll up to ~5s so even a slow Wine rundown fully completes
+      // before we proceed, rather than being abandoned after a fixed wait.
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        if (Kernel32Impl.WaitForSingleObject(handle, 0) === 0) break;
+        Bun.sleepSync(25);
+      }
+      Kernel32Impl.CloseHandle(handle);
+    }
+
+    // Reap node's ChildProcess bookkeeping too, then a small extra grace
+    // period for Wine's own process-death handling to settle (matching
+    // tests/setup.ts's afterAll grace period).
+    if (child.exitCode === null) {
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 3000);
+        child.once('exit', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
       });
-      child.kill();
-    });
+    }
+    await new Promise((r) => setTimeout(r, 250));
   }
 }
 
