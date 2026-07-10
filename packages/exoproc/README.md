@@ -42,7 +42,7 @@ const targetFn = cmachinecode({
 });
 
 async function main() {
-  const memory = Process.current.asyncMemory;
+  const memory = Process.current.memory;
   const minhook = new MinHook(Process.current.pid);
 
   console.log(`Original: targetFn(10) => ${targetFn(10)} (Expected: 21)`);
