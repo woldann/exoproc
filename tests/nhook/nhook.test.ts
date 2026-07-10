@@ -320,7 +320,7 @@ describe('NHook end-to-end lifecycle (real compiled function, real thread)', () 
       source: `return arg0 * 2 + 1;`,
     });
     const targetAddr = BigInt(resolveAddress(targetFn));
-    const memory = Native.currentProcess.asyncMemory;
+    const memory = Native.currentProcess.memory;
 
     const nhook = new NHook(Native.currentProcess.pid);
     const hook = await nhook.create(memory, targetFn);
@@ -382,7 +382,7 @@ describe('NHook end-to-end lifecycle (real compiled function, real thread)', () 
       source: `return arg0 * 2 + 1;`,
     });
     const targetAddr = BigInt(resolveAddress(targetFn));
-    const memory = Native.currentProcess.asyncMemory;
+    const memory = Native.currentProcess.memory;
 
     const nhook = new NHook(Native.currentProcess.pid);
     const hook = await nhook.create(memory, targetFn);

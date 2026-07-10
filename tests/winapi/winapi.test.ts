@@ -71,23 +71,6 @@ describe('WinAPI Package Tests', () => {
       mem.freeSync(addr, 1024);
     });
 
-    test.skip('memory read/write on local process accessor should work (Async)', async () => {
-      const process = Native.currentProcess;
-      const mem = process.asyncMemory;
-
-      // Allocate, write, read, and free memory asynchronously
-      const addr = await mem.alloc(1024);
-      expect(addr).not.toBeNull();
-
-      const testBuffer = Buffer.from([6, 7, 8, 9, 10]);
-      await mem.write(addr, testBuffer);
-
-      const readBuffer = Buffer.from(await mem.read(addr, 5));
-      expect(readBuffer).toEqual(testBuffer);
-
-      await mem.free(addr, 1024);
-    });
-
     test('memory pattern scan on remote process accessor should work', async () => {
       const tp = new TestProcess();
       const { pid } = tp;
