@@ -5,7 +5,6 @@ import {
   localMemoryAccessor,
   resolveAddress,
   type ISyncMemoryAccessor,
-  type IMemoryAccessor,
 } from 'bun-xffi';
 import { Thread } from './thread.js';
 import {
@@ -50,10 +49,6 @@ export class Process extends Handle {
     this.memory = new RemoteMemoryAccessor(this.pid, {
       handle: this.rawHandle as any,
     });
-  }
-
-  get asyncMemory(): IMemoryAccessor {
-    return this.memory;
   }
 
   static open(pid: number, access: number = ProcessAccess.ALL_ACCESS): Process {
