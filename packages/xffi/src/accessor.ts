@@ -781,7 +781,7 @@ export class RemoteMemoryAccessor
     return info;
   }
 
-  // --- Asynchronous Implementations using CFunction callAsync ---
+  // --- Asynchronous Implementations delegating to the *Sync methods ---
   override async read(
     address: AddressLike,
     size: number,

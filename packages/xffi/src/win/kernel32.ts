@@ -138,10 +138,6 @@ const lib = cimport(
       ],
       returns: CType.HANDLE,
     },
-    QueueUserWorkItem: {
-      args: [CType.ptr, CType.ptr, CType.DWORD],
-      returns: CType.BOOL,
-    },
     CreateRemoteThread: {
       args: [
         CType.HANDLE,

@@ -272,12 +272,9 @@ describe('NHook instruction simulation', () => {
   });
 });
 
-// `Handle.wait(timeoutMs)` routes through `WaitForSingleObject.callAsync()` for
-// any timeout above `asyncCallOverheadMs` (see handle.ts) -- the same
-// QueueUserWorkItem-based mechanism already documented in CLAUDE.md as prone to
-// intermittently hanging/crashing under Wine. Poll `getExitCode()` instead so
-// this test verifies nhook's own resume()/simulateDisplacedInstructions logic
-// (which is reliable) without inheriting that unrelated, pre-existing flakiness.
+// Poll `getExitCode()` directly (GetExitCodeThread) rather than `Handle.wait()`
+// (thread signal state) so this test verifies nhook's own
+// resume()/simulateDisplacedInstructions logic in isolation.
 async function pollExitCode(
   thread: Native.Thread,
   timeoutMs: number,

@@ -88,13 +88,6 @@ function makeStub(address: number, bytes: number[]): Stub {
     return makeStub(addr, bytes);
   };
 
-  wrapper.callAsync = function (..._argsList: any[]) {
-    throw new Error(
-      'callAsync is not supported on Stubs; use accessor.call(stub, ...)',
-    );
-  };
-  wrapper.close = function () {};
-
   return wrapper as Stub;
 }
 

@@ -15,6 +15,7 @@ export {
 export * from './host-accessor.js';
 export * from './callable-accessor.js';
 export * from './win/utils.js';
+export * from './waiter.js';
 export * from './cfunction.js';
 export * from './cjit.js';
 export { cjitopen } from './cjit.js';
