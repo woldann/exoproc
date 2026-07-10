@@ -40,7 +40,10 @@ export const CrtDefinitions = {
 /**
  * Native CRT Bindings (wrapped around Bun's process/executable space where overridden)
  */
-export const CrtLibrary = cimport(CrtDefinitions, { library: ['msvcrt'] });
+export const CrtLibrary = cimport(CrtDefinitions, {
+  library: ['msvcrt'],
+  knownToLinker: true,
+});
 
 export const CrtImpl = CrtLibrary.symbols;
 

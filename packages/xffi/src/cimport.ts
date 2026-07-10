@@ -47,6 +47,7 @@ export interface CImportLibrary<T extends Record<string, CImportSymbol>> {
   readonly library: string[];
   readonly defFiles?: string[];
   readonly dummySymbols?: Set<string>;
+  readonly knownToLinker?: boolean;
   baseAddress?: IPointer;
   close(): void;
 }
@@ -54,6 +55,16 @@ export interface CImportLibrary<T extends Record<string, CImportSymbol>> {
 export interface CImportOptions {
   library?: string[];
   suffix?: string;
+  /**
+   * Set when `library` names a DLL the target toolchain's linker already
+   * has import knowledge of (e.g. TinyCC's bundled kernel32/msvcrt/user32/gdi32
+   * stubs on Windows), so no synthetic .def file is needed to resolve its
+   * exports — the library name can just be passed straight through to the
+   * linker. Platform-specific libraries should set this where they define
+   * their `cimport()` call (see `packages/xffi/src/win/*.ts`) rather than
+   * having callers guess it from a hardcoded name list.
+   */
+  knownToLinker?: boolean;
 }
 
 /**
@@ -126,14 +137,12 @@ void* ${name}_ptr() { return unwrap_thunk((void*)${name}); }
   }
 
   // Detect non-default libraries on Windows/Wine and dynamically generate .def files
-  const systemLibs = new Set(['kernel32', 'msvcrt', 'user32', 'gdi32']);
   const generatedDefFiles: string[] = [];
   const libsToLink: string[] = [];
 
   if (process.platform === 'win32') {
     for (const lib of libs) {
-      const isSystem = systemLibs.has(lib.toLowerCase());
-      if (isSystem) {
+      if (opts.knownToLinker) {
         libsToLink.push(lib);
       } else {
         // Generate a temporary .def file
@@ -276,6 +285,7 @@ void* ${name}_ptr() { return unwrap_thunk((void*)${name}); }
     library: libs,
     defFiles: generatedDefFiles,
     dummySymbols,
+    knownToLinker: !!opts.knownToLinker,
     baseAddress: new NativePointer(0),
     close() {
       compiledLibrary.close();

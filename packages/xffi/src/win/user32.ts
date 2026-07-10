@@ -160,7 +160,7 @@ const lib = cimport(
       returns: CType.BOOL,
     },
   },
-  { library: ['user32'] },
+  { library: ['user32'], knownToLinker: true },
 );
 
 export const User32Impl = lib.symbols;

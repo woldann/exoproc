@@ -194,7 +194,7 @@ const lib = cimport(
       returns: CType.DWORD,
     },
   },
-  { library: ['kernel32'] },
+  { library: ['kernel32'], knownToLinker: true },
 );
 
 export const Kernel32Impl = lib.symbols;
