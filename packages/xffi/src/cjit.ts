@@ -127,27 +127,18 @@ export function cjitopen<T extends Record<string, CJitSymbol>>(
   const defFiles: string[] = [];
   const libsToLink: string[] = [];
 
-  // Gather system libraries and .def files only when in standard 'jit' linking mode
+  // Gather libraries and .def files only when in standard 'jit' linking mode.
+  // Each import declares for itself (via `knownToLinker`, set where its
+  // `cimport()` call lives under win/) whether the toolchain already knows
+  // how to resolve it directly, or needs the .def file it generated.
   if (compileMode === 'jit') {
-    if (process.platform === 'win32') {
-      const defaultLibs = ['kernel32', 'msvcrt', 'user32', 'gdi32'];
-      for (const lib of defaultLibs) {
-        if (!libsToLink.includes(lib)) {
-          libsToLink.push(lib);
-        }
-      }
-    }
-
-    const systemLibs = new Set(['kernel32', 'msvcrt', 'user32', 'gdi32']);
     for (const imp of importsList) {
       if (imp && typeof imp === 'object') {
         const library = 'library' in imp ? (imp as any).library : [];
-        if (library) {
+        if (library && (imp as any).knownToLinker) {
           for (const lib of library) {
-            if (systemLibs.has(lib.toLowerCase())) {
-              if (!libsToLink.includes(lib)) {
-                libsToLink.push(lib);
-              }
+            if (!libsToLink.includes(lib)) {
+              libsToLink.push(lib);
             }
           }
         }

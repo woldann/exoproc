@@ -39,7 +39,7 @@ export const Gdi32Library = cimport(
       returns: CType.BOOL,
     },
   },
-  { library: ['gdi32'] },
+  { library: ['gdi32'], knownToLinker: true },
 );
 
 export const Gdi32Impl = Gdi32Library.symbols;
