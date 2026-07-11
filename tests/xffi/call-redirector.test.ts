@@ -2,7 +2,6 @@ import { expect, test, describe } from 'bun:test';
 import {
   CallRedirectorAccessor,
   IndirectCallRedirectorAccessor,
-  NamedPipeCallableAccessor,
   RemoteCallableMemoryAccessor,
   BootstrapHostAccessor,
   HostAccessor,
@@ -22,22 +21,18 @@ describe('xffi > CallRedirectorAccessor', () => {
 
     try {
       // 2. Compose our decorator chain (mirrors IndirectCallableAccessor construction):
-      // accessor (CallRedirectorAccessor) -> pipeAccessor -> baseAccessor
-      // bootstrap acts as root: during init it routes directly to pipeAccessor (bypassing
+      // accessor (CallRedirectorAccessor) -> baseAccessor
+      // bootstrap acts as root: during init it routes directly to baseAccessor (bypassing
       // CallRedirectorAccessor), after init it routes through the full chain via outerHost.
       const baseAccessor = new RemoteCallableMemoryAccessor(pid);
       const outerHost = new HostAccessor(new ThrowingMemoryAccessor(pid));
       const bootstrap = new BootstrapHostAccessor(pid, outerHost);
-      const pipeAccessor = new NamedPipeCallableAccessor(
-        baseAccessor,
-        bootstrap,
-      );
-      bootstrap.backend = pipeAccessor;
-      const accessor = new CallRedirectorAccessor(pipeAccessor, bootstrap);
+      bootstrap.backend = baseAccessor;
+      const accessor = new CallRedirectorAccessor(baseAccessor, bootstrap);
       outerHost.backend = accessor;
 
       try {
-        // 3. Test remote alloc (runs VirtualAlloc in target process via Named Pipe call)
+        // 3. Test remote alloc (runs VirtualAlloc in target process via a remote call)
         const size = 1024;
         const remoteAddr = await accessor.alloc(size);
         expect(remoteAddr).toBeDefined();
@@ -86,12 +81,8 @@ describe('xffi > CallRedirectorAccessor', () => {
       const baseAccessor = new RemoteCallableMemoryAccessor(pid);
       const outerHost = new HostAccessor(new ThrowingMemoryAccessor(pid));
       const bootstrap = new BootstrapHostAccessor(pid, outerHost);
-      const pipeAccessor = new NamedPipeCallableAccessor(
-        baseAccessor,
-        bootstrap,
-      );
-      bootstrap.backend = pipeAccessor;
-      const accessor = new CallRedirectorAccessor(pipeAccessor, bootstrap);
+      bootstrap.backend = baseAccessor;
+      const accessor = new CallRedirectorAccessor(baseAccessor, bootstrap);
       outerHost.backend = accessor;
 
       try {
@@ -146,13 +137,9 @@ describe('xffi > CallRedirectorAccessor', () => {
       const baseAccessor = new RemoteCallableMemoryAccessor(pid);
       const outerHost = new HostAccessor(new ThrowingMemoryAccessor(pid));
       const bootstrap = new BootstrapHostAccessor(pid, outerHost);
-      const pipeAccessor = new NamedPipeCallableAccessor(
-        baseAccessor,
-        bootstrap,
-      );
-      bootstrap.backend = pipeAccessor;
+      bootstrap.backend = baseAccessor;
       const accessor = new IndirectCallRedirectorAccessor(
-        pipeAccessor,
+        baseAccessor,
         bootstrap,
       );
       outerHost.backend = accessor;

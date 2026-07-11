@@ -2,8 +2,6 @@ import { expect, test, describe } from 'bun:test';
 import {
   cmachinecode,
   CType,
-  NamedPipeCallableAccessor,
-  HostAccessor,
   RemoteCallableMemoryAccessor,
   createCFunction,
   currentProcessId,
@@ -27,17 +25,14 @@ describe('xffi > cmachinecode Builder & Compiler', () => {
     const targetFunc = targetLib.symbols.get_big_secret;
 
     const base = new RemoteCallableMemoryAccessor(currentProcessId);
-    const host = new HostAccessor(base);
-    const accessor = new NamedPipeCallableAccessor(base, host);
-    host.backend = accessor;
 
     const param = 0x111222333444n;
-    const result = await accessor.call(targetFunc, param);
+    const result = await base.call(targetFunc, param);
     const expected = 0xaaabbbcccdddn + param;
 
     expect(result).toBe(expected);
 
-    accessor.close();
+    base.close();
     targetLib.close();
   });
 
@@ -113,13 +108,10 @@ describe('xffi > cmachinecode Builder & Compiler', () => {
     console.log(`cmachinecode: Spawned ping.exe process with PID: ${pid}`);
 
     try {
-      // 2. Setup the accessors
-      console.log('cmachinecode: Initializing accessors...');
+      // 2. Setup the accessor
+      console.log('cmachinecode: Initializing accessor...');
       const baseAccessor = new RemoteCallableMemoryAccessor(pid);
-      const host = new HostAccessor(baseAccessor);
-      const pipeAccessor = new NamedPipeCallableAccessor(baseAccessor, host);
-      host.backend = pipeAccessor;
-      console.log('cmachinecode: Accessors initialized.');
+      console.log('cmachinecode: Accessor initialized.');
 
       try {
         // 3. Write/inject machineCode to the target process
@@ -133,18 +125,16 @@ describe('xffi > cmachinecode Builder & Compiler', () => {
         // 4. Call the remote machineCode
         console.log('cmachinecode: Creating CFunction wrapper...');
         const remoteFunc = createCFunction(remoteAddr, [CType.u64, []]);
-        console.log(
-          'cmachinecode: Calling remote machineCode via named pipe...',
-        );
-        const result = await pipeAccessor.call(remoteFunc);
+        console.log('cmachinecode: Calling remote machineCode...');
+        const result = await baseAccessor.call(remoteFunc);
         console.log(`cmachinecode: Execution completed. Result: ${result}`);
 
         // The length of "Virtual MachineCode Direct Address Patching Works!" is 48
         expect(result).toBe(48n);
         console.log('cmachinecode: Assertion passed.');
       } finally {
-        console.log('cmachinecode: Closing pipeAccessor...');
-        pipeAccessor.close();
+        console.log('cmachinecode: Closing accessor...');
+        baseAccessor.close();
       }
     } finally {
       console.log('cmachinecode: Stopping remote ping process...');

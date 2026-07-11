@@ -1,7 +1,6 @@
 import {
   MiddlewareAccessor,
   ThrowingMemoryAccessor,
-  NamedPipeCallableAccessor,
   IndirectCallRedirectorAccessor,
   MarshallingCallableAccessor,
   HostAccessor,
@@ -43,18 +42,12 @@ export class IndirectCallableAccessor extends HostAccessor {
 
     if (processIdOrBackend !== undefined) {
       if (typeof processIdOrBackend === 'number') {
-        initialBackend = new NamedPipeCallableAccessor(
-          new RemoteCallableMemoryAccessor(processIdOrBackend),
-          bootstrap,
-        );
+        initialBackend = new RemoteCallableMemoryAccessor(processIdOrBackend);
       } else {
         initialBackend = processIdOrBackend;
       }
     } else {
-      initialBackend = new NamedPipeCallableAccessor(
-        new RemoteCallableMemoryAccessor(-1),
-        bootstrap,
-      );
+      initialBackend = new RemoteCallableMemoryAccessor(-1);
     }
 
     bootstrap.backend = initialBackend;

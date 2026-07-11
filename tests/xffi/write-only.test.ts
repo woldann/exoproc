@@ -1,7 +1,6 @@
 import { expect, test, describe } from 'bun:test';
 import {
   FileTransferWriteAccessor,
-  NamedPipeCallableAccessor,
   RemoteCallableMemoryAccessor,
   HostAccessor,
 } from '../../packages/xffi/src/index.js';
@@ -18,8 +17,7 @@ describe('xffi > FileTransferWriteAccessor', () => {
         closeHandle: false,
       });
       const host = new HostAccessor(baseAccessor);
-      const pipeAccessor = new NamedPipeCallableAccessor(baseAccessor, host);
-      const accessor = new FileTransferWriteAccessor(pipeAccessor, host);
+      const accessor = new FileTransferWriteAccessor(baseAccessor, host);
       host.backend = accessor;
 
       try {

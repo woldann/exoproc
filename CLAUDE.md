@@ -79,8 +79,7 @@ The foundational layer. Key concepts:
 - **`MiddlewareAccessor` / `InittableMiddlewareAccessor`** (`middleware-accessor.ts`) — wraps another accessor; `InittableMiddlewareAccessor` adds lazy async `init()`/`deinit()` lifecycle. **Every** memory op (`read`, `write`, `alloc`, `free`, `protect`, `query`, `call`, **and `machineCode`**) is guarded by `!isInitializing → await this.init()` — each has an `XAfterInit` twin that forwards to the backend. (`machineCode` was historically missing this guard, so a `machineCode()`-first call routed down the chain before init: the backend wasn't hijacked/ready yet and `MsvcrtDependentMiddlewareAccessor.onInit`'s msvcrt check spuriously failed. Any new op MUST have the same guard.) `initNext()` skips backends that are already initializing (`!next.isInitializing` guard) to prevent deadlocks when `root.*` is called from within `onInit()`.
 - **`allocNear` / `allocNearSync`** (`iaccessor.ts` + `accessor.ts`, pure helpers in `near-alloc.ts`) — accessor **method** (not a standalone fn) that finds/commits free memory within ±~2GB of a target address (for a 5-byte rel32 JMP), by walking `query()` results outward and honoring 64KB allocation granularity. The generic impl on `AbstractMemoryAccessor` uses `this.query()`/`this.alloc()`, so it composes cross-process for free through `CallRedirectorAccessor` (which overrides those). `CallRedirectorAccessor` also has an explicit **region-aware** `allocNear` override (jumps by `RegionSize` instead of naive 64KB steps) since each probe there is an expensive remote `call`.
 - **`HostAccessor`** (`host-accessor.ts`) — orchestrating root accessor; initializes all `InittableMiddlewareAccessor` instances in the backend chain via `initNext()`.
-- **`BootstrapHostAccessor`** (`middleware-accessor.ts`) — solves circular init dependencies. Starts with `target = this` (routes directly through its own backend, bypassing any middleware above), then after `initNext()` switches `target = root`. Required as root for `NamedPipeCallableAccessor` when `CallRedirectorAccessor` is in the chain above it.
-- **`NamedPipeCallableAccessor`** (`middleware-accessor.ts`) — executes remote calls via a named pipe machineCode loop rather than `CreateRemoteThread` per call. The remote machineCode thread loops forever reading `CallRequest` structs (144 bytes: targetFunc addr + arg count + 16 arg slots) and writing back 8-byte results. Root **must** be `BootstrapHostAccessor` — `onInit` uses `this.root.*` for alloc/write/machineCode/call; `this.backend` is only used in the `call` override escape hatch for the initial loop machineCode invocation (scAddress bypass → `this.backend.call`).
+- **`BootstrapHostAccessor`** (`middleware-accessor.ts`) — solves circular init dependencies. Starts with `target = this` (routes directly through its own backend, bypassing any middleware above), then after `initNext()` switches `target = root`. Required as root for any `InittableMiddlewareAccessor` (e.g. `CallRedirectorAccessor`) whose `onInit` needs `this.root.*` before the full chain above it is wired up.
 - **`CallRedirectorAccessor`** (`middleware-accessor.ts`) — redirects `alloc/free/protect/query` to run inside the target process via `this.root.call(VirtualAlloc/VirtualFree/VirtualProtect/VirtualQuery)`.
 - **`IndirectCallRedirectorAccessor`** (`middleware-accessor.ts`) — extends `CallRedirectorAccessor`; for `READWRITE` allocations without a specific address uses `MsvcrtImpl.malloc`/`MsvcrtImpl.free` instead of `VirtualAlloc`. Tracks malloc blocks locally to intercept `free`/`protect`/`query` on them.
 - **`waitAsync(handle, timeoutMs)`** (`waiter.ts`) — non-blocking wait for a HANDLE to signal: polls `WaitForSingleObject(handle, 0)` in a loop with a backoff ramp (a few zero-delay instant checks, then 1ms up to a 10ms cap), yielding to the event loop via `setTimeout` between checks. No separate thread/Worker — every check is a real OS query, never a blocking wait, so the JS event loop is never wedged. Replaces the old `callAsync`/`QueueUserWorkItem`-based async call mechanism (`CFunction.callAsync`), which is gone entirely — it required JIT-compiled thread-pool-proc code and a threadsafe `JSCallback`, and hung indefinitely on real Windows because `QueueUserWorkItem`'s worker threads are native NT thread-pool threads Bun has no knowledge of (threadsafe callbacks are only reliable from a Bun `Worker`, per Bun's own docs). `waitAsync` sidesteps the whole problem by never leaving the calling thread.
@@ -97,14 +96,13 @@ The foundational layer. Key concepts:
 
 ```
 BootstrapHostAccessor (root, pid, outerHost)
-  └─ .backend = NamedPipeCallableAccessor (backend, root=bootstrap)
-                  └─ .backend = RemoteCallableMemoryAccessor(pid)
+  └─ .backend = RemoteCallableMemoryAccessor(pid)
 
-CallRedirectorAccessor (or Indirect variant) (backend=pipe, root=bootstrap)
+CallRedirectorAccessor (or Indirect variant) (backend=RemoteCallableMemoryAccessor, root=bootstrap)
 outerHost.backend = accessor  ← wired after construction
 ```
 
-During `NamedPipeCallableAccessor.onInit()`: bootstrap `target=this` → `root.alloc()` routes through `pipeAccessor` (isInitializing→skip init) → `RemoteCallableMemoryAccessor.alloc()`. After init: bootstrap `target=outerHost` → full chain active.
+During `CallRedirectorAccessor.onInit()`-driven calls: bootstrap `target=this` → `root.call()` routes through `RemoteCallableMemoryAccessor` directly (isInitializing→skip init). After init: bootstrap `target=outerHost` → full chain active.
 
 ### winapi
 

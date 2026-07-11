@@ -2,7 +2,6 @@ import { expect, test, describe } from 'bun:test';
 import {
   FileTransferReadAccessor,
   FileTransferWriteAccessor,
-  NamedPipeCallableAccessor,
   RemoteCallableMemoryAccessor,
   HostAccessor,
 } from '../../packages/xffi/src/index.js';
@@ -19,8 +18,7 @@ describe('xffi > FileTransferAccessors', () => {
         closeHandle: false,
       });
       const host = new HostAccessor(baseAccessor);
-      const pipeAccessor = new NamedPipeCallableAccessor(baseAccessor, host);
-      const accessor = new FileTransferReadAccessor(pipeAccessor, host);
+      const accessor = new FileTransferReadAccessor(baseAccessor, host);
       host.backend = accessor;
 
       try {
@@ -31,7 +29,7 @@ describe('xffi > FileTransferAccessors', () => {
         expect(remoteAddr).toBeDefined();
         expect(Number(remoteAddr)).toBeGreaterThan(0);
 
-        // Write directly (routes to NamedPipeCallableAccessor write)
+        // Write directly (routes to the base RemoteCallableMemoryAccessor write)
         const testData = Buffer.from('Independent Read Accessor Test!');
         await accessor.write(remoteAddr, testData);
 
@@ -59,8 +57,7 @@ describe('xffi > FileTransferAccessors', () => {
         closeHandle: false,
       });
       const host = new HostAccessor(baseAccessor);
-      const pipeAccessor = new NamedPipeCallableAccessor(baseAccessor, host);
-      const accessor = new FileTransferWriteAccessor(pipeAccessor, host);
+      const accessor = new FileTransferWriteAccessor(baseAccessor, host);
       host.backend = accessor;
 
       try {
@@ -75,7 +72,7 @@ describe('xffi > FileTransferAccessors', () => {
         const testData = Buffer.from('Independent Write Accessor Test!');
         await accessor.write(remoteAddr, testData);
 
-        // Read directly (routes to NamedPipeCallableAccessor read)
+        // Read directly (routes to the base RemoteCallableMemoryAccessor read)
         const readData = await accessor.read(remoteAddr, testData.byteLength);
         expect(readData.toString()).toBe(testData.toString());
 
@@ -99,8 +96,7 @@ describe('xffi > FileTransferAccessors', () => {
         closeHandle: false,
       });
       const host = new HostAccessor(baseAccessor);
-      const pipeAccessor = new NamedPipeCallableAccessor(baseAccessor, host);
-      const writeAccessor = new FileTransferWriteAccessor(pipeAccessor, host);
+      const writeAccessor = new FileTransferWriteAccessor(baseAccessor, host);
       const accessor = new FileTransferReadAccessor(writeAccessor, host);
       host.backend = accessor;
 
