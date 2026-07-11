@@ -1,24 +1,28 @@
 import { expect, test, describe } from 'bun:test';
+import * as Native from 'bun-winapi';
 import {
   isModuleLoadedInProcess,
   verifyCoreModules,
-  RemoteCallableMemoryAccessor,
   Kernel32Impl,
-} from '../../packages/xffi/src/index.js';
+} from 'bun-xffi';
+import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { TestProcess } from '../helpers.js';
 
-describe('xffi > Module Loading Helpers', () => {
+// Moved from tests/xffi/module-helpers.test.ts -- GetModuleHandleExA(FROM_ADDRESS)
+// with a deliberately bogus address crashed Wine ("Unhandled page fault...
+// starting debugger") when dispatched via a bare RemoteCallableMemoryAccessor
+// (a fresh CreateRemoteThread thread); driven through IndirectNThreadHostAccessor
+// (an already-live, hijacked thread) instead.
+describe('nthread > Module Loading Helpers', () => {
   test('should check loaded modules in the current process', async () => {
-    // 1. Spawn a real target process
     const tp = new TestProcess();
-    const { pid } = tp;
+    const thread = Native.Thread.getThreads(tp.pid)[0];
+    if (!thread) throw new Error('No thread found in the spawned process');
 
-    // isModuleLoadedInProcess/verifyCoreModules only need a single call() each
-    // (GetModuleHandleExA) -- no need for the full IndirectCallableAccessor
-    // chain (malloc/memset/file-transfer), which requires several WinAPI calls
-    // executed on a freshly-created CreateRemoteThread thread and is unreliable
-    // under Wine (see the GHA thread-freshness bug in CLAUDE.md).
-    const accessor = new RemoteCallableMemoryAccessor(pid);
+    const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
+      timeoutMs: 20000,
+    });
+
     try {
       // kernel32.dll and ntdll.dll must always be loaded in a valid process!
       const hKernel32 = BigInt(
@@ -49,8 +53,8 @@ describe('xffi > Module Loading Helpers', () => {
       expect(coreStatus.kernelbase).toBe(true);
       expect(coreStatus.msvcrt).toBe(true);
     } finally {
-      accessor.close();
+      await accessor.deinit();
       await tp.stop();
     }
-  }, 30000);
+  }, 60000);
 });
