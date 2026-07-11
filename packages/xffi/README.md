@@ -106,9 +106,8 @@ console.log(Kernel32.symbols.GetCurrentThreadId());
   redirected thread in another process.
 - **Middleware Accessor chain**: Composable decorators — `CallRedirectorAccessor`,
   `IndirectCallRedirectorAccessor` (malloc-based, no direct
-  `VirtualAlloc`/`WriteProcessMemory`), `NamedPipeCallableAccessor` (an
-  efficient remote call loop instead of one remote thread per call) — that
-  stack to build a fully silent, cross-process execution pipeline.
+  `VirtualAlloc`/`WriteProcessMemory`) — that stack to build a fully silent,
+  cross-process execution pipeline.
 - **C Struct Compiler (`struct`, `union`)**: Native-feeling TypeScript
   declarations backed 1:1 by real (even remote) memory pointers, with
   automatic offset alignment, padding, and nested structs.

@@ -7,7 +7,6 @@ import {
   type AddressLike,
   Kernel32Impl,
   GetModuleHandleExFlag,
-  NamedPipeCallableAccessor,
   RemoteCallableMemoryAccessor,
   HostAccessor,
   MemoryBasicInformation,
@@ -161,8 +160,7 @@ describe('xffi > ProcessCacheAccessor', () => {
     try {
       const remote = new RemoteCallableMemoryAccessor(pid);
       const host = new HostAccessor(remote);
-      const baseAccessor = new NamedPipeCallableAccessor(remote, host);
-      const cacheAccessor = new ProcessCacheAccessor(baseAccessor, host);
+      const cacheAccessor = new ProcessCacheAccessor(remote, host);
       host.backend = cacheAccessor;
 
       // Verify lazy metadata getters

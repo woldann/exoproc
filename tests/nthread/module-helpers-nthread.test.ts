@@ -1,23 +1,29 @@
 import { expect, test, describe } from 'bun:test';
+import * as Native from 'bun-winapi';
 import {
   isModuleLoadedInProcess,
   verifyCoreModules,
-  IndirectCallableAccessor,
   Kernel32Impl,
-} from '../../packages/xffi/src/index.js';
+} from 'bun-xffi';
+import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { TestProcess } from '../helpers.js';
 
-describe('xffi > Module Loading Helpers', () => {
+// Moved from tests/xffi/module-helpers.test.ts -- GetModuleHandleExA(FROM_ADDRESS)
+// with a deliberately bogus address crashed Wine ("Unhandled page fault...
+// starting debugger") when dispatched via a bare RemoteCallableMemoryAccessor
+// (a fresh CreateRemoteThread thread); driven through IndirectNThreadHostAccessor
+// (an already-live, hijacked thread) instead.
+describe('nthread > Module Loading Helpers', () => {
   test('should check loaded modules in the current process', async () => {
-    // 1. Spawn a real target process
     const tp = new TestProcess();
-    const { pid } = tp;
+    const thread = Native.Thread.getThreads(tp.pid)[0];
+    if (!thread) throw new Error('No thread found in the spawned process');
 
-    let accessor: IndirectCallableAccessor | undefined;
+    const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
+      timeoutMs: 20000,
+    });
+
     try {
-      accessor = new IndirectCallableAccessor(pid);
-      await accessor.init();
-
       // kernel32.dll and ntdll.dll must always be loaded in a valid process!
       const hKernel32 = BigInt(
         Kernel32Impl.GetModuleHandleA(Buffer.from('kernel32.dll\0')),
@@ -47,10 +53,8 @@ describe('xffi > Module Loading Helpers', () => {
       expect(coreStatus.kernelbase).toBe(true);
       expect(coreStatus.msvcrt).toBe(true);
     } finally {
-      if (accessor) {
-        await accessor.deinit().catch(() => {});
-      }
+      await accessor.deinit();
       await tp.stop();
     }
-  }, 30000);
+  }, 60000);
 });

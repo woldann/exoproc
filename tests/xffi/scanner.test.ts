@@ -10,7 +10,6 @@ import {
   ScanResult,
   InvalidPatternError,
   MemoryProtection,
-  IndirectCallableAccessor,
 } from '../../packages/xffi/src/index';
 import { TestProcess } from '../helpers';
 
@@ -235,54 +234,11 @@ describe('xffi > Scanner & Pattern Scanning API', () => {
       await tp.stop();
     });
 
-    test('should support remote process JIT pattern scan using IndirectCallableAccessor template', async () => {
-      if (process.platform !== 'win32') return;
-
-      const tp = new TestProcess();
-
-      // Wrap the remote accessor with IndirectCallableAccessor which includes ScannerMiddleware in its pipeline
-      const accessor = new IndirectCallableAccessor(tp.pid);
-
-      const size = 100;
-      const addr = await accessor.alloc(size);
-      expect(addr).toBeGreaterThan(0);
-
-      const patternBytes = Buffer.from([
-        0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x11,
-      ]);
-      await accessor.write(resolveAddress(addr) + 20, patternBytes);
-
-      // 1. Test 3-byte pattern scan (uses memmemWithoutBuffer)
-      const res3: bigint[] = [];
-      for await (const val of accessor.scan(addr, size, '12 34 56')) {
-        res3.push(BigInt(resolveAddress(val)));
-      }
-      expect(res3).toHaveLength(1);
-      expect(res3[0]).toBe(BigInt(resolveAddress(addr)) + 20n);
-
-      // 2. Test 5-byte pattern scan (uses memmemWithoutBuffer)
-      const res5: bigint[] = [];
-      for await (const val of accessor.scan(addr, size, '12 34 56 78 9A')) {
-        res5.push(BigInt(resolveAddress(val)));
-      }
-      expect(res5).toHaveLength(1);
-      expect(res5[0]).toBe(BigInt(resolveAddress(addr)) + 20n);
-
-      // 3. Test 9-byte pattern scan (uses memmem fallback with remote buffer allocation)
-      const res9: bigint[] = [];
-      for await (const val of accessor.scan(
-        addr,
-        size,
-        '12 34 56 78 9A BC DE F0 11',
-      )) {
-        res9.push(BigInt(resolveAddress(val)));
-      }
-      expect(res9).toHaveLength(1);
-      expect(res9[0]).toBe(BigInt(resolveAddress(addr)) + 20n);
-
-      await accessor.free(addr);
-      accessor.close();
-      await tp.stop();
-    });
+    // The "remote process JIT pattern scan using IndirectCallableAccessor
+    // template" case moved to
+    // tests/nthread/scanner-indirect-nthread.test.ts -- the indirect chain's
+    // malloc-backed alloc() needs to run on an already-live thread rather than
+    // a freshly-created CreateRemoteThread thread (see the GHA thread-freshness
+    // bug in CLAUDE.md), so it now uses IndirectNThreadHostAccessor.
   });
 });
