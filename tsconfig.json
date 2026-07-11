@@ -46,6 +46,7 @@
       "bun-nthread": ["packages/nthread/src/index.ts"],
       "bun-nhook": ["packages/nhook/src/index.ts"],
       "bun-minhook": ["packages/minhook/src/index.ts"],
+      "bun-nshm": ["packages/nshm/src/index.ts"],
       "exoproc": ["packages/exoproc/src/index.ts"]
     }
   },
@@ -58,6 +59,7 @@
     { "path": "./packages/nthread" },
     { "path": "./packages/nhook" },
     { "path": "./packages/minhook" },
+    { "path": "./packages/nshm" },
     { "path": "./packages/exoproc" }
   ]
 }

@@ -1,18 +1,18 @@
 {
-  "name": "exoproc",
+  "name": "bun-nshm",
   "publishConfig": {
     "access": "public"
   },
   "version": "0.1.0",
-  "description": "Exoproc - Cross-process systems programming and runtime instrumentation framework for Bun x64 Windows environments.",
+  "description": "Cross-process shared memory for Bun via a low-privilege dummy-process handle relay — the caller never OpenProcess's the target directly.",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
   },
+  "types": "./dist/index.d.ts",
   "type": "module",
   "engines": {
     "bun": ">=1.3.0"
@@ -23,17 +23,14 @@
   ],
   "license": "AGPL-3.0-or-later",
   "keywords": [
-    "bun",
-    "ffi",
+    "exoproc",
+    "shared-memory",
     "windows",
     "x64",
-    "systems-programming",
-    "instrumentation",
-    "hooking",
-    "thread-redirection",
-    "memory-manipulation",
-    "disassembly",
-    "jit"
+    "native",
+    "handle-relay",
+    "cross-process",
+    "systems-instrumentation"
   ],
   "author": "Serkan",
   "homepage": "https://github.com/woldann/exoproc#readme",
@@ -47,11 +44,6 @@
   "dependencies": {
     "bun-winapi": "workspace:*",
     "bun-xffi": "workspace:*",
-    "bun-nthread": "workspace:*",
-    "bun-nhook": "workspace:*",
-    "bun-minhook": "workspace:*",
-    "bun-nshm": "workspace:*",
-    "bun-capstone": "workspace:*",
     "exoproc-utils": "workspace:*"
   }
 }

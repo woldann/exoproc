@@ -61,6 +61,7 @@
         "bun-capstone": "workspace:*",
         "bun-minhook": "workspace:*",
         "bun-nhook": "workspace:*",
+        "bun-nshm": "workspace:*",
         "bun-nthread": "workspace:*",
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
@@ -83,6 +84,15 @@
       "dependencies": {
         "bun-capstone": "workspace:*",
         "bun-nthread": "workspace:*",
+        "bun-winapi": "workspace:*",
+        "bun-xffi": "workspace:*",
+        "exoproc-utils": "workspace:*",
+      },
+    },
+    "packages/nshm": {
+      "name": "bun-nshm",
+      "version": "0.1.0",
+      "dependencies": {
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
         "exoproc-utils": "workspace:*",
@@ -507,6 +517,8 @@
     "bun-minhook": ["bun-minhook@workspace:packages/minhook"],
 
     "bun-nhook": ["bun-nhook@workspace:packages/nhook"],
+
+    "bun-nshm": ["bun-nshm@workspace:packages/nshm"],
 
     "bun-nthread": ["bun-nthread@workspace:packages/nthread"],
 

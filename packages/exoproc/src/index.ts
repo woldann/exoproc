@@ -3,6 +3,7 @@ export * from 'bun-xffi';
 export * from 'bun-nthread';
 export * from 'bun-nhook';
 export * from 'bun-minhook';
+export * from 'bun-nshm';
 export * from 'bun-capstone';
 export * from 'exoproc-utils';
 

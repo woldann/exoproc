@@ -255,6 +255,7 @@ export const BARE = cdefines({
 });
 export type BARE = CDefineValueType<typeof BARE, true>;
 export const INFINITE = 0xffffffff;
+export const INVALID_HANDLE_VALUE = -1;
 
 // 10. MemoryState
 export const MemoryState = cdefines(
@@ -460,3 +461,53 @@ export type WaitReturn = CDefineValueType<typeof WaitReturn>;
 
 // 22. Default alignments
 export const DEFAULT_MACHINECODE_ALIGNMENT = 16;
+
+// 23. ProcessCreationFlags (for CreateProcess*)
+export const ProcessCreationFlags = cdefines({
+  DEBUG_PROCESS: 0x00000001,
+  DEBUG_ONLY_THIS_PROCESS: 0x00000002,
+  CREATE_SUSPENDED: 0x00000004,
+  DETACHED_PROCESS: 0x00000008,
+  CREATE_NEW_CONSOLE: 0x00000010,
+  NORMAL_PRIORITY_CLASS: 0x00000020,
+  IDLE_PRIORITY_CLASS: 0x00000040,
+  HIGH_PRIORITY_CLASS: 0x00000080,
+  REALTIME_PRIORITY_CLASS: 0x00000100,
+  CREATE_NEW_PROCESS_GROUP: 0x00000200,
+  CREATE_UNICODE_ENVIRONMENT: 0x00000400,
+  CREATE_SEPARATE_WOW_VDM: 0x00000800,
+  CREATE_PROTECTED_PROCESS: 0x00040000,
+  EXTENDED_STARTUPINFO_PRESENT: 0x00080000,
+  CREATE_DEFAULT_ERROR_MODE: 0x04000000,
+  CREATE_NO_WINDOW: 0x08000000,
+});
+export type ProcessCreationFlags = CDefineValueType<
+  typeof ProcessCreationFlags
+>;
+
+// 24. FileMapAccess (for MapViewOfFile)
+export const FileMapAccess = cdefines(
+  {
+    COPY: 0x00000001,
+    WRITE: 0x00000002,
+    READ: 0x00000004,
+    EXECUTE: 0x00000020,
+    LARGE_PAGES: 0x20000000,
+    TARGETS_INVALID: 0x40000000,
+    ALL_ACCESS: 0x000f001f,
+  },
+  'FILE_MAP',
+);
+export type FileMapAccess = CDefineValueType<typeof FileMapAccess>;
+
+// 25. DuplicateHandleOptions (for DuplicateHandle)
+export const DuplicateHandleOptions = cdefines(
+  {
+    CLOSE_SOURCE: 0x00000001,
+    SAME_ACCESS: 0x00000002,
+  },
+  'DUPLICATE',
+);
+export type DuplicateHandleOptions = CDefineValueType<
+  typeof DuplicateHandleOptions
+>;
