@@ -1,30 +1,23 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
-import {
-  cmachinecode,
-  CType,
-  createCFunction,
-  RedirectorHostAccessor,
-  HostAccessor,
-} from 'bun-xffi';
-import { NThread } from 'bun-nthread';
+import { cmachinecode, CType, createCFunction } from 'bun-xffi';
+import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { TestProcess } from '../helpers.js';
 
-// Moved from tests/xffi/cmachinecode.test.ts. The original shell called
-// VirtualAlloc/VirtualFree *from inside the injected code itself* -- that
-// pattern was only ever proven safe over the old NamedPipeCallableAccessor
-// (whose calls ran on one already-live, already-warmed-up loop thread). Over
-// NThread's redirect-hijack, a thread pulled out of whatever it was doing and
-// pointed straight at a nested real WinAPI call is untested territory and
-// crashed Wine in CI. Sidestep it entirely: allocate the scratch buffer via a
-// plain alloc() (a reliable VirtualAllocEx call from our own process, no
-// thread execution involved) and pass it in as an argument -- the injected
-// shell only ever touches memory, never makes its own WinAPI calls.
+// Moved from tests/xffi/cmachinecode.test.ts -- the injected shell itself calls
+// VirtualAlloc/VirtualFree, which needs to run on an already-live thread rather
+// than a freshly-created CreateRemoteThread thread (see the GHA thread-freshness
+// bug in CLAUDE.md). Driven through IndirectNThreadHostAccessor (the same
+// proven, correctly-wired class minhook-indirect-nthread.test.ts calls .call()
+// on repeatedly) rather than hand-rolling a RedirectorHostAccessor here.
 describe('nthread > cmachinecode remote execution', () => {
   test('should compile standard C code into standalone bytecode with automatic macro address patching and run it remotely', async () => {
     const shell = cmachinecode({
       source: `
-        char* msg = (char*)arg0;
+        void* ptr = VirtualAlloc(0, 1024, 0x3000, 0x04);
+        if (!ptr) return 0ULL;
+
+        char* msg = (char*)ptr;
         msg[0] = 'V';
         msg[1] = 'i';
         msg[2] = 'r';
@@ -75,44 +68,33 @@ describe('nthread > cmachinecode remote execution', () => {
         msg[47] = '!';
         msg[48] = '\\0';
 
+        VirtualFree(ptr, 0, 0x8000);
+
         return 48ULL;
       `,
       returns: CType.u64,
-      args: [CType.ptr],
+      args: [],
     });
 
     const tp = new TestProcess();
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const redirector = new RedirectorHostAccessor(tp.pid);
-    const nthread = new NThread(
-      tp.pid,
-      thread.tid,
-      { timeoutMs: 20000 },
-      redirector,
-    );
-    const host = new HostAccessor(nthread);
-    // RedirectorHostAccessor only routes the top-level async ops through
-    // `target` -- sync scalar helpers bypass it and go straight to
-    // `this.backend`, which defaults to a throwing dummy. Must wire both.
-    redirector.backend = nthread;
-    redirector.target = host;
+    const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
+      timeoutMs: 20000,
+    });
 
     try {
-      const bufAddr = await host.alloc(64);
-      const remoteAddr = await shell.machineCode(host);
+      const remoteAddr = await accessor.machineCode(shell);
       expect(Number(remoteAddr)).toBeGreaterThan(0);
 
-      const remoteFunc = createCFunction(remoteAddr, [CType.u64, [CType.ptr]]);
-      const result = await host.call(remoteFunc, bufAddr);
+      const remoteFunc = createCFunction(remoteAddr, [CType.u64, []]);
+      const result = await accessor.call(remoteFunc);
 
       // The length of "Virtual MachineCode Direct Address Patching Works!" is 48
       expect(result).toBe(48n);
-
-      await host.free(bufAddr);
     } finally {
-      await host.deinit();
+      await accessor.deinit();
       await tp.stop();
     }
   }, 60000);

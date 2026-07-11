@@ -1,15 +1,7 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
-import {
-  CallRedirectorAccessor,
-  IndirectCallRedirectorAccessor,
-  RedirectorHostAccessor,
-  HostAccessor,
-  MemoryState,
-  MemoryProtection,
-  resolveAddress,
-} from 'bun-xffi';
-import { NThread } from 'bun-nthread';
+import { MemoryState, MemoryProtection } from 'bun-xffi';
+import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { TestProcess } from '../helpers.js';
 
 // Moved from tests/xffi/call-redirector.test.ts -- CallRedirectorAccessor/
@@ -17,140 +9,24 @@ import { TestProcess } from '../helpers.js';
 // `this.root.call(VirtualAlloc/VirtualFree/...)`. Real WinAPI calls like
 // VirtualAlloc/malloc need to run on an already-live thread rather than a
 // freshly-created CreateRemoteThread thread (see the GHA thread-freshness bug
-// in CLAUDE.md), so the backend here is NThread (hijacks an existing thread)
-// instead of a bare RemoteCallableMemoryAccessor.
-describe('nthread > CallRedirectorAccessor over NThread', () => {
-  test('should seamlessly redirect all memory operations to remote call execution', async () => {
+// in CLAUDE.md), so this drives everything through IndirectNThreadHostAccessor
+// (proven wiring: its internal BootstrapHostAccessor.backend is set correctly
+// by IndirectCallableAccessor's own constructor) instead of hand-rolling a
+// RedirectorHostAccessor here, which is exactly where an earlier version of
+// this file lost a `.backend` assignment and crashed.
+//
+// The standalone allocNear case is dropped -- it's already covered by
+// tests/nthread/indirect-nthread-host-accessor.test.ts's own allocNear test
+// against the same IndirectNThreadHostAccessor chain.
+describe('nthread > CallRedirectorAccessor/IndirectCallRedirectorAccessor over IndirectNThreadHostAccessor', () => {
+  test('should seamlessly route READWRITE allocations via malloc, and non-READWRITE via real VirtualAlloc/VirtualProtect/VirtualQuery/VirtualFree', async () => {
     const tp = new TestProcess();
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const redirector = new RedirectorHostAccessor(tp.pid);
-    const nthread = new NThread(
-      tp.pid,
-      thread.tid,
-      { timeoutMs: 20000 },
-      redirector,
-    );
-    const accessor = new CallRedirectorAccessor(nthread, redirector);
-    // RedirectorHostAccessor only routes the top-level async ops (read/write/
-    // alloc/.../call) through `target` -- the sync scalar helpers inherited
-    // from AbstractSyncMemoryAccessor (readUInt32Sync -> readSync, used by
-    // CallRedirectorAccessor.protect()) bypass `target` and go straight to
-    // `this.backend`, which defaults to a throwing dummy. Must wire both.
-    redirector.backend = nthread;
-    redirector.target = new HostAccessor(nthread);
-
-    try {
-      // 1. Test remote alloc (runs VirtualAlloc in target process via a redirected call)
-      const size = 1024;
-      const remoteAddr = await accessor.alloc(size);
-      expect(remoteAddr).toBeDefined();
-      expect(Number(remoteAddr)).toBeGreaterThan(0);
-
-      // 2. Test write and read (delegates normally, ensuring data gets written/read)
-      const testData = Buffer.from('Inter-process Redirector Test String!');
-      await accessor.write(remoteAddr, testData);
-
-      const readData = await accessor.read(remoteAddr, testData.byteLength);
-      expect(readData.toString()).toBe(testData.toString());
-
-      // 3. Test remote protect (runs VirtualProtect in target process via call + temp alloc/read/free)
-      const oldProtect = await accessor.protect(
-        remoteAddr,
-        size,
-        MemoryProtection.READONLY,
-      );
-      expect(oldProtect).toBe(MemoryProtection.READWRITE);
-
-      // 4. Test remote query (runs VirtualQuery in target process via call + temp alloc/read/free)
-      const info = await accessor.query(remoteAddr);
-
-      expect(info).toBeDefined();
-      expect(Number(info.BaseAddress)).toBe(Number(remoteAddr));
-      expect(info.Protect).toBe(MemoryProtection.READONLY);
-      expect(info.State).toBe(MemoryState.COMMIT);
-
-      // 5. Test remote free (runs VirtualFree in target process via call)
-      const freeSuccess = await accessor.free(remoteAddr);
-      expect(freeSuccess).toBe(true);
-    } finally {
-      await nthread.deinit();
-      await tp.stop();
-    }
-  }, 30000);
-
-  test('allocNear runs its whole probe+alloc search inside the target via call', async () => {
-    const tp = new TestProcess();
-    const thread = Native.Thread.getThreads(tp.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
-
-    const redirector = new RedirectorHostAccessor(tp.pid);
-    const nthread = new NThread(
-      tp.pid,
-      thread.tid,
-      { timeoutMs: 20000 },
-      redirector,
-    );
-    const accessor = new CallRedirectorAccessor(nthread, redirector);
-    redirector.backend = nthread;
-    redirector.target = new HostAccessor(nthread);
-
-    try {
-      // An anchor address that lives inside ping.exe -- allocated via the
-      // redirector, so it's VirtualAlloc *in the target*, not VirtualAllocEx
-      // reaching in from our process.
-      const anchor = await accessor.alloc(
-        0x1000,
-        null,
-        MemoryProtection.EXECUTE_READWRITE,
-      );
-      const anchorAddr = BigInt(resolveAddress(anchor));
-
-      // allocNear drives its entire region-walk through the same remote
-      // call path (VirtualQuery/VirtualAlloc in the target), never touching
-      // our own address space.
-      const near = await accessor.allocNear(anchor, 64, {
-        protection: MemoryProtection.EXECUTE_READWRITE,
-      });
-      const nearAddr = BigInt(resolveAddress(near));
-      expect(nearAddr).toBeGreaterThan(0n);
-
-      // Landed within a 5-byte rel32 jmp's reach of the anchor.
-      const distance =
-        nearAddr > anchorAddr ? nearAddr - anchorAddr : anchorAddr - nearAddr;
-      expect(distance <= 0x7fff0000n).toBe(true);
-
-      // And it genuinely exists in the target: a remote VirtualQuery reports
-      // a committed, executable region based exactly at the returned address.
-      const info = await accessor.query(near);
-      expect(Number(info.BaseAddress)).toBe(Number(near));
-      expect(info.State).toBe(MemoryState.COMMIT);
-      expect(info.Protect).toBe(MemoryProtection.EXECUTE_READWRITE);
-
-      expect(await accessor.free(near)).toBe(true);
-      expect(await accessor.free(anchor)).toBe(true);
-    } finally {
-      await nthread.deinit();
-      await tp.stop();
-    }
-  }, 60000);
-
-  test('should seamlessly route READWRITE allocations via malloc and mock query/protect under IndirectCallRedirectorAccessor', async () => {
-    const tp = new TestProcess();
-    const thread = Native.Thread.getThreads(tp.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
-
-    const redirector = new RedirectorHostAccessor(tp.pid);
-    const nthread = new NThread(
-      tp.pid,
-      thread.tid,
-      { timeoutMs: 20000 },
-      redirector,
-    );
-    const accessor = new IndirectCallRedirectorAccessor(nthread, redirector);
-    redirector.backend = nthread;
-    redirector.target = new HostAccessor(nthread);
+    const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
+      timeoutMs: 20000,
+    });
 
     try {
       // 1. Test indirect remote alloc (READWRITE is allocated via malloc)
@@ -191,7 +67,9 @@ describe('nthread > CallRedirectorAccessor over NThread', () => {
       const freeSuccess = await accessor.free(remoteAddr);
       expect(freeSuccess).toBe(true);
 
-      // 6. Test fallback behaviour: non-READWRITE (e.g. EXECUTE_READWRITE) should fall back to VirtualAlloc
+      // 6. Test fallback behaviour: non-READWRITE (e.g. EXECUTE_READWRITE) falls back to
+      // the real, non-mocked path -- genuine VirtualAlloc/VirtualProtect/VirtualQuery/VirtualFree
+      // via `this.root.call`, all executed on the hijacked thread.
       const execAddr = await accessor.alloc(
         size,
         null,
@@ -203,10 +81,17 @@ describe('nthread > CallRedirectorAccessor over NThread', () => {
       const execInfo = await accessor.query(execAddr);
       expect(execInfo.Protect).toBe(MemoryProtection.EXECUTE_READWRITE);
 
+      const oldProtect = await accessor.protect(
+        execAddr,
+        size,
+        MemoryProtection.READONLY,
+      );
+      expect(oldProtect).toBe(MemoryProtection.EXECUTE_READWRITE);
+
       const execFree = await accessor.free(execAddr);
       expect(execFree).toBe(true);
     } finally {
-      await nthread.deinit();
+      await accessor.deinit();
       await tp.stop();
     }
   }, 60000);
