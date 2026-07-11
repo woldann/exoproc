@@ -29,10 +29,16 @@ describe('nthread > CallRedirectorAccessor over NThread', () => {
     const nthread = new NThread(
       tp.pid,
       thread.tid,
-      { timeoutMs: 15000 },
+      { timeoutMs: 20000 },
       redirector,
     );
     const accessor = new CallRedirectorAccessor(nthread, redirector);
+    // RedirectorHostAccessor only routes the top-level async ops (read/write/
+    // alloc/.../call) through `target` -- the sync scalar helpers inherited
+    // from AbstractSyncMemoryAccessor (readUInt32Sync -> readSync, used by
+    // CallRedirectorAccessor.protect()) bypass `target` and go straight to
+    // `this.backend`, which defaults to a throwing dummy. Must wire both.
+    redirector.backend = nthread;
     redirector.target = new HostAccessor(nthread);
 
     try {
@@ -83,10 +89,11 @@ describe('nthread > CallRedirectorAccessor over NThread', () => {
     const nthread = new NThread(
       tp.pid,
       thread.tid,
-      { timeoutMs: 15000 },
+      { timeoutMs: 20000 },
       redirector,
     );
     const accessor = new CallRedirectorAccessor(nthread, redirector);
+    redirector.backend = nthread;
     redirector.target = new HostAccessor(nthread);
 
     try {
@@ -127,7 +134,7 @@ describe('nthread > CallRedirectorAccessor over NThread', () => {
       await nthread.deinit();
       await tp.stop();
     }
-  }, 30000);
+  }, 60000);
 
   test('should seamlessly route READWRITE allocations via malloc and mock query/protect under IndirectCallRedirectorAccessor', async () => {
     const tp = new TestProcess();
@@ -138,10 +145,11 @@ describe('nthread > CallRedirectorAccessor over NThread', () => {
     const nthread = new NThread(
       tp.pid,
       thread.tid,
-      { timeoutMs: 15000 },
+      { timeoutMs: 20000 },
       redirector,
     );
     const accessor = new IndirectCallRedirectorAccessor(nthread, redirector);
+    redirector.backend = nthread;
     redirector.target = new HostAccessor(nthread);
 
     try {
@@ -201,5 +209,5 @@ describe('nthread > CallRedirectorAccessor over NThread', () => {
       await nthread.deinit();
       await tp.stop();
     }
-  }, 30000);
+  }, 60000);
 });

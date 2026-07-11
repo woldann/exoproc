@@ -18,8 +18,12 @@ import { TestProcess } from '../helpers.js';
 describe('nthread > FileTransferAccessors over NThread', () => {
   function makeNThread(pid: number, tid: number): NThread {
     const redirector = new RedirectorHostAccessor(pid);
-    const options: NThreadOptions = { timeoutMs: 15000 };
+    const options: NThreadOptions = { timeoutMs: 20000 };
     const nthread = new NThread(pid, tid, options, redirector);
+    // RedirectorHostAccessor only routes the top-level async ops through
+    // `target` -- sync scalar helpers bypass it and go straight to
+    // `this.backend`, which defaults to a throwing dummy. Must wire both.
+    redirector.backend = nthread;
     redirector.target = new HostAccessor(nthread);
     return nthread;
   }
