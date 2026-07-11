@@ -1,8 +1,8 @@
-import { expect, test, describe } from 'bun:test';
+import { expect, test, describe, afterAll } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { Kernel32Impl, FileMapAccess } from 'bun-xffi';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { createSharedMemory } from 'bun-nshm';
+import { createSharedMemory, closeGlobalDummyProcess } from 'bun-nshm';
 import { TestProcess } from '../helpers.js';
 
 // Proves the full handle-relay flow: this (Bun) process never OpenProcess's
@@ -11,7 +11,20 @@ import { TestProcess } from '../helpers.js';
 // already-live, hijacked thread in the target) per CLAUDE.md's guidance on
 // real WinAPI/CRT calls (CreateFileMappingA/CreateProcessA/DuplicateHandle)
 // never running on a freshly-created thread under Wine/GHA.
-describe('nshm > createSharedMemory (handle relay via a dummy process)', () => {
+describe('nshm > createSharedMemory (handle relay via a single shared dummy process)', () => {
+  let dummyPid: number | undefined;
+
+  afterAll(async () => {
+    if (dummyPid !== undefined) {
+      const h = Kernel32Impl.OpenProcess(0x1f0fff, 0, dummyPid);
+      if (Number(h) !== 0) {
+        Kernel32Impl.TerminateProcess(h, 0);
+        Kernel32Impl.CloseHandle(h);
+      }
+    }
+    await closeGlobalDummyProcess();
+  });
+
   test('shares memory between the target process and this process without OpenProcess on the target', async () => {
     const target = new TestProcess();
     const thread = Native.Thread.getThreads(target.pid)[0];
@@ -22,6 +35,7 @@ describe('nshm > createSharedMemory (handle relay via a dummy process)', () => {
     });
 
     const shm = await createSharedMemory(memory, { size: 4096 });
+    dummyPid = shm.dummyPid;
 
     try {
       expect(shm.localView).toBeGreaterThan(0);
@@ -67,4 +81,38 @@ describe('nshm > createSharedMemory (handle relay via a dummy process)', () => {
       await target.stop();
     }
   }, 60000);
+
+  test('reuses the same global dummy process across different targets and regions', async () => {
+    const targetA = new TestProcess();
+    const targetB = new TestProcess();
+    const threadA = Native.Thread.getThreads(targetA.pid)[0];
+    const threadB = Native.Thread.getThreads(targetB.pid)[0];
+    if (!threadA || !threadB)
+      throw new Error('No thread found in a spawned process');
+
+    const memoryA = new IndirectNThreadHostAccessor(targetA.pid, threadA.tid, {
+      timeoutMs: 20000,
+    });
+    const memoryB = new IndirectNThreadHostAccessor(targetB.pid, threadB.tid, {
+      timeoutMs: 20000,
+    });
+
+    const shmA = await createSharedMemory(memoryA, { size: 4096 });
+    const shmB = await createSharedMemory(memoryB, { size: 4096 });
+    dummyPid = shmA.dummyPid;
+
+    try {
+      // Two different regions, two different targets -- one shared dummy.
+      expect(shmB.dummyPid).toBe(shmA.dummyPid);
+      expect(shmB.localDummyHandle).toBe(shmA.localDummyHandle);
+      expect(shmA.localMappingHandle).not.toBe(shmB.localMappingHandle);
+    } finally {
+      shmA.close();
+      shmB.close();
+      await memoryA.deinit();
+      await memoryB.deinit();
+      await targetA.stop();
+      await targetB.stop();
+    }
+  }, 90000);
 });

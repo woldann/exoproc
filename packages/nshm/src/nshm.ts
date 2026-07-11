@@ -20,11 +20,8 @@ import {
   MapViewOfFileFailedError,
 } from './errors.js';
 
-/** Access mask requested on both the target-side and the local `OpenProcess` of the dummy process. */
-const DUMMY_PROCESS_ACCESS = ProcessAccess.combine(
-  ProcessAccess.DUP_HANDLE,
-  ProcessAccess.TERMINATE,
-);
+/** Access mask requested on every `OpenProcess` of the dummy process (target-side and local). */
+const DUMMY_PROCESS_ACCESS = ProcessAccess.ALL_ACCESS;
 
 /**
  * `GetCurrentProcess()`'s pseudo-handle is always `(HANDLE)-1` by definition
@@ -38,9 +35,10 @@ export interface NshmOptions {
   /** Size in bytes of the shared memory section. */
   size: number;
   /**
-   * Executable spawned as the low-privilege relay ("dummy") process, launched
-   * as a child of the target process. Must exist on the target's PATH.
-   * Default: `cmd.exe`.
+   * Executable spawned as the relay ("dummy") process the first time a
+   * global dummy needs to be created, as a child of whichever target
+   * happens to trigger that. Must exist on the target's PATH. Default:
+   * `cmd.exe`. Ignored once a global dummy process already exists.
    */
   dummyExecutable?: string;
   /** Extra command-line arguments appended after the quoted executable path. */
@@ -67,9 +65,9 @@ export class Nshm {
     public readonly localMappingHandle: number,
     /** Base address of the mapped view, valid in this (Bun) process's address space. */
     public readonly localView: number,
-    /** PID of the dummy relay process. */
+    /** PID of the (shared, global) dummy relay process. */
     public readonly dummyPid: number,
-    /** HANDLE to the dummy process, opened directly by this (Bun) process. */
+    /** HANDLE to the dummy process, opened directly by this (Bun) process. Shared across every `Nshm` -- do not close it yourself. */
     public readonly localDummyHandle: number,
   ) {}
 
@@ -87,16 +85,13 @@ export class Nshm {
   }
 
   /**
-   * Unmaps and closes the local view/handle, closes the local dummy handle,
-   * and terminates the (still-suspended, never-resumed) dummy process. The
-   * target-side mapping handle is left as-is -- the target process owns it
-   * and may still be using it for its own purposes.
+   * Unmaps and closes this mapping's own local view/handle. The dummy
+   * process and its local handle are shared by every `Nshm` and are left
+   * untouched -- see {@link closeGlobalDummyProcess} to release those.
    */
   close(): void {
     Kernel32Impl.UnmapViewOfFile(this.localView);
     Kernel32Impl.CloseHandle(this.localMappingHandle);
-    Kernel32Impl.TerminateProcess(this.localDummyHandle, 0);
-    Kernel32Impl.CloseHandle(this.localDummyHandle);
   }
 }
 
@@ -108,62 +103,49 @@ async function getLastError(target: ICallableMemoryAccessor): Promise<number> {
   return Number(await target.call(Kernel32Impl.GetLastError));
 }
 
-/**
- * Creates a shared memory section reachable from both `target` (an already
- * hijacked/attached process, e.g. via `IndirectNThreadHostAccessor`) and this
- * (Bun) process -- without this process ever calling `OpenProcess` on the
- * target.
- *
- * Flow (see CLAUDE.md / task notes for the full rationale):
- *  1. Inside the target (via `target.call`): `CreateFileMappingA` creates the
- *     section, `CreateProcessA` spawns a suspended, low-privilege dummy
- *     process as the target's own child, `OpenProcess` opens a target-local
- *     handle to that dummy, and `DuplicateHandle` relays the mapping handle
- *     from the target's own handle table into the dummy's.
- *  2. This process directly `OpenProcess`es the dummy (the only direct
- *     `OpenProcess` call this process ever makes) and `DuplicateHandle`s the
- *     mapping handle out of the dummy and into itself, then `MapViewOfFile`s
- *     it locally.
- *
- * The target and this process therefore both end up with a handle to the
- * same section, but this process never touches the target process's handle
- * table directly -- only the dummy's.
- */
-export async function createSharedMemory(
+async function writeTargetBuffer(
+  target: ICallableMemoryAccessor,
+  data: Buffer,
+): Promise<number> {
+  const addr = await target.alloc(data.byteLength);
+  await target.write(addr, data);
+  return resolveAddress(addr);
+}
+
+interface GlobalDummyProcess {
+  pid: number;
+  /** This (Bun) process's own handle to the dummy, opened once and reused. */
+  localHandle: number;
+}
+
+// A single relay process is shared by every `createSharedMemory` call,
+// regardless of which target/accessor/pid asked for it -- different shared
+// memory regions all get relayed through the same dummy, so there is no
+// need to spawn a new one per call. Lazily created on first use.
+let globalDummy: Promise<GlobalDummyProcess> | undefined;
+
+// Each target process must independently OpenProcess the (shared) dummy
+// within its own handle table before it can DuplicateHandle into it -- that
+// per-target handle is cached too, keyed by target PID, so repeat calls
+// against the same target skip straight to DuplicateHandle.
+const targetDummyHandles = new Map<number, Promise<bigint>>();
+
+async function getGlobalDummyProcess(
   target: ICallableMemoryAccessor,
   options: NshmOptions,
-): Promise<Nshm> {
-  const size = options.size;
+): Promise<GlobalDummyProcess> {
+  if (!globalDummy) {
+    globalDummy = spawnGlobalDummyProcess(target, options);
+  }
+  return globalDummy;
+}
+
+async function spawnGlobalDummyProcess(
+  target: ICallableMemoryAccessor,
+  options: NshmOptions,
+): Promise<GlobalDummyProcess> {
   const dummyExecutable = options.dummyExecutable ?? 'cmd.exe';
   const dummyArgs = options.dummyArgs ?? '';
-  const protection = options.protection ?? MemoryProtection.READWRITE;
-  const mapAccess =
-    options.mapAccess ??
-    FileMapAccess.combine(FileMapAccess.READ, FileMapAccess.WRITE);
-  const sizeLow = size >>> 0;
-  const sizeHigh = Math.floor(size / 0x100000000) >>> 0;
-
-  // ── 1a. CreateFileMappingA inside the target ──────────────────────────────
-  const namePtr = options.name
-    ? await writeTargetBuffer(target, cstr(options.name))
-    : 0;
-
-  const hMapping = BigInt(
-    await target.call(
-      Kernel32Impl.CreateFileMappingA,
-      INVALID_HANDLE_VALUE,
-      0,
-      protection,
-      sizeHigh,
-      sizeLow,
-      namePtr,
-    ),
-  );
-  if (hMapping === 0n) {
-    throw new CreateFileMappingFailedError(await getLastError(target));
-  }
-
-  // ── 1b. CreateProcessA inside the target: spawn the suspended dummy ──────
   const commandLine = `"${dummyExecutable}"${dummyArgs ? ` ${dummyArgs}` : ''}`;
   const commandLinePtr = await writeTargetBuffer(
     target,
@@ -220,26 +202,134 @@ export async function createSharedMemory(
     throw new CreateDummyProcessFailedError(await getLastError(target));
   }
 
-  const dummyPid = Number(await processInfo.get('dwProcessId'));
+  const pid = Number(await processInfo.get('dwProcessId'));
 
-  // ── 1c. OpenProcess inside the target: a target-local handle to the dummy ─
-  const hDummyInTarget = BigInt(
-    await target.call(
-      Kernel32Impl.OpenProcess,
-      DUMMY_PROCESS_ACCESS,
-      0,
-      dummyPid,
-    ),
+  // The one direct OpenProcess this (Bun) process ever makes -- on the
+  // dummy, never on a target -- done once and cached for every future call.
+  const localHandle = Number(
+    Kernel32Impl.OpenProcess(DUMMY_PROCESS_ACCESS, 0, pid),
   );
-  if (hDummyInTarget === 0n) {
+  if (localHandle === 0) {
     throw new OpenDummyProcessFailedError(
-      dummyPid,
-      await getLastError(target),
-      true,
+      pid,
+      Number(Kernel32Impl.GetLastError()),
+      false,
     );
   }
 
-  // ── 1d. DuplicateHandle inside the target: relay the mapping into the dummy ─
+  return { pid, localHandle };
+}
+
+async function getTargetDummyHandle(
+  target: ICallableMemoryAccessor,
+  dummyPid: number,
+): Promise<bigint> {
+  const cached = targetDummyHandles.get(target.processId);
+  if (cached) return cached;
+
+  const opened = (async () => {
+    const hDummyInTarget = BigInt(
+      await target.call(
+        Kernel32Impl.OpenProcess,
+        DUMMY_PROCESS_ACCESS,
+        0,
+        dummyPid,
+      ),
+    );
+    if (hDummyInTarget === 0n) {
+      throw new OpenDummyProcessFailedError(
+        dummyPid,
+        await getLastError(target),
+        true,
+      );
+    }
+    return hDummyInTarget;
+  })();
+
+  targetDummyHandles.set(target.processId, opened);
+  return opened;
+}
+
+/**
+ * Releases this (Bun) process's cached handle to the global dummy process
+ * and forgets the cached global/per-target state, so the next
+ * {@link createSharedMemory} call spawns a fresh dummy. Existing `Nshm`
+ * instances remain valid (their own local mapping handle/view are
+ * independent), but the dummy process itself is left running -- terminate
+ * it yourself (e.g. via `Kernel32Impl.TerminateProcess`) if that's desired.
+ */
+export async function closeGlobalDummyProcess(): Promise<void> {
+  const dummy = globalDummy;
+  globalDummy = undefined;
+  targetDummyHandles.clear();
+  if (!dummy) return;
+  const { localHandle } = await dummy;
+  Kernel32Impl.CloseHandle(localHandle);
+}
+
+/**
+ * Creates a shared memory section reachable from both `target` (an already
+ * hijacked/attached process, e.g. via `IndirectNThreadHostAccessor`) and this
+ * (Bun) process -- without this process ever calling `OpenProcess` on the
+ * target.
+ *
+ * Flow (see CLAUDE.md / task notes for the full rationale):
+ *  1. Inside the target (via `target.call`): `CreateFileMappingA` creates the
+ *     section. A single relay ("dummy") process is shared globally -- it is
+ *     spawned once (as the first-ever target's own child, suspended and
+ *     low-privilege) and reused for every subsequent call regardless of
+ *     which target/accessor/pid is asking, since different shared memory
+ *     regions can all be relayed through the same dummy. Each target still
+ *     independently `OpenProcess`es that shared dummy PID within its own
+ *     handle table the first time it's used (cached per target), then
+ *     `DuplicateHandle`s the mapping handle from the target's own handle
+ *     table into the dummy's.
+ *  2. This process `OpenProcess`es the dummy only once ever (the only direct
+ *     `OpenProcess` call this process makes, cached and reused for every
+ *     call) and `DuplicateHandle`s the mapping handle out of the dummy and
+ *     into itself, then `MapViewOfFile`s it locally.
+ *
+ * The target and this process therefore both end up with a handle to the
+ * same section, but this process never touches the target process's handle
+ * table directly -- only the (shared) dummy's.
+ */
+export async function createSharedMemory(
+  target: ICallableMemoryAccessor,
+  options: NshmOptions,
+): Promise<Nshm> {
+  const size = options.size;
+  const protection = options.protection ?? MemoryProtection.READWRITE;
+  const mapAccess =
+    options.mapAccess ??
+    FileMapAccess.combine(FileMapAccess.READ, FileMapAccess.WRITE);
+  const sizeLow = size >>> 0;
+  const sizeHigh = Math.floor(size / 0x100000000) >>> 0;
+
+  // ── CreateFileMappingA inside the target ──────────────────────────────────
+  const namePtr = options.name
+    ? await writeTargetBuffer(target, cstr(options.name))
+    : 0;
+
+  const hMapping = BigInt(
+    await target.call(
+      Kernel32Impl.CreateFileMappingA,
+      INVALID_HANDLE_VALUE,
+      0,
+      protection,
+      sizeHigh,
+      sizeLow,
+      namePtr,
+    ),
+  );
+  if (hMapping === 0n) {
+    throw new CreateFileMappingFailedError(await getLastError(target));
+  }
+
+  // ── The shared global dummy + this target's handle to it ─────────────────
+  const dummy = await getGlobalDummyProcess(target, options);
+  const hDummyInTarget = await getTargetDummyHandle(target, dummy.pid);
+
+  // ── DuplicateHandle inside the target: relay the mapping into the dummy ──
   const dupOutAddr = await target.alloc(8);
   const dupOk = await target.call(
     Kernel32Impl.DuplicateHandle,
@@ -258,23 +348,10 @@ export async function createSharedMemory(
     0,
   );
 
-  // ── 2a. This process directly OpenProcess's the dummy (the only direct
-  //        OpenProcess call this process makes) ─────────────────────────────
-  const localDummyHandle = Number(
-    Kernel32Impl.OpenProcess(DUMMY_PROCESS_ACCESS, 0, dummyPid),
-  );
-  if (localDummyHandle === 0) {
-    throw new OpenDummyProcessFailedError(
-      dummyPid,
-      Number(Kernel32Impl.GetLastError()),
-      false,
-    );
-  }
-
-  // ── 2b. DuplicateHandle locally: pull the mapping handle out of the dummy ─
+  // ── DuplicateHandle locally: pull the mapping handle out of the dummy ────
   const localDupOut = Buffer.alloc(8);
   const localDupOk = Kernel32Impl.DuplicateHandle(
-    localDummyHandle,
+    dummy.localHandle,
     dummyMappingHandle,
     CURRENT_PROCESS_PSEUDO_HANDLE,
     localDupOut,
@@ -290,7 +367,7 @@ export async function createSharedMemory(
   }
   const localMappingHandle = Number(localDupOut.readBigUInt64LE(0));
 
-  // ── 2c. MapViewOfFile locally ──────────────────────────────────────────────
+  // ── MapViewOfFile locally ─────────────────────────────────────────────────
   const localView = Number(
     Kernel32Impl.MapViewOfFile(localMappingHandle, mapAccess, 0, 0, size),
   );
@@ -303,16 +380,7 @@ export async function createSharedMemory(
     hMapping,
     localMappingHandle,
     localView,
-    dummyPid,
-    localDummyHandle,
+    dummy.pid,
+    dummy.localHandle,
   );
-}
-
-async function writeTargetBuffer(
-  target: ICallableMemoryAccessor,
-  data: Buffer,
-): Promise<number> {
-  const addr = await target.alloc(data.byteLength);
-  await target.write(addr, data);
-  return resolveAddress(addr);
 }
