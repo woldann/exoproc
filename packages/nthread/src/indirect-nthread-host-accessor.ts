@@ -4,14 +4,16 @@ import { NThread, type NThreadOptions } from './nthread.js';
 /**
  * An {@link IndirectCallableAccessor} whose base "call" mechanism is
  * {@link NThread} (x64 thread redirection) instead of the default
- * `RemoteCallableMemoryAccessor` (`CreateRemoteThread` + named-pipe loop).
+ * `RemoteCallableMemoryAccessor` (a fresh `CreateRemoteThread` per call).
  *
  * Everything above the backend is identical to `IndirectCallableAccessor` --
  * `IndirectCallRedirectorAccessor` (malloc/memset indirect allocs) →
  * machineCode pool → memset write → memcmp read → file-transfer R/W → scanner →
  * marshalling. Only the thing that actually executes remote calls changes: no
- * `CreateRemoteThread`, no injected pipe-loop machineCode -- a live thread in the
- * target is redirected, parked at a `jmp $` stub, and driven per call.
+ * `CreateRemoteThread` at all -- a live thread in the target is redirected,
+ * parked at a `jmp $` stub, and driven per call. This also sidesteps a
+ * GHA/Wine bug where WinAPI calls (VirtualAlloc, malloc, fopen, ...) executed
+ * on a freshly-created thread (local or remote) are unreliable -- see CLAUDE.md.
  *
  * This is the pre-wired form of the manual chain the nthread integration test
  * builds (`new NThread(...)` → `new IndirectCallableAccessor(nthread)` →

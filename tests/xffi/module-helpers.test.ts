@@ -2,7 +2,7 @@ import { expect, test, describe } from 'bun:test';
 import {
   isModuleLoadedInProcess,
   verifyCoreModules,
-  IndirectCallableAccessor,
+  RemoteCallableMemoryAccessor,
   Kernel32Impl,
 } from '../../packages/xffi/src/index.js';
 import { TestProcess } from '../helpers.js';
@@ -13,11 +13,13 @@ describe('xffi > Module Loading Helpers', () => {
     const tp = new TestProcess();
     const { pid } = tp;
 
-    let accessor: IndirectCallableAccessor | undefined;
+    // isModuleLoadedInProcess/verifyCoreModules only need a single call() each
+    // (GetModuleHandleExA) -- no need for the full IndirectCallableAccessor
+    // chain (malloc/memset/file-transfer), which requires several WinAPI calls
+    // executed on a freshly-created CreateRemoteThread thread and is unreliable
+    // under Wine (see the GHA thread-freshness bug in CLAUDE.md).
+    const accessor = new RemoteCallableMemoryAccessor(pid);
     try {
-      accessor = new IndirectCallableAccessor(pid);
-      await accessor.init();
-
       // kernel32.dll and ntdll.dll must always be loaded in a valid process!
       const hKernel32 = BigInt(
         Kernel32Impl.GetModuleHandleA(Buffer.from('kernel32.dll\0')),
@@ -47,9 +49,7 @@ describe('xffi > Module Loading Helpers', () => {
       expect(coreStatus.kernelbase).toBe(true);
       expect(coreStatus.msvcrt).toBe(true);
     } finally {
-      if (accessor) {
-        await accessor.deinit().catch(() => {});
-      }
+      accessor.close();
       await tp.stop();
     }
   }, 30000);
