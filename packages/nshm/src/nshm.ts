@@ -36,7 +36,7 @@ const DUMMY_PROCESS_ACCESS = ProcessAccess.ALL_ACCESS;
  */
 const CURRENT_PROCESS_PSEUDO_HANDLE = INVALID_HANDLE_VALUE;
 
-export interface NshmOptions {
+export interface NShmOptions {
   /** Size in bytes of the shared memory section. */
   size: number;
   /**
@@ -61,7 +61,7 @@ export interface NshmOptions {
  * (Bun) process, obtained without ever calling `OpenProcess` on the target
  * directly -- see {@link createSharedMemory}.
  */
-export class Nshm {
+export class NShm {
   constructor(
     public readonly size: number,
     /** HANDLE value for the mapping object, valid in the target process's handle table. */
@@ -74,7 +74,7 @@ export class Nshm {
     public readonly localView: number,
     /** PID of the (shared, global) dummy relay process. */
     public readonly dummyPid: number,
-    /** HANDLE to the dummy process, opened directly by this (Bun) process. Shared across every `Nshm` -- do not close it yourself. */
+    /** HANDLE to the dummy process, opened directly by this (Bun) process. Shared across every `NShm` -- do not close it yourself. */
     public readonly localDummyHandle: number,
   ) {}
 
@@ -99,7 +99,7 @@ export class Nshm {
    * `target.call(Kernel32Impl.UnmapViewOfFile, shm.targetView)` +
    * `target.call(Kernel32Impl.CloseHandle, shm.targetMappingHandle)`) once
    * the target no longer needs the shared memory. The dummy process and its
-   * local handle are shared by every `Nshm` and are left untouched too --
+   * local handle are shared by every `NShm` and are left untouched too --
    * see {@link closeGlobalDummyProcess} to release those.
    */
   close(): void {
@@ -138,7 +138,7 @@ interface GlobalDummyProcess {
 // spawned on first use.
 let globalDummy: GlobalDummyProcess | undefined;
 
-function getGlobalDummyProcess(options: NshmOptions): GlobalDummyProcess {
+function getGlobalDummyProcess(options: NShmOptions): GlobalDummyProcess {
   if (!globalDummy) {
     globalDummy = spawnGlobalDummyProcess(options);
   }
@@ -157,7 +157,7 @@ function getGlobalDummyProcess(options: NshmOptions): GlobalDummyProcess {
  * PRIMARYTOKEN_NAME` is not required to hand it to `CreateProcessAsUser`
  * (see MSDN).
  */
-function spawnGlobalDummyProcess(options: NshmOptions): GlobalDummyProcess {
+function spawnGlobalDummyProcess(options: NShmOptions): GlobalDummyProcess {
   const dummyExecutable = options.dummyExecutable ?? 'ping.exe';
   const dummyArgs = options.dummyArgs ?? ['127.0.0.1', '-t'];
   const commandLine = `"${dummyExecutable}"${dummyArgs.length ? ` ${dummyArgs.join(' ')}` : ''}`;
@@ -291,7 +291,7 @@ async function openDummyHandleInTarget(
 /**
  * Terminates and releases this (Bun) process's handle to the global dummy
  * process, and forgets the cached state, so the next
- * {@link createSharedMemory} call spawns a fresh dummy. Existing `Nshm`
+ * {@link createSharedMemory} call spawns a fresh dummy. Existing `NShm`
  * instances remain valid (their own local mapping handle/view are
  * independent of the dummy once mapped).
  */
@@ -341,12 +341,12 @@ export function closeGlobalDummyProcess(): void {
  * target process's handle table directly -- only the (shared) dummy's, and
  * only for the relay handle, which leaves no trace behind. Releasing the
  * mapping/view on either side afterward is the caller's responsibility --
- * see {@link Nshm.close} for the local side.
+ * see {@link NShm.close} for the local side.
  */
 export async function createSharedMemory(
   target: ICallableMemoryAccessor,
-  options: NshmOptions,
-): Promise<Nshm> {
+  options: NShmOptions,
+): Promise<NShm> {
   const size = options.size;
   const protection = options.protection ?? MemoryProtection.READWRITE;
   const mapAccess =
@@ -463,7 +463,7 @@ export async function createSharedMemory(
     );
   }
 
-  return new Nshm(
+  return new NShm(
     size,
     hMapping,
     targetView,

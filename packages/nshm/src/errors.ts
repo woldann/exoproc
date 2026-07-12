@@ -9,9 +9,9 @@ abstract class BaseError extends ExoprocError {
   }
 }
 
-export class NshmError extends BaseError {}
+export class NShmError extends BaseError {}
 
-export class CreateFileMappingFailedError extends NshmError {
+export class CreateFileMappingFailedError extends NShmError {
   constructor(public readonly lastError: number) {
     super(
       `CreateFileMappingA failed in target process (GetLastError=${lastError})`,
@@ -19,7 +19,7 @@ export class CreateFileMappingFailedError extends NshmError {
   }
 }
 
-export class OpenProcessTokenFailedError extends NshmError {
+export class OpenProcessTokenFailedError extends NShmError {
   constructor(public readonly lastError: number) {
     super(
       `OpenProcessToken failed for this (Bun) process's own token (GetLastError=${lastError})`,
@@ -27,13 +27,13 @@ export class OpenProcessTokenFailedError extends NshmError {
   }
 }
 
-export class CreateRestrictedTokenFailedError extends NshmError {
+export class CreateRestrictedTokenFailedError extends NShmError {
   constructor(public readonly lastError: number) {
     super(`CreateRestrictedToken failed (GetLastError=${lastError})`);
   }
 }
 
-export class SpawnDummyProcessFailedError extends NshmError {
+export class SpawnDummyProcessFailedError extends NShmError {
   constructor(
     public readonly executable: string,
     public readonly lastError: number,
@@ -44,7 +44,7 @@ export class SpawnDummyProcessFailedError extends NshmError {
   }
 }
 
-export class OpenDummyProcessFailedError extends NshmError {
+export class OpenDummyProcessFailedError extends NShmError {
   constructor(
     public readonly pid: number,
     public readonly lastError: number,
@@ -56,7 +56,7 @@ export class OpenDummyProcessFailedError extends NshmError {
   }
 }
 
-export class DuplicateHandleFailedError extends NshmError {
+export class DuplicateHandleFailedError extends NShmError {
   constructor(
     public readonly lastError: number,
     public readonly inTarget: boolean,
@@ -67,7 +67,7 @@ export class DuplicateHandleFailedError extends NshmError {
   }
 }
 
-export class MapViewOfFileFailedError extends NshmError {
+export class MapViewOfFileFailedError extends NShmError {
   constructor(
     public readonly lastError: number,
     public readonly inTarget: boolean,
