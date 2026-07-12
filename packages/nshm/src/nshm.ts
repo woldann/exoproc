@@ -159,7 +159,7 @@ function getGlobalDummyProcess(options: NShmOptions): GlobalDummyProcess {
  */
 function spawnGlobalDummyProcess(options: NShmOptions): GlobalDummyProcess {
   const dummyExecutable = options.dummyExecutable ?? 'ping.exe';
-  const dummyArgs = options.dummyArgs ?? ['127.0.0.1', '-t'];
+  const dummyArgs = options.dummyArgs ?? ['127.0.0.1', '-n', '1000000'];
   const commandLine = `"${dummyExecutable}"${dummyArgs.length ? ` ${dummyArgs.join(' ')}` : ''}`;
   const commandLineBuf = Buffer.concat([cstr(commandLine), Buffer.alloc(32)]);
 

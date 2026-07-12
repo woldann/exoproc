@@ -28,6 +28,7 @@ export default {
         'nthread',
         'nhook',
         'minhook',
+        'nshm',
         'utils',
         'exoproc',
         'deps',
