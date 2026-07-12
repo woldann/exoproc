@@ -64,6 +64,10 @@ export interface NshmOptions {
 export class Nshm {
   constructor(
     public readonly size: number,
+    /** HANDLE value for the mapping object, valid in the target process's handle table. */
+    public readonly targetMappingHandle: bigint,
+    /** Base address of the mapped view, valid in the target process's address space. */
+    public readonly targetView: number,
     /** HANDLE value for the mapping object, valid in this (Bun) process's handle table. */
     public readonly localMappingHandle: number,
     /** Base address of the mapped view, valid in this (Bun) process's address space. */
@@ -88,9 +92,15 @@ export class Nshm {
   }
 
   /**
-   * Unmaps and closes this mapping's own local view/handle. The dummy
-   * process and its local handle are shared by every `Nshm` and are left
-   * untouched -- see {@link closeGlobalDummyProcess} to release those.
+   * Unmaps and closes this mapping's own *local* (Bun-side) view/handle
+   * only. The target's own view/handle (`targetView`/`targetMappingHandle`)
+   * are the target's actual, intended deliverable -- not transient plumbing
+   * -- so they are left alone here; release them yourself (e.g.
+   * `target.call(Kernel32Impl.UnmapViewOfFile, shm.targetView)` +
+   * `target.call(Kernel32Impl.CloseHandle, shm.targetMappingHandle)`) once
+   * the target no longer needs the shared memory. The dummy process and its
+   * local handle are shared by every `Nshm` and are left untouched too --
+   * see {@link closeGlobalDummyProcess} to release those.
    */
   close(): void {
     Kernel32Impl.UnmapViewOfFile(this.localView);
@@ -297,7 +307,9 @@ export function closeGlobalDummyProcess(): void {
  * Creates a shared memory section reachable from both `target` (an already
  * hijacked/attached process, e.g. via `IndirectNThreadHostAccessor`) and this
  * (Bun) process -- without this process ever calling `OpenProcess` on the
- * target.
+ * target. The goal is a section genuinely usable by all three processes
+ * involved (target, dummy relay, this process) -- not just a handle that
+ * gets minted and thrown away.
  *
  * Flow (see CLAUDE.md / task notes for the full rationale):
  *  1. This (Bun) process spawns a single relay ("dummy") process directly,
@@ -308,27 +320,28 @@ export function closeGlobalDummyProcess(): void {
  *     multiple `createSharedMemory` calls against the same target, or
  *     against different targets, all relay through the same dummy.
  *  2. Inside the target (via `target.call`): `CreateFileMappingA` creates
- *     the section, `OpenProcess` opens a target-local handle to the (shared)
- *     dummy PID, and `DuplicateHandle` transfers the mapping handle from the
- *     target's own handle table into the dummy's -- with `DUPLICATE_CLOSE_
- *     SOURCE`, so the target's own mapping handle is closed by the OS as
- *     part of that same call (a duplicated handle is a fully independent
- *     reference to the object; closing the handle it was duplicated from
- *     never affects it). The `OpenProcess` handle used to reach the dummy is
- *     then closed too, so nothing is left open in the target once this
- *     function returns.
+ *     the section and `MapViewOfFile`s it -- both are kept: they're the
+ *     target's actual deliverable, not transient plumbing, so unlike the
+ *     rest of the relay machinery they are *not* closed automatically.
+ *     `OpenProcess` then opens a target-local handle to the (shared) dummy
+ *     PID purely to reach it, and `DuplicateHandle` transfers the mapping
+ *     handle from the target's own handle table into the dummy's. That
+ *     `OpenProcess` handle -- pure relay plumbing, unlike the mapping/view
+ *     above -- is closed again immediately afterward.
  *  3. This process `OpenProcess`es the dummy only once ever (the only direct
  *     `OpenProcess` call this process makes, cached and reused for every
  *     call) and `DuplicateHandle`s the mapping handle out of the dummy and
- *     into itself -- again with `DUPLICATE_CLOSE_SOURCE`, so the dummy's own
- *     copy doesn't accumulate across calls -- then `MapViewOfFile`s it
- *     locally.
+ *     into itself with `DUPLICATE_CLOSE_SOURCE` (so the dummy's own transit
+ *     copy doesn't accumulate across calls -- the dummy never actively uses
+ *     the memory itself, so it has no reason to keep a handle around), then
+ *     `MapViewOfFile`s it locally.
  *
- * The target and this process therefore both end up with a handle to the
- * same section, but this process never touches the target process's handle
- * table directly -- only the (shared) dummy's -- and the target itself is
- * left with no trace of the operation. Releasing *this* process's own local
- * mapping/view is the caller's responsibility -- see {@link Nshm.close}.
+ * The target and this process therefore both end up with a working handle
+ * *and* mapped view of the same section, but this process never touches the
+ * target process's handle table directly -- only the (shared) dummy's, and
+ * only for the relay handle, which leaves no trace behind. Releasing the
+ * mapping/view on either side afterward is the caller's responsibility --
+ * see {@link Nshm.close} for the local side.
  */
 export async function createSharedMemory(
   target: ICallableMemoryAccessor,
@@ -365,15 +378,33 @@ export async function createSharedMemory(
     throw new CreateFileMappingFailedError(await getLastError(target));
   }
 
+  // MapViewOfFile in the target too -- this is the target's actual
+  // deliverable (along with hMapping above), not transient relay plumbing,
+  // so unlike the OpenProcess/DuplicateHandle machinery below, neither of
+  // these gets closed automatically.
+  const targetView = Number(
+    await target.call(
+      Kernel32Impl.MapViewOfFile,
+      hMapping,
+      mapAccess,
+      0,
+      0,
+      size,
+    ),
+  );
+  if (targetView === 0) {
+    throw new MapViewOfFileFailedError(await getLastError(target), true);
+  }
+
   const hDummyInTarget = await openDummyHandleInTarget(target, dummy.pid);
 
   // ── DuplicateHandle inside the target: transfer the mapping to the dummy ─
-  // DUPLICATE_CLOSE_SOURCE closes `hMapping` (in the target's own handle
-  // table) as part of the same call -- the duplicate now sitting in the
-  // dummy's handle table is a fully independent handle to the same section
-  // (that's the entire point of DuplicateHandle: closing one handle to an
-  // object never affects any other handle to it), so there is nothing left
-  // for the target to keep open once this succeeds.
+  // No DUPLICATE_CLOSE_SOURCE here -- `hMapping` is the target's own working
+  // handle (kept alongside `targetView` above), not something to discard
+  // once relayed. The duplicate sitting in the dummy's handle table is a
+  // fully independent handle to the same section regardless (closing one
+  // handle to an object never affects any other handle to it) -- it just
+  // isn't *this* one.
   const dupOutAddr = await target.alloc(8);
   const dupOk = await target.call(
     Kernel32Impl.DuplicateHandle,
@@ -383,10 +414,7 @@ export async function createSharedMemory(
     resolveAddress(dupOutAddr),
     0,
     0,
-    DuplicateHandleOptions.combine(
-      DuplicateHandleOptions.SAME_ACCESS,
-      DuplicateHandleOptions.CLOSE_SOURCE,
-    ),
+    DuplicateHandleOptions.SAME_ACCESS,
   );
   if (!dupOk) {
     throw new DuplicateHandleFailedError(await getLastError(target), true);
@@ -395,8 +423,9 @@ export async function createSharedMemory(
     0,
   );
 
-  // The mapping handle itself is already gone (closed by DUPLICATE_CLOSE_SOURCE
-  // above); only the OpenProcess handle used to reach the dummy remains.
+  // Only the OpenProcess handle used to reach the dummy is pure plumbing --
+  // close that; `hMapping`/`targetView` are left as the target's own working
+  // handle+view.
   await target.call(Kernel32Impl.CloseHandle, hDummyInTarget);
 
   // ── DuplicateHandle locally: pull the mapping handle out of the dummy,
@@ -428,11 +457,16 @@ export async function createSharedMemory(
     Kernel32Impl.MapViewOfFile(localMappingHandle, mapAccess, 0, 0, size),
   );
   if (localView === 0) {
-    throw new MapViewOfFileFailedError(Number(Kernel32Impl.GetLastError()));
+    throw new MapViewOfFileFailedError(
+      Number(Kernel32Impl.GetLastError()),
+      false,
+    );
   }
 
   return new Nshm(
     size,
+    hMapping,
+    targetView,
     localMappingHandle,
     localView,
     dummy.pid,

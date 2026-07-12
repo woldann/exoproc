@@ -1,18 +1,20 @@
 import { expect, test, describe, afterAll } from 'bun:test';
 import * as Native from 'bun-winapi';
-import { Kernel32Impl, FileMapAccess } from 'bun-xffi';
+import { Kernel32Impl } from 'bun-xffi';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { createSharedMemory, closeGlobalDummyProcess } from 'bun-nshm';
 import { TestProcess } from '../helpers.js';
 
 // Proves the full handle-relay flow: this (Bun) process never OpenProcess's
-// the target directly -- only the dummy process it spawns itself. The
-// target's own CreateFileMappingA/OpenProcess handles are both closed again
-// inside createSharedMemory itself, so nothing is left open in the target
-// once it returns -- only this process's own local mapping/view (Nshm.close)
-// remains the caller's responsibility. Driven through
-// IndirectNThreadHostAccessor (an already-live, hijacked thread in the
-// target) per CLAUDE.md's guidance on real WinAPI/CRT calls
+// the target directly -- only the dummy process it spawns itself. Target,
+// dummy, and this process all end up with a handle to the same section, but
+// only the target and this process actually map+use a view of it -- the
+// dummy is a pure relay vessel, so its own transit copy is closed
+// automatically. The target's mapping handle/view are its real deliverable
+// (kept open on return), not relay plumbing -- only the OpenProcess handle
+// used to reach the dummy is closed automatically inside the target.
+// Driven through IndirectNThreadHostAccessor (an already-live, hijacked
+// thread in the target) per CLAUDE.md's guidance on real WinAPI/CRT calls
 // (CreateFileMappingA/OpenProcess/DuplicateHandle) never running on a
 // freshly-created thread under Wine/GHA.
 describe('nshm > createSharedMemory (handle relay via a single shared dummy process)', () => {
@@ -20,7 +22,7 @@ describe('nshm > createSharedMemory (handle relay via a single shared dummy proc
     closeGlobalDummyProcess();
   });
 
-  test('shares memory between target and this process, with nothing left open in the target', async () => {
+  test('shares a genuinely usable mapping/view with both the target and this process', async () => {
     const target = new TestProcess();
     const thread = Native.Thread.getThreads(target.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
@@ -29,63 +31,34 @@ describe('nshm > createSharedMemory (handle relay via a single shared dummy proc
       timeoutMs: 20000,
     });
 
-    const name = `nshm-test-${target.pid}-${Date.now()}`;
-    const shm = await createSharedMemory(memory, { size: 4096, name });
+    const shm = await createSharedMemory(memory, { size: 4096 });
 
     try {
       expect(shm.localView).toBeGreaterThan(0);
+      expect(shm.targetView).toBeGreaterThan(0);
       expect(shm.dummyPid).toBeGreaterThan(0);
       expect(shm.dummyPid).not.toBe(target.pid);
-
-      // createSharedMemory already closed the target's own CreateFileMappingA
-      // handle by the time it returns, so re-opening the section *by name*
-      // from inside the target proves two things at once: the section is
-      // still alive (kept alive only by the dummy's/this process's own
-      // duplicates, not anything left in the target), and the two processes
-      // really do share the same physical pages.
-      const nameBuf = Buffer.from(name + '\0', 'latin1');
-      const nameAddr = await memory.alloc(nameBuf.byteLength);
-      await memory.write(nameAddr, nameBuf);
-
-      const mapAccess = FileMapAccess.combine(
-        FileMapAccess.READ,
-        FileMapAccess.WRITE,
-      );
-      const hReopened = await memory.call(
-        Kernel32Impl.OpenFileMappingA,
-        mapAccess,
-        0,
-        nameAddr,
-      );
-      expect(Number(hReopened)).toBeGreaterThan(0);
-
-      const targetView = Number(
-        await memory.call(
-          Kernel32Impl.MapViewOfFile,
-          hReopened,
-          mapAccess,
-          0,
-          0,
-          shm.size,
-        ),
-      );
-      expect(targetView).toBeGreaterThan(0);
 
       // Local -> target
       const marker1 = Buffer.from('nshm-local-to-target!\0');
       shm.write(marker1);
-      const seenInTarget = await memory.read(targetView, marker1.byteLength);
+      const seenInTarget = await memory.read(
+        shm.targetView,
+        marker1.byteLength,
+      );
       expect(seenInTarget.toString()).toBe(marker1.toString());
 
       // Target -> local
       const marker2 = Buffer.from('nshm-target-to-local!\0');
-      await memory.write(targetView, marker2);
+      await memory.write(shm.targetView, marker2);
       const seenLocally = shm.read(marker2.byteLength);
       expect(seenLocally.toString()).toBe(marker2.toString());
-
-      await memory.call(Kernel32Impl.UnmapViewOfFile, targetView);
-      await memory.call(Kernel32Impl.CloseHandle, hReopened);
     } finally {
+      // The target's own view/handle are its real deliverable, not relay
+      // plumbing -- createSharedMemory leaves them open, so releasing them
+      // (once the target no longer needs the shared memory) is on us here.
+      await memory.call(Kernel32Impl.UnmapViewOfFile, shm.targetView);
+      await memory.call(Kernel32Impl.CloseHandle, shm.targetMappingHandle);
       shm.close();
       await memory.deinit();
       await target.stop();
@@ -107,6 +80,7 @@ describe('nshm > createSharedMemory (handle relay via a single shared dummy proc
     try {
       expect(shm1.localMappingHandle).not.toBe(shm2.localMappingHandle);
       expect(shm1.localView).not.toBe(shm2.localView);
+      expect(shm1.targetView).not.toBe(shm2.targetView);
       // Same target, same shared dummy.
       expect(shm2.dummyPid).toBe(shm1.dummyPid);
 
@@ -115,6 +89,10 @@ describe('nshm > createSharedMemory (handle relay via a single shared dummy proc
       expect(shm1.read(10).toString()).toBe('region-one');
       expect(shm2.read(10).toString()).toBe('region-two');
     } finally {
+      await memory.call(Kernel32Impl.UnmapViewOfFile, shm1.targetView);
+      await memory.call(Kernel32Impl.CloseHandle, shm1.targetMappingHandle);
+      await memory.call(Kernel32Impl.UnmapViewOfFile, shm2.targetView);
+      await memory.call(Kernel32Impl.CloseHandle, shm2.targetMappingHandle);
       shm1.close();
       shm2.close();
       await memory.deinit();
@@ -146,6 +124,10 @@ describe('nshm > createSharedMemory (handle relay via a single shared dummy proc
       expect(shmB.localDummyHandle).toBe(shmA.localDummyHandle);
       expect(shmA.localMappingHandle).not.toBe(shmB.localMappingHandle);
     } finally {
+      await memoryA.call(Kernel32Impl.UnmapViewOfFile, shmA.targetView);
+      await memoryA.call(Kernel32Impl.CloseHandle, shmA.targetMappingHandle);
+      await memoryB.call(Kernel32Impl.UnmapViewOfFile, shmB.targetView);
+      await memoryB.call(Kernel32Impl.CloseHandle, shmB.targetMappingHandle);
       shmA.close();
       shmB.close();
       await memoryA.deinit();

@@ -68,7 +68,12 @@ export class DuplicateHandleFailedError extends NshmError {
 }
 
 export class MapViewOfFileFailedError extends NshmError {
-  constructor(public readonly lastError: number) {
-    super(`MapViewOfFile failed in local process (GetLastError=${lastError})`);
+  constructor(
+    public readonly lastError: number,
+    public readonly inTarget: boolean,
+  ) {
+    super(
+      `MapViewOfFile failed ${inTarget ? 'in target process' : 'in local process'} (GetLastError=${lastError})`,
+    );
   }
 }
