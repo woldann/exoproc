@@ -12,7 +12,7 @@ import {
   ScannerMiddleware,
   BootstrapHostAccessor,
 } from './middleware-accessor.js';
-import { type ICallableMemoryAccessor } from './iaccessor.js';
+import { type ISyncCallableMemoryAccessor } from './iaccessor.js';
 
 /**
  * Pre-configured Indirect Accessor template.
@@ -20,7 +20,7 @@ import { type ICallableMemoryAccessor } from './iaccessor.js';
  * FileTransferWriteAccessor, FileTransferReadAccessor, and MarshallingCallableAccessor
  * to provide a fully silent, type-marshalled memory execution pipeline.
  *
- * `backend` is required and must be an already-constructed `ICallableMemoryAccessor`
+ * `backend` is required and must be an already-constructed `ISyncCallableMemoryAccessor`
  * (e.g. an `NThread` for proper multi-argument calls, or a bare
  * `RemoteCallableMemoryAccessor` if you explicitly want its single-argument-only
  * `CreateRemoteThread`-per-call mechanism). There is no pid-only overload that
@@ -36,7 +36,7 @@ import { type ICallableMemoryAccessor } from './iaccessor.js';
 export class IndirectCallableAccessor extends HostAccessor {
   private bootstrapRoot: BootstrapHostAccessor;
 
-  constructor(backend: ICallableMemoryAccessor) {
+  constructor(backend: ISyncCallableMemoryAccessor) {
     const pid = backend.processId;
     super(new ThrowingMemoryAccessor(pid));
 
@@ -58,7 +58,7 @@ export class IndirectCallableAccessor extends HostAccessor {
     const marshalling = new MarshallingCallableAccessor(scanner, bootstrap);
 
     this.backend = marshalling;
-    let b: MiddlewareAccessor | ICallableMemoryAccessor = marshalling;
+    let b: MiddlewareAccessor | ISyncCallableMemoryAccessor = marshalling;
     while (b && b instanceof MiddlewareAccessor) {
       b = b.backend;
     }

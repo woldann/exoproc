@@ -2,7 +2,7 @@ import {
   InittableMiddlewareAccessor,
   HostAccessor,
   RemoteCallableMemoryAccessor,
-  type ICallableMemoryAccessor,
+  type ISyncCallableMemoryAccessor,
   type CCallResult,
   type CFunction,
   parseCallResult,
@@ -103,7 +103,7 @@ export class NThread extends InittableMiddlewareAccessor {
   private _stackArgStubs = new Map<number, bigint>();
 
   constructor(
-    backend: ICallableMemoryAccessor | number,
+    backend: ISyncCallableMemoryAccessor | number,
     public readonly threadId: number,
     public readonly options: NThreadOptions = {},
     root: HostAccessor,

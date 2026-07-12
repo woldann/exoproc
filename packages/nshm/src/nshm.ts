@@ -17,6 +17,7 @@ import {
   type AddressLike,
   type HostAccessor,
   type ICallableMemoryAccessor,
+  type ISyncCallableMemoryAccessor,
 } from 'bun-xffi';
 import {
   CreateFileMappingFailedError,
@@ -364,7 +365,7 @@ export class NShm extends MiddlewareAccessor {
   private readonly regions = new Map<number, NShmRegion>();
 
   constructor(
-    backend: ICallableMemoryAccessor,
+    backend: ISyncCallableMemoryAccessor,
     root: HostAccessor,
     private readonly options: NShmOptions = {},
   ) {

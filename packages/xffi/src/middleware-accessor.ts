@@ -9,6 +9,7 @@ import {
 } from './win/utils.js';
 import {
   type ICallableMemoryAccessor,
+  type ISyncCallableMemoryAccessor,
   type AllocNearOptions,
 } from './iaccessor.js';
 import { type CFunction } from './cfunction.js';
@@ -45,7 +46,7 @@ import {
 import { Pattern, Scanner } from './win/scanner.js';
 
 export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
-  public backend: ICallableMemoryAccessor;
+  public backend: ISyncCallableMemoryAccessor;
   public readonly root: HostAccessor;
 
   override get processId(): number {
@@ -55,8 +56,8 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     return this.root.processId;
   }
 
-  constructor(backend: ICallableMemoryAccessor, root: HostAccessor) {
-    let b: MiddlewareAccessor | ICallableMemoryAccessor = backend;
+  constructor(backend: ISyncCallableMemoryAccessor, root: HostAccessor) {
+    let b: MiddlewareAccessor | ISyncCallableMemoryAccessor = backend;
     while (b && b instanceof MiddlewareAccessor) {
       b = b.backend;
     }
@@ -128,12 +129,7 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
   }
 
   override machineCodeSync(machineCode: CMachineCode): number {
-    if (typeof (this.backend as any).machineCodeSync === 'function') {
-      return (this.backend as any).machineCodeSync(machineCode);
-    }
-    throw new Error(
-      'machineCodeSync is not supported by the backend accessor.',
-    );
+    return this.backend.machineCodeSync(machineCode);
   }
 
   override async *scan(
@@ -149,11 +145,11 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     size: number,
     pattern: Pattern | string,
   ): Generator<NativeMemory> {
-    yield* (this.backend as any).scanSync(address, size, pattern);
+    yield* this.backend.scanSync(address, size, pattern);
   }
 
   readSync(address: AddressLike, size: number, offset = 0): Buffer {
-    return (this.backend as any).readSync(address, size, offset);
+    return this.backend.readSync(address, size, offset);
   }
 
   writeSync(
@@ -161,7 +157,7 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     data: Buffer | Uint8Array,
     offset = 0,
   ): number {
-    return (this.backend as any).writeSync(address, data, offset);
+    return this.backend.writeSync(address, data, offset);
   }
 
   allocSync(
@@ -170,28 +166,23 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     protection?: any,
     allocationType?: any,
   ): AddressLike {
-    return (this.backend as any).allocSync(
-      size,
-      address,
-      protection,
-      allocationType,
-    );
+    return this.backend.allocSync(size, address, protection, allocationType);
   }
 
   freeSync(address: AddressLike, size = 0, freeType?: any): boolean {
-    return (this.backend as any).freeSync(address, size, freeType);
+    return this.backend.freeSync(address, size, freeType);
   }
 
   protectSync(address: AddressLike, size: number, newProtect: any): any {
-    return (this.backend as any).protectSync(address, size, newProtect);
+    return this.backend.protectSync(address, size, newProtect);
   }
 
   querySync(address: AddressLike): any {
-    return (this.backend as any).querySync(address);
+    return this.backend.querySync(address);
   }
 
   callSync(func: CFunction, ...args: any[]): CCallResult {
-    return (this.backend as any).callSync(func, ...args);
+    return this.backend.callSync(func, ...args);
   }
 
   // Forward close if backend exposes it
@@ -218,7 +209,7 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
   protected isInitialized = false;
   private initPromise: Promise<void> | null = null;
 
-  constructor(backend: ICallableMemoryAccessor, root: HostAccessor) {
+  constructor(backend: ISyncCallableMemoryAccessor, root: HostAccessor) {
     super(backend, root);
     if (this.root && (this.root as any) !== this) {
       this.root.children.add(this);
@@ -230,7 +221,7 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
   protected async onDeinit(): Promise<void> {}
 
   protected async initNext(): Promise<void> {
-    let next: MiddlewareAccessor | ICallableMemoryAccessor = this.backend;
+    let next: MiddlewareAccessor | ISyncCallableMemoryAccessor = this.backend;
     while (
       next &&
       next instanceof MiddlewareAccessor &&
@@ -244,7 +235,7 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
   }
 
   protected async deinitNext(): Promise<void> {
-    let next: MiddlewareAccessor | ICallableMemoryAccessor = this.backend;
+    let next: MiddlewareAccessor | ISyncCallableMemoryAccessor = this.backend;
     while (
       next &&
       next instanceof MiddlewareAccessor &&
@@ -472,12 +463,12 @@ export class HostAccessor extends InittableMiddlewareAccessor {
     return this._processId;
   }
 
-  constructor(backend: ICallableMemoryAccessor, root?: HostAccessor) {
+  constructor(backend: ISyncCallableMemoryAccessor, root?: HostAccessor) {
     super(backend, root ?? (null as any));
     if (!root) {
       (this as any).root = this;
     }
-    let b: MiddlewareAccessor | ICallableMemoryAccessor = backend;
+    let b: MiddlewareAccessor | ISyncCallableMemoryAccessor = backend;
     while (b && b instanceof MiddlewareAccessor) {
       b = b.backend;
     }
@@ -1221,7 +1212,7 @@ export class MemcmpReadAccessor extends MsvcrtDependentMiddlewareAccessor {
  * Used as a strict base definition or safety guard for middleware accessor pipelines
  * to ensure unsupported operations are explicitly caught rather than silently ignored.
  */
-export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
+export class ThrowingMemoryAccessor implements ISyncCallableMemoryAccessor {
   public readonly isLocal = false;
   public readonly processId: number;
 
@@ -1246,12 +1237,24 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
     this.throwError('read');
   }
 
+  readSync(_address: AddressLike, _size: number, _offset = 0): Buffer {
+    this.throwError('readSync');
+  }
+
   async write(
     _address: AddressLike,
     _data: Buffer | Uint8Array,
     _offset = 0,
   ): Promise<number> {
     this.throwError('write');
+  }
+
+  writeSync(
+    _address: AddressLike,
+    _data: Buffer | Uint8Array,
+    _offset = 0,
+  ): number {
+    this.throwError('writeSync');
   }
 
   async alloc(
@@ -1263,12 +1266,29 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
     this.throwError('alloc');
   }
 
+  allocSync(
+    _size: number,
+    _address: AddressLike | null = null,
+    _protection?: any,
+    _allocationType?: any,
+  ): AddressLike {
+    this.throwError('allocSync');
+  }
+
   async allocNear(
     _target: AddressLike,
     _size: number,
     _options?: AllocNearOptions,
   ): Promise<AddressLike> {
     this.throwError('allocNear');
+  }
+
+  allocNearSync(
+    _target: AddressLike,
+    _size: number,
+    _options?: AllocNearOptions,
+  ): AddressLike {
+    this.throwError('allocNearSync');
   }
 
   async free(
@@ -1279,6 +1299,10 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
     this.throwError('free');
   }
 
+  freeSync(_address: AddressLike, _size = 0, _freeType?: any): boolean {
+    this.throwError('freeSync');
+  }
+
   async protect(
     _address: AddressLike,
     _size: number,
@@ -1287,12 +1311,24 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
     this.throwError('protect');
   }
 
+  protectSync(_address: AddressLike, _size: number, _newProtect: any): any {
+    this.throwError('protectSync');
+  }
+
   async query(_address: AddressLike): Promise<any> {
     this.throwError('query');
   }
 
+  querySync(_address: AddressLike): any {
+    this.throwError('querySync');
+  }
+
   async call(_func: CFunction, ..._args: any[]): Promise<CCallResult> {
     this.throwError('call');
+  }
+
+  callSync(_func: CFunction, ..._args: any[]): CCallResult {
+    this.throwError('callSync');
   }
 
   // eslint-disable-next-line require-yield
@@ -1316,35 +1352,68 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
   async readInt8(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readInt8');
   }
+  readInt8Sync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readInt8Sync');
+  }
   async readUInt8(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readUInt8');
+  }
+  readUInt8Sync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readUInt8Sync');
   }
   async readInt16(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readInt16');
   }
+  readInt16Sync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readInt16Sync');
+  }
   async readUInt16(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readUInt16');
+  }
+  readUInt16Sync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readUInt16Sync');
   }
   async readInt32(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readInt32');
   }
+  readInt32Sync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readInt32Sync');
+  }
   async readUInt32(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readUInt32');
+  }
+  readUInt32Sync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readUInt32Sync');
   }
   async readInt64(_address: AddressLike, _offset = 0): Promise<bigint> {
     this.throwError('readInt64');
   }
+  readInt64Sync(_address: AddressLike, _offset = 0): bigint {
+    this.throwError('readInt64Sync');
+  }
   async readUInt64(_address: AddressLike, _offset = 0): Promise<bigint> {
     this.throwError('readUInt64');
+  }
+  readUInt64Sync(_address: AddressLike, _offset = 0): bigint {
+    this.throwError('readUInt64Sync');
   }
   async readFloat(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readFloat');
   }
+  readFloatSync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readFloatSync');
+  }
   async readDouble(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readDouble');
   }
+  readDoubleSync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readDoubleSync');
+  }
   async readPointer(_address: AddressLike, _offset = 0): Promise<number> {
     this.throwError('readPointer');
+  }
+  readPointerSync(_address: AddressLike, _offset = 0): number {
+    this.throwError('readPointerSync');
   }
 
   async writeInt8(
@@ -1354,12 +1423,18 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
   ): Promise<number> {
     this.throwError('writeInt8');
   }
+  writeInt8Sync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeInt8Sync');
+  }
   async writeUInt8(
     _address: AddressLike,
     _value: number,
     _offset = 0,
   ): Promise<number> {
     this.throwError('writeUInt8');
+  }
+  writeUInt8Sync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeUInt8Sync');
   }
   async writeInt16(
     _address: AddressLike,
@@ -1368,12 +1443,18 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
   ): Promise<number> {
     this.throwError('writeInt16');
   }
+  writeInt16Sync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeInt16Sync');
+  }
   async writeUInt16(
     _address: AddressLike,
     _value: number,
     _offset = 0,
   ): Promise<number> {
     this.throwError('writeUInt16');
+  }
+  writeUInt16Sync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeUInt16Sync');
   }
   async writeInt32(
     _address: AddressLike,
@@ -1382,12 +1463,18 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
   ): Promise<number> {
     this.throwError('writeInt32');
   }
+  writeInt32Sync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeInt32Sync');
+  }
   async writeUInt32(
     _address: AddressLike,
     _value: number,
     _offset = 0,
   ): Promise<number> {
     this.throwError('writeUInt32');
+  }
+  writeUInt32Sync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeUInt32Sync');
   }
   async writeInt64(
     _address: AddressLike,
@@ -1396,12 +1483,26 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
   ): Promise<number> {
     this.throwError('writeInt64');
   }
+  writeInt64Sync(
+    _address: AddressLike,
+    _value: bigint | number,
+    _offset = 0,
+  ): number {
+    this.throwError('writeInt64Sync');
+  }
   async writeUInt64(
     _address: AddressLike,
     _value: bigint | number,
     _offset = 0,
   ): Promise<number> {
     this.throwError('writeUInt64');
+  }
+  writeUInt64Sync(
+    _address: AddressLike,
+    _value: bigint | number,
+    _offset = 0,
+  ): number {
+    this.throwError('writeUInt64Sync');
   }
   async writeFloat(
     _address: AddressLike,
@@ -1410,6 +1511,9 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
   ): Promise<number> {
     this.throwError('writeFloat');
   }
+  writeFloatSync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeFloatSync');
+  }
   async writeDouble(
     _address: AddressLike,
     _value: number,
@@ -1417,12 +1521,22 @@ export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
   ): Promise<number> {
     this.throwError('writeDouble');
   }
+  writeDoubleSync(_address: AddressLike, _value: number, _offset = 0): number {
+    this.throwError('writeDoubleSync');
+  }
   async writePointer(
     _address: AddressLike,
     _value: number | bigint,
     _offset = 0,
   ): Promise<number> {
     this.throwError('writePointer');
+  }
+  writePointerSync(
+    _address: AddressLike,
+    _value: number | bigint,
+    _offset = 0,
+  ): number {
+    this.throwError('writePointerSync');
   }
 
   async machineCode(_machineCode: CMachineCode): Promise<number> {
@@ -2040,7 +2154,7 @@ export class ScannerMiddleware extends MiddlewareAccessor {
 }
 
 export class DebugMemoryAccessor extends MiddlewareAccessor {
-  constructor(backend: ICallableMemoryAccessor, root: HostAccessor) {
+  constructor(backend: ISyncCallableMemoryAccessor, root: HostAccessor) {
     super(backend, root);
     if (backend) {
       let curr: any = backend;
@@ -2089,7 +2203,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       offset,
-      () => (this.backend as any).readSync(address, size, offset),
+      () => this.backend.readSync(address, size, offset),
     );
   }
 
@@ -2117,7 +2231,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       data,
       offset,
-      () => (this.backend as any).writeSync(address, data, offset),
+      () => this.backend.writeSync(address, data, offset),
     );
   }
 
@@ -2149,13 +2263,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       protection,
       allocationType,
-      () =>
-        (this.backend as any).allocSync(
-          size,
-          address,
-          protection,
-          allocationType,
-        ),
+      () => this.backend.allocSync(size, address, protection, allocationType),
     );
   }
 
@@ -2179,7 +2287,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       freeType,
-      () => (this.backend as any).freeSync(address, size, freeType),
+      () => this.backend.freeSync(address, size, freeType),
     );
   }
 
@@ -2191,7 +2299,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
 
   override callSync(func: any, ...args: any[]): any {
     return debug.debugCallSync(this.backend.constructor.name, func, args, () =>
-      (this.backend as any).callSync(func, ...args),
+      this.backend.callSync(func, ...args),
     );
   }
 
@@ -2215,7 +2323,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       newProtect,
-      () => (this.backend as any).protectSync(address, size, newProtect),
+      () => this.backend.protectSync(address, size, newProtect),
     );
   }
 
@@ -2227,7 +2335,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
 
   override querySync(address: any): any {
     return debug.debugQuerySync(this.backend.constructor.name, address, () =>
-      (this.backend as any).querySync(address),
+      this.backend.querySync(address),
     );
   }
 
@@ -2243,7 +2351,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
     return debug.debugMachineCodeSync(
       this.backend.constructor.name,
       machineCode.size,
-      () => (this.backend as any).machineCodeSync(machineCode),
+      () => this.backend.machineCodeSync(machineCode),
     );
   }
 
@@ -2271,7 +2379,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       pattern,
-      () => (this.backend as any).scanSync(address, size, pattern),
+      () => this.backend.scanSync(address, size, pattern),
     );
   }
 }
