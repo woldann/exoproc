@@ -305,6 +305,22 @@ function readField(instance: any, field: ComputedStructField): any {
   }
 }
 
+/**
+ * Resolves a struct field value into a `bigint` for `i64`/`u64`/`ptr` writes.
+ * `null`/`undefined` (a NULL pointer -- a routine value for optional `ptr`
+ * fields like `lpReserved`) map to `0n` rather than throwing, and a
+ * pointer-like object (anything with an `address` property) resolves via
+ * that address, matching how such objects are already handled elsewhere in
+ * this file.
+ */
+function toBigIntFieldValue(value: any): bigint {
+  if (value === null || value === undefined) return 0n;
+  if (typeof value === 'object' && 'address' in value) {
+    return BigInt(Number(value.address));
+  }
+  return BigInt(value);
+}
+
 function writeField(
   instance: any,
   field: ComputedStructField,
@@ -390,10 +406,10 @@ function writeField(
         instance._view.setUint32(offset, Number(value), true);
         return;
       case 'i64':
-        instance._view.setBigInt64(offset, BigInt(value), true);
+        instance._view.setBigInt64(offset, toBigIntFieldValue(value), true);
         return;
       case 'u64':
-        instance._view.setBigUint64(offset, BigInt(value), true);
+        instance._view.setBigUint64(offset, toBigIntFieldValue(value), true);
         return;
       case 'f32':
         instance._view.setFloat32(offset, Number(value), true);
@@ -402,7 +418,7 @@ function writeField(
         instance._view.setFloat64(offset, Number(value), true);
         return;
       case 'ptr':
-        instance._view.setBigUint64(offset, BigInt(value), true);
+        instance._view.setBigUint64(offset, toBigIntFieldValue(value), true);
         return;
       default:
         throw new Error(`Unsupported struct field type for writing: ${type}`);
@@ -469,10 +485,10 @@ function writeField(
       accessor.writeUInt32Sync(address, Number(valToWrite), offset);
       break;
     case 'i64':
-      accessor.writeInt64Sync(address, BigInt(valToWrite), offset);
+      accessor.writeInt64Sync(address, toBigIntFieldValue(valToWrite), offset);
       break;
     case 'u64':
-      accessor.writeUInt64Sync(address, BigInt(valToWrite), offset);
+      accessor.writeUInt64Sync(address, toBigIntFieldValue(valToWrite), offset);
       break;
     case 'f32':
       accessor.writeFloatSync(address, Number(valToWrite), offset);
@@ -748,13 +764,13 @@ async function writeFieldAsync(
       if ('writeInt64' in accessor)
         await (accessor as IMemoryAccessor).writeInt64(
           address,
-          BigInt(valToWrite),
+          toBigIntFieldValue(valToWrite),
           offset,
         );
       else
         (accessor as ISyncMemoryAccessor).writeInt64Sync(
           address,
-          BigInt(valToWrite),
+          toBigIntFieldValue(valToWrite),
           offset,
         );
       break;
@@ -762,13 +778,13 @@ async function writeFieldAsync(
       if ('writeUInt64' in accessor)
         await (accessor as IMemoryAccessor).writeUInt64(
           address,
-          BigInt(valToWrite),
+          toBigIntFieldValue(valToWrite),
           offset,
         );
       else
         (accessor as ISyncMemoryAccessor).writeUInt64Sync(
           address,
-          BigInt(valToWrite),
+          toBigIntFieldValue(valToWrite),
           offset,
         );
       break;
