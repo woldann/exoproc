@@ -41,7 +41,7 @@ describe('MinHook over IndirectNThreadHostAccessor (cross-process, thread-hijack
     const verifier = new RemoteCallableMemoryAccessor(proc.pid);
 
     try {
-      // Inject a real function (int -> int) into ping.exe. `machineCode()` being
+      // Inject a real function (int -> int) into the target process. `machineCode()` being
       // the first op exercises its init guard (chain inits cleanly up front).
       const targetSc = cmachinecode({
         returns: 'i32',

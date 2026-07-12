@@ -13,49 +13,39 @@ import {
   BootstrapHostAccessor,
 } from './middleware-accessor.js';
 import { type ICallableMemoryAccessor } from './iaccessor.js';
-import { RemoteCallableMemoryAccessor } from './callable-accessor.js';
 
 /**
  * Pre-configured Indirect Accessor template.
  * Combines IndirectCallRedirectorAccessor, MemsetWriteAccessor, MemcmpReadAccessor,
  * FileTransferWriteAccessor, FileTransferReadAccessor, and MarshallingCallableAccessor
  * to provide a fully silent, type-marshalled memory execution pipeline.
+ *
+ * `backend` is required and must be an already-constructed `ICallableMemoryAccessor`
+ * (e.g. an `NThread` for proper multi-argument calls, or a bare
+ * `RemoteCallableMemoryAccessor` if you explicitly want its single-argument-only
+ * `CreateRemoteThread`-per-call mechanism). There is no pid-only overload that
+ * silently defaults to `RemoteCallableMemoryAccessor` -- that implicit default let
+ * `MsvcrtDependentMiddlewareAccessor.onInit()`'s `isModuleLoadedInProcess()` call
+ * (3 arguments) run over a backend that only delivers the first argument via
+ * `CreateRemoteThread`'s single `lpParameter`, leaving the output pointer
+ * (`GetModuleHandleExA`'s `phModule`) as leftover register garbage -- an
+ * intermittent `wine: Unhandled page fault` when that garbage isn't a writable
+ * address. Picking the backend explicitly at every call site makes that
+ * tradeoff visible instead of an accidental default.
  */
 export class IndirectCallableAccessor extends HostAccessor {
   private bootstrapRoot: BootstrapHostAccessor;
 
-  constructor(processIdOrBackend?: number | ICallableMemoryAccessor) {
-    let pid = -1;
-    if (processIdOrBackend !== undefined) {
-      if (typeof processIdOrBackend === 'number') {
-        pid = processIdOrBackend;
-      } else {
-        pid = processIdOrBackend.processId;
-      }
-    }
+  constructor(backend: ICallableMemoryAccessor) {
+    const pid = backend.processId;
     super(new ThrowingMemoryAccessor(pid));
 
     const bootstrap = new BootstrapHostAccessor(pid, this);
     this.bootstrapRoot = bootstrap;
 
-    let initialBackend: ICallableMemoryAccessor;
+    bootstrap.backend = backend;
 
-    if (processIdOrBackend !== undefined) {
-      if (typeof processIdOrBackend === 'number') {
-        initialBackend = new RemoteCallableMemoryAccessor(processIdOrBackend);
-      } else {
-        initialBackend = processIdOrBackend;
-      }
-    } else {
-      initialBackend = new RemoteCallableMemoryAccessor(-1);
-    }
-
-    bootstrap.backend = initialBackend;
-
-    const redirector = new IndirectCallRedirectorAccessor(
-      initialBackend,
-      bootstrap,
-    );
+    const redirector = new IndirectCallRedirectorAccessor(backend, bootstrap);
     const machineCodePool = new MachineCodePoolMiddleware(
       redirector,
       bootstrap,

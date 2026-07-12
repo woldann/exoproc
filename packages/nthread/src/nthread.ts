@@ -319,6 +319,53 @@ export class NThread extends InittableMiddlewareAccessor {
     return WaitReturn.TIMEOUT;
   }
 
+  /**
+   * Synchronous twin of {@link waitForLanding} for {@link callSync}: a tight
+   * busy-spin over `fetchContext()`/RIP-check with *no* yield between
+   * iterations (no `sleepAbortable`, unlike the async version's poll-interval
+   * backoff) -- every check is back-to-back, bounded only by the wall-clock
+   * `deadline`. This pins a CPU core for however long the call takes, so it
+   * only makes sense for calls expected to land almost immediately (which is
+   * exactly {@link callSync}'s intended use case); for anything slower, the
+   * async `call()`/`waitForLanding()` path (which yields via `setTimeout`
+   * between polls) is the right tool.
+   */
+  private waitForLandingSync(
+    timeoutMs: number = INFINITE as number,
+    signal?: AbortSignal,
+  ): WaitReturn {
+    const deadline =
+      timeoutMs === (INFINITE as number)
+        ? Number.POSITIVE_INFINITY
+        : Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      if (signal?.aborted) {
+        throw new WaitAbortedError();
+      }
+
+      try {
+        this.fetchContext();
+        const rip = this.getContext().Rip;
+        if (
+          BigInt(rip) === BigInt((this.stubs as ThreadStubs).spinStub.address)
+        ) {
+          this.suspendThread();
+          return WaitReturn.OBJECT_0;
+        }
+      } catch (_) {
+        // Unlike waitForLanding's async fallback (a real wait(0) on the
+        // thread handle to distinguish "exited" from "still alive but this
+        // check failed"), there's no synchronous equivalent to reach for
+        // here -- a fetchContext() failure this deep is almost always the
+        // thread having died, so treat it as fatal rather than retrying.
+        return WaitReturn.FAILED;
+      }
+    }
+
+    return WaitReturn.TIMEOUT;
+  }
+
   private async sleepAbortable(
     ms: number,
     signal?: AbortSignal,
@@ -477,7 +524,7 @@ export class NThread extends InittableMiddlewareAccessor {
       typeof (func as any).shouldCloneForAccessor === 'function' &&
       (func as any).shouldCloneForAccessor(this)
     ) {
-      const addr = await this.machineCode(func as any);
+      const addr = await this.root.machineCode(func as any);
       func = (func as any).cloneForAddress(addr);
     }
 
@@ -657,9 +704,183 @@ export class NThread extends InittableMiddlewareAccessor {
     return result;
   }
 
-  public override callSync(_func: CFunction, ..._args: any[]): CCallResult {
-    throw new Error(
-      'Synchronous calls are not supported on NThread redirected threads.',
-    );
+  /**
+   * Synchronous twin of {@link callAfterInit}: identical setup (stack args,
+   * register assignment, `applyContext`/`resumeThread`), but waits for the
+   * call to land via {@link waitForLandingSync} (a tight busy-spin, no
+   * `await`/yield anywhere in this method) instead of the async, backoff-
+   * polling {@link waitForLanding}. Intended for calls expected to return
+   * almost immediately -- it blocks the calling JS thread and pins a CPU
+   * core for the duration, so it's a poor fit for anything slow; use the
+   * async `call()` for that instead.
+   */
+  public override callSync(func: CFunction, ...args: any[]): CCallResult {
+    if (!this.nativeThread) {
+      throw new Error('NThread is not initialized.');
+    }
+
+    if (
+      typeof (func as any).shouldCloneForAccessor === 'function' &&
+      (func as any).shouldCloneForAccessor(this)
+    ) {
+      const addr = this.root.machineCodeSync(func as any);
+      func = (func as any).cloneForAddress(addr);
+    }
+
+    const timeoutMs = this.options.timeoutMs ?? 5000;
+    const normalizedArgTypes = (func.args ?? []).map((t) => normalizeType(t));
+    const returnsType = normalizeType(func.returns);
+    const targetAddr = BigInt(func.ptr);
+    const N_stack = Math.max(0, args.length - 4);
+    const stubs = this.stubs as ThreadStubs;
+
+    // For calls with stack args (> 4), adjust the return chain and write
+    // stack args into the remote thread's stack before resuming.
+    if (N_stack > 0) {
+      const callRsp = this.callRsp;
+
+      // Get or allocate a per-N_stack stub: add rsp,(0x28+N*8); ret
+      let stubAddr = this._stackArgStubs.get(N_stack);
+      if (!stubAddr) {
+        const N = 0x28 + N_stack * 8;
+        const stubBytes: number[] =
+          N <= 0x7f
+            ? [0x48, 0x83, 0xc4, N, 0xc3]
+            : [
+                0x48,
+                0x81,
+                0xc4,
+                N & 0xff,
+                (N >> 8) & 0xff,
+                (N >> 16) & 0xff,
+                (N >> 24) & 0xff,
+                0xc3,
+              ];
+        while (stubBytes.length < 16) stubBytes.push(0x90);
+        const allocAddr = this.root.allocSync(
+          16,
+          null,
+          MemoryProtection.EXECUTE_READWRITE,
+        );
+        this.root.writeSync(allocAddr, Buffer.from(stubBytes));
+        stubAddr = BigInt(resolveAddress(allocAddr));
+        this._stackArgStubs.set(N_stack, stubAddr);
+      }
+
+      // Overwrite [callRsp] with stub address (replaces addRsp28RetStub)
+      const retBuf = Buffer.allocUnsafe(8);
+      retBuf.writeBigUInt64LE(stubAddr);
+      this.root.writeSync(callRsp, retBuf);
+
+      // Write each stack arg at [callRsp + 40 + i*8]
+      for (let i = 4; i < args.length; i++) {
+        const n = i - 4;
+        const slotBuf = Buffer.alloc(8, 0);
+        const argType = normalizedArgTypes[i] ?? 'ptr';
+        const v = args[i];
+        if (argType === 'f32') {
+          slotBuf.writeFloatLE(Number(v), 0);
+        } else if (argType === 'f64') {
+          slotBuf.writeDoubleLE(Number(v), 0);
+        } else {
+          slotBuf.writeBigUInt64LE(BigInt(resolveAddress(v)));
+        }
+        this.root.writeSync(callRsp + 40n + BigInt(n * 8), slotBuf);
+      }
+
+      // Write spinStub at [callRsp + 48 + N_stack*8]
+      const sleepBuf = Buffer.allocUnsafe(8);
+      sleepBuf.writeBigUInt64LE(BigInt(stubs.spinStub.address));
+      this.root.writeSync(callRsp + 48n + BigInt(N_stack * 8), sleepBuf);
+    }
+
+    const ctx = this.getContext();
+
+    for (let i = 0; i < Math.min(args.length, 4); i++) {
+      const argType = normalizedArgTypes[i] ?? 'ptr';
+      const v = args[i];
+      if (argType === 'f32') {
+        this.setXmmFloat(i as 0 | 1 | 2 | 3, Number(v));
+        const buf = Buffer.allocUnsafe(4);
+        buf.writeFloatLE(Number(v), 0);
+        const bits = BigInt(buf.readUInt32LE(0));
+        if (i === 0) ctx.Rcx = bits;
+        else if (i === 1) ctx.Rdx = bits;
+        else if (i === 2) ctx.R8 = bits;
+        else ctx.R9 = bits;
+      } else if (argType === 'f64') {
+        this.setXmmDouble(i as 0 | 1 | 2 | 3, Number(v));
+        const buf = Buffer.allocUnsafe(8);
+        buf.writeDoubleLE(Number(v), 0);
+        const bits = buf.readBigUInt64LE(0);
+        if (i === 0) ctx.Rcx = bits;
+        else if (i === 1) ctx.Rdx = bits;
+        else if (i === 2) ctx.R8 = bits;
+        else ctx.R9 = bits;
+      } else {
+        const bits = BigInt(resolveAddress(v));
+        if (i === 0) ctx.Rcx = bits;
+        else if (i === 1) ctx.Rdx = bits;
+        else if (i === 2) ctx.R8 = bits;
+        else ctx.R9 = bits;
+      }
+    }
+
+    ctx.Rip = targetAddr;
+    if (this.isCallRspSet()) {
+      ctx.Rsp = this.callRsp;
+    }
+
+    this.setContext(ctx);
+    this.applyContext();
+    this.resumeThread();
+
+    let waitResult: WaitReturn = WaitReturn.FAILED;
+    try {
+      waitResult = this.waitForLandingSync(timeoutMs, this.options.signal);
+    } finally {
+      // Restore the original return chain after a stack-arg call so subsequent
+      // 0-stack-arg calls find addRsp28RetStub and spinStub in place.
+      if (N_stack > 0) {
+        try {
+          const callRsp = this.callRsp;
+          const retBuf = Buffer.allocUnsafe(8);
+          retBuf.writeBigUInt64LE(BigInt(stubs.addRsp28RetStub.address));
+          this.root.writeSync(callRsp, retBuf);
+          const sleepBuf = Buffer.allocUnsafe(8);
+          sleepBuf.writeBigUInt64LE(BigInt(stubs.spinStub.address));
+          this.root.writeSync(callRsp + 48n, sleepBuf);
+        } catch {
+          /* ignore restore errors */
+        }
+      }
+    }
+
+    if (waitResult === WaitReturn.FAILED) {
+      throw new CallThreadDiedError(targetAddr);
+    }
+    if (waitResult !== WaitReturn.OBJECT_0) {
+      throw new CallTimeoutError(targetAddr, waitResult);
+    }
+
+    const finalContext = this.getContext();
+    const finalRsp = BigInt(finalContext.Rsp);
+    const finalRax = BigInt(finalContext.Rax);
+
+    if (this.isExpectedRspSet()) {
+      const expectedRsp = this.expectedRsp;
+      if (finalRsp !== expectedRsp) {
+        nthreadLog.warn(
+          `Stack mismatch after call! Expected RSP: 0x${expectedRsp.toString(16)}, Actual: 0x${finalRsp.toString(16)}`,
+        );
+      }
+    }
+
+    let result: CCallResult;
+    if (returnsType === 'f32') result = this.getXmmFloat(0);
+    else if (returnsType === 'f64') result = this.getXmmDouble(0);
+    else result = parseCallResult(finalRax, func.returns);
+
+    return result;
   }
 }

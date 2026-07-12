@@ -20,7 +20,7 @@ import { TestProcess } from '../helpers.js';
 // rather than depending on some real DLL export happening to start with the
 // instruction under test.
 //
-// Driven cross-process (spawned ping.exe + IndirectNThreadHostAccessor,
+// Driven cross-process (a spawned TestProcess + IndirectNThreadHostAccessor,
 // exactly like minhook.test.ts) rather than a locally spawned thread --
 // spawnLoopThread()'s local VirtualAlloc fails under this CI environment
 // (see #5), which this sidesteps entirely since no local allocation is

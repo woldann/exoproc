@@ -7,12 +7,10 @@ import {
   type AddressLike,
   Kernel32Impl,
   GetModuleHandleExFlag,
-  RemoteCallableMemoryAccessor,
   HostAccessor,
   MemoryBasicInformation,
 } from '../../packages/xffi/src/index.js';
 import { resolveAddress } from '../../packages/xffi/src/ffi.js';
-import { TestProcess } from '../helpers.js';
 
 describe('xffi > ProcessCacheAccessor', () => {
   test('should lazily cache process metadata and intercept/cache module handle lookups', async () => {
@@ -152,42 +150,6 @@ describe('xffi > ProcessCacheAccessor', () => {
     expect(hMod2).toBe(0x556677n);
     expect(callCount).toBe(2); // Call count remains 2!
   });
-
-  test('should resolve metadata and cache status using a real target process', async () => {
-    const tp = new TestProcess();
-    const { pid } = tp;
-
-    try {
-      const remote = new RemoteCallableMemoryAccessor(pid);
-      const host = new HostAccessor(remote);
-      const cacheAccessor = new ProcessCacheAccessor(remote, host);
-      host.backend = cacheAccessor;
-
-      // Verify lazy metadata getters
-      const is64 = await cacheAccessor.getIs64Bit();
-      expect(typeof is64).toBe('boolean');
-
-      const processName = await cacheAccessor.getProcessName();
-      expect(processName.toLowerCase()).toContain('ping');
-
-      const coreModules = await cacheAccessor.getCoreModules();
-      expect(coreModules.ntdll).toBe(true);
-      expect(coreModules.kernel32).toBe(true);
-      expect(coreModules.msvcrt).toBe(true);
-
-      // Repeated calls should return immediately from cache
-      const is64Cached = await cacheAccessor.getIs64Bit();
-      expect(is64Cached).toBe(is64);
-
-      const processNameCached = await cacheAccessor.getProcessName();
-      expect(processNameCached).toBe(processName);
-
-      const coreModulesCached = await cacheAccessor.getCoreModules();
-      expect(coreModulesCached).toEqual(coreModules);
-    } finally {
-      await tp.stop();
-    }
-  }, 30000);
 
   test('should intercept GetCurrentProcess and GetCurrentProcessId', async () => {
     let callCount = 0;

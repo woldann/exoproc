@@ -637,6 +637,14 @@ export class RedirectorHostAccessor extends HostAccessor {
     return t.call(func, ...args);
   }
 
+  override async machineCode(machineCode: CMachineCode): Promise<number> {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.machineCode(machineCode);
+    }
+    return t.machineCode(machineCode);
+  }
+
   override async *scan(
     address: AddressLike,
     size: number,
@@ -647,6 +655,102 @@ export class RedirectorHostAccessor extends HostAccessor {
       yield* super.scan(address, size, pattern);
     } else {
       yield* t.scan(address, size, pattern);
+    }
+  }
+
+  // ── Sync twins of the overrides above -- same getTarget()-redirect, for
+  //    callers (e.g. NThread.callSync) that need the *Sync family routed
+  //    through `root` all the way to whatever `target` ends up wired to,
+  //    instead of silently hitting the placeholder ThrowingMemoryAccessor
+  //    this class starts with as its own `backend`. ─────────────────────────
+
+  override readSync(address: AddressLike, size: number, offset = 0): Buffer {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.readSync(address, size, offset);
+    }
+    return t.readSync(address, size, offset);
+  }
+
+  override writeSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.writeSync(address, data, offset);
+    }
+    return t.writeSync(address, data, offset);
+  }
+
+  override allocSync(
+    size: number | any,
+    address: AddressLike | null = null,
+    protection?: any,
+    allocationType?: any,
+  ): AddressLike {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.allocSync(size, address, protection, allocationType);
+    }
+    return t.allocSync(size, address, protection, allocationType);
+  }
+
+  override freeSync(address: AddressLike, size = 0, freeType?: any): boolean {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.freeSync(address, size, freeType);
+    }
+    return t.freeSync(address, size, freeType);
+  }
+
+  override protectSync(
+    address: AddressLike,
+    size: number,
+    newProtect: any,
+  ): any {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.protectSync(address, size, newProtect);
+    }
+    return t.protectSync(address, size, newProtect);
+  }
+
+  override querySync(address: AddressLike): any {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.querySync(address);
+    }
+    return t.querySync(address);
+  }
+
+  override callSync(func: CFunction, ...args: any[]): CCallResult {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.callSync(func, ...args);
+    }
+    return t.callSync(func, ...args);
+  }
+
+  override machineCodeSync(machineCode: CMachineCode): number {
+    const t = this.getTarget();
+    if (t === this) {
+      return super.machineCodeSync(machineCode);
+    }
+    return t.machineCodeSync(machineCode);
+  }
+
+  override *scanSync(
+    address: AddressLike,
+    size: number,
+    pattern: Pattern | string,
+  ): Generator<NativeMemory> {
+    const t = this.getTarget();
+    if (t === this) {
+      yield* super.scanSync(address, size, pattern);
+    } else {
+      yield* t.scanSync(address, size, pattern);
     }
   }
 

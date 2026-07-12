@@ -33,13 +33,13 @@ export class CreateRestrictedTokenFailedError extends NShmError {
   }
 }
 
-export class SpawnDummyProcessFailedError extends NShmError {
+export class SpawnProcessFailedError extends NShmError {
   constructor(
     public readonly executable: string,
     public readonly lastError: number,
   ) {
     super(
-      `CreateProcessAsUserA failed to spawn dummy relay process (${executable}, GetLastError=${lastError})`,
+      `CreateProcessAsUserA failed to spawn process (${executable}, GetLastError=${lastError})`,
     );
   }
 }

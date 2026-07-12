@@ -93,6 +93,66 @@ describe('NThread Integration with Indirect Accessor', () => {
     }
   });
 
+  test('callSync performs the same redirection synchronously, no await', async () => {
+    const proc = new TestProcess();
+    const thread = Native.Thread.getThreads(proc.pid)[0];
+    if (!thread) {
+      throw new Error('No thread found in the spawned process');
+    }
+
+    try {
+      const pid = proc.pid;
+      const tid = thread.tid;
+
+      const redirector = new RedirectorHostAccessor(pid);
+      const nthread = new NThread(
+        new RemoteCallableMemoryAccessor(pid),
+        tid,
+        { timeoutMs: 15000 },
+        redirector,
+      );
+      const indirect = new IndirectCallableAccessor(nthread);
+      redirector.target = indirect;
+
+      // Force the chain to finish initializing via one async call first --
+      // callSync (like the underlying NThread.callSync) has no init guard of
+      // its own, so the redirected thread/stubs must already be ready.
+      await indirect.call(Kernel32Impl.GetCurrentThreadId);
+
+      // Simple no-arg call, purely via the synchronous busy-spin path.
+      const remoteTidSync = indirect.callSync(Kernel32Impl.GetCurrentThreadId);
+      expect(Number(remoteTidSync)).toBe(tid);
+
+      // f32 arg/return through callSync.
+      const halfPiF = Math.fround(Math.PI / 2);
+      const sinf90Sync = indirect.callSync(CrtImpl.sinf, halfPiF);
+      expect(sinf90Sync as number).toBeCloseTo(1.0, 5);
+
+      // f64 arg/return through callSync.
+      const sqrt4Sync = indirect.callSync(CrtImpl.sqrt, 4.0);
+      expect(sqrt4Sync as number).toBeCloseTo(2.0, 10);
+
+      // 8 float args (4 via XMM, 4 via stack) through callSync -- exercises
+      // callSync's own stack-arg-stub setup path (writeSync/allocSync).
+      const sumSync = indirect.callSync(
+        sum8f,
+        1.5,
+        2.5,
+        3.5,
+        4.5,
+        5.5,
+        6.5,
+        7.5,
+        8.0,
+      );
+      expect(sumSync as number).toBeCloseTo(39.5, 4);
+
+      await indirect.close();
+    } finally {
+      await proc.stop();
+    }
+  });
+
   test('verify all local global stubs are discovered and present', async () => {
     const sleep = getRandomSpinStub();
     const pushret = getRandomPushretStub();
