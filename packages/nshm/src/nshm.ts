@@ -310,15 +310,19 @@ export function closeGlobalDummyProcess(): void {
  *  2. Inside the target (via `target.call`): `CreateFileMappingA` creates
  *     the section, `OpenProcess` opens a target-local handle to the (shared)
  *     dummy PID, and `DuplicateHandle` transfers the mapping handle from the
- *     target's own handle table into the dummy's. Both of those target-local
- *     handles are then immediately closed again in the target -- once the
- *     dummy holds its own duplicate, the target's own copies are no longer
- *     needed to keep the section alive, so nothing is left open in the
- *     target once this function returns.
+ *     target's own handle table into the dummy's -- with `DUPLICATE_CLOSE_
+ *     SOURCE`, so the target's own mapping handle is closed by the OS as
+ *     part of that same call (a duplicated handle is a fully independent
+ *     reference to the object; closing the handle it was duplicated from
+ *     never affects it). The `OpenProcess` handle used to reach the dummy is
+ *     then closed too, so nothing is left open in the target once this
+ *     function returns.
  *  3. This process `OpenProcess`es the dummy only once ever (the only direct
  *     `OpenProcess` call this process makes, cached and reused for every
  *     call) and `DuplicateHandle`s the mapping handle out of the dummy and
- *     into itself, then `MapViewOfFile`s it locally.
+ *     into itself -- again with `DUPLICATE_CLOSE_SOURCE`, so the dummy's own
+ *     copy doesn't accumulate across calls -- then `MapViewOfFile`s it
+ *     locally.
  *
  * The target and this process therefore both end up with a handle to the
  * same section, but this process never touches the target process's handle
@@ -364,6 +368,12 @@ export async function createSharedMemory(
   const hDummyInTarget = await openDummyHandleInTarget(target, dummy.pid);
 
   // ── DuplicateHandle inside the target: transfer the mapping to the dummy ─
+  // DUPLICATE_CLOSE_SOURCE closes `hMapping` (in the target's own handle
+  // table) as part of the same call -- the duplicate now sitting in the
+  // dummy's handle table is a fully independent handle to the same section
+  // (that's the entire point of DuplicateHandle: closing one handle to an
+  // object never affects any other handle to it), so there is nothing left
+  // for the target to keep open once this succeeds.
   const dupOutAddr = await target.alloc(8);
   const dupOk = await target.call(
     Kernel32Impl.DuplicateHandle,
@@ -373,7 +383,10 @@ export async function createSharedMemory(
     resolveAddress(dupOutAddr),
     0,
     0,
-    DuplicateHandleOptions.SAME_ACCESS,
+    DuplicateHandleOptions.combine(
+      DuplicateHandleOptions.SAME_ACCESS,
+      DuplicateHandleOptions.CLOSE_SOURCE,
+    ),
   );
   if (!dupOk) {
     throw new DuplicateHandleFailedError(await getLastError(target), true);
@@ -382,14 +395,13 @@ export async function createSharedMemory(
     0,
   );
 
-  // ── Nothing about this operation should remain in the target: the dummy
-  //    already holds its own duplicate, so the target's own handles (the
-  //    mapping and the OpenProcess handle used to reach the dummy) are no
-  //    longer needed to keep the section alive.
+  // The mapping handle itself is already gone (closed by DUPLICATE_CLOSE_SOURCE
+  // above); only the OpenProcess handle used to reach the dummy remains.
   await target.call(Kernel32Impl.CloseHandle, hDummyInTarget);
-  await target.call(Kernel32Impl.CloseHandle, hMapping);
 
-  // ── DuplicateHandle locally: pull the mapping handle out of the dummy ────
+  // ── DuplicateHandle locally: pull the mapping handle out of the dummy,
+  //    closing the dummy's own copy in the same call so its handle table
+  //    doesn't grow without bound across many createSharedMemory calls ──────
   const localDupOut = Buffer.alloc(8);
   const localDupOk = Kernel32Impl.DuplicateHandle(
     dummy.localHandle,
@@ -398,7 +410,10 @@ export async function createSharedMemory(
     localDupOut,
     0,
     0,
-    DuplicateHandleOptions.SAME_ACCESS,
+    DuplicateHandleOptions.combine(
+      DuplicateHandleOptions.SAME_ACCESS,
+      DuplicateHandleOptions.CLOSE_SOURCE,
+    ),
   );
   if (!localDupOk) {
     throw new DuplicateHandleFailedError(
