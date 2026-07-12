@@ -93,7 +93,6 @@
       "name": "bun-nshm",
       "version": "0.1.0",
       "dependencies": {
-        "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
         "exoproc-utils": "workspace:*",
       },

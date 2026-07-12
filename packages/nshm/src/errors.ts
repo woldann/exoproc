@@ -19,11 +19,9 @@ export class CreateFileMappingFailedError extends NshmError {
   }
 }
 
-export class CreateDummyProcessFailedError extends NshmError {
-  constructor(public readonly lastError: number) {
-    super(
-      `CreateProcessA failed in target process (GetLastError=${lastError})`,
-    );
+export class SpawnDummyProcessFailedError extends NshmError {
+  constructor(public readonly executable: string) {
+    super(`Failed to spawn dummy relay process (${executable})`);
   }
 }
 

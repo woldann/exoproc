@@ -42,7 +42,6 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-winapi": "workspace:*",
     "bun-xffi": "workspace:*",
     "exoproc-utils": "workspace:*"
   }

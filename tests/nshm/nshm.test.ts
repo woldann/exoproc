@@ -6,22 +6,15 @@ import { createSharedMemory, closeGlobalDummyProcess } from 'bun-nshm';
 import { TestProcess } from '../helpers.js';
 
 // Proves the full handle-relay flow: this (Bun) process never OpenProcess's
-// the target directly -- only the low-privilege dummy the target itself
-// spawns as its own child. Driven through IndirectNThreadHostAccessor (an
-// already-live, hijacked thread in the target) per CLAUDE.md's guidance on
-// real WinAPI/CRT calls (CreateFileMappingA/CreateProcessA/DuplicateHandle)
-// never running on a freshly-created thread under Wine/GHA.
+// the target directly -- only the dummy process it spawns itself. The
+// target's only job is CreateFileMappingA + OpenProcess/DuplicateHandle to
+// hand the mapping to the (already-running) dummy. Driven through
+// IndirectNThreadHostAccessor (an already-live, hijacked thread in the
+// target) per CLAUDE.md's guidance on real WinAPI/CRT calls
+// (CreateFileMappingA/OpenProcess/DuplicateHandle) never running on a
+// freshly-created thread under Wine/GHA.
 describe('nshm > createSharedMemory (handle relay via a single shared dummy process)', () => {
-  let dummyPid: number | undefined;
-
   afterAll(async () => {
-    if (dummyPid !== undefined) {
-      const h = Kernel32Impl.OpenProcess(0x1f0fff, 0, dummyPid);
-      if (Number(h) !== 0) {
-        Kernel32Impl.TerminateProcess(h, 0);
-        Kernel32Impl.CloseHandle(h);
-      }
-    }
     await closeGlobalDummyProcess();
   });
 
@@ -35,7 +28,6 @@ describe('nshm > createSharedMemory (handle relay via a single shared dummy proc
     });
 
     const shm = await createSharedMemory(memory, { size: 4096 });
-    dummyPid = shm.dummyPid;
 
     try {
       expect(shm.localView).toBeGreaterThan(0);
@@ -99,7 +91,6 @@ describe('nshm > createSharedMemory (handle relay via a single shared dummy proc
 
     const shmA = await createSharedMemory(memoryA, { size: 4096 });
     const shmB = await createSharedMemory(memoryB, { size: 4096 });
-    dummyPid = shmA.dummyPid;
 
     try {
       // Two different regions, two different targets -- one shared dummy.
