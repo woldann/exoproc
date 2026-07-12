@@ -1,24 +1,31 @@
 import { toArrayBuffer } from 'bun:ffi';
-import { spawn, type ChildProcess } from 'node:child_process';
 import {
   Kernel32Impl,
+  Advapi32Impl,
   ProcessAccess,
+  TokenAccess,
+  CreateRestrictedTokenFlags,
   MemoryProtection,
   FileMapAccess,
   DuplicateHandleOptions,
+  ProcessCreationFlags,
+  StartupInfoA,
+  ProcessInformation,
   INVALID_HANDLE_VALUE,
   resolveAddress,
   type ICallableMemoryAccessor,
 } from 'bun-xffi';
 import {
   CreateFileMappingFailedError,
+  OpenProcessTokenFailedError,
+  CreateRestrictedTokenFailedError,
   SpawnDummyProcessFailedError,
   OpenDummyProcessFailedError,
   DuplicateHandleFailedError,
   MapViewOfFileFailedError,
 } from './errors.js';
 
-/** Access mask requested on every `OpenProcess` of the dummy process (target-side and local). */
+/** Access mask requested on every target-side `OpenProcess` of the dummy process. */
 const DUMMY_PROCESS_ACCESS = ProcessAccess.ALL_ACCESS;
 
 /**
@@ -29,21 +36,14 @@ const DUMMY_PROCESS_ACCESS = ProcessAccess.ALL_ACCESS;
  */
 const CURRENT_PROCESS_PSEUDO_HANDLE = INVALID_HANDLE_VALUE;
 
-/**
- * Grace period after spawning the dummy before touching it via `OpenProcess`
- * -- mirrors `TestProcess`'s own startup wait (see tests/helpers.ts): Wine
- * needs a moment to actually finish creating the process.
- */
-const DUMMY_STARTUP_GRACE_MS = 2000;
-
 export interface NshmOptions {
   /** Size in bytes of the shared memory section. */
   size: number;
   /**
-   * Executable this (Bun) process spawns directly as the relay ("dummy")
-   * process the first time a global dummy is needed. Default: `ping.exe`
-   * (an idle, long-lived process -- the same reliable pattern `TestProcess`
-   * already uses). Ignored once a global dummy process already exists.
+   * Executable this (Bun) process spawns directly, in a de-elevated user-mode
+   * token, as the relay ("dummy") process the first time a global dummy is
+   * needed. Default: `ping.exe` (an idle, long-lived process). Ignored once
+   * a global dummy process already exists.
    */
   dummyExecutable?: string;
   /** Arguments for `dummyExecutable`. Default: `['127.0.0.1', '-t']` (infinite ping). */
@@ -119,7 +119,6 @@ async function writeTargetBuffer(
 
 interface GlobalDummyProcess {
   pid: number;
-  process: ChildProcess;
   /** This (Bun) process's own handle to the dummy, opened once and reused. */
   localHandle: number;
 }
@@ -129,7 +128,7 @@ interface GlobalDummyProcess {
 // call regardless of which target/accessor/pid asked for it, since different
 // shared memory regions all get relayed through the same dummy. Lazily
 // spawned on first use.
-let globalDummy: Promise<GlobalDummyProcess> | undefined;
+let globalDummy: GlobalDummyProcess | undefined;
 
 // Each target process must independently OpenProcess the (shared) dummy
 // within its own handle table before it can DuplicateHandle into it -- that
@@ -137,44 +136,125 @@ let globalDummy: Promise<GlobalDummyProcess> | undefined;
 // against the same target skip straight to DuplicateHandle.
 const targetDummyHandles = new Map<number, Promise<bigint>>();
 
-function getGlobalDummyProcess(
-  options: NshmOptions,
-): Promise<GlobalDummyProcess> {
+function getGlobalDummyProcess(options: NshmOptions): GlobalDummyProcess {
   if (!globalDummy) {
     globalDummy = spawnGlobalDummyProcess(options);
   }
   return globalDummy;
 }
 
-async function spawnGlobalDummyProcess(
-  options: NshmOptions,
-): Promise<GlobalDummyProcess> {
+/**
+ * Spawns the dummy directly via `CreateProcessAsUserA` with a token derived
+ * (via `CreateRestrictedToken`) from this (Bun) process's own token, rather
+ * than `child_process.spawn` -- the dummy must run in a plain user-mode
+ * context even when this process itself is elevated, and `spawn` would just
+ * inherit this process's token unmodified. `CreateRestrictedToken` with
+ * `DISABLE_MAX_PRIVILEGE` strips administrative privileges from a duplicate
+ * of the caller's own token; because the resulting token is still derived
+ * from the caller's own primary token (not an arbitrary one), `SE_ASSIGN_
+ * PRIMARYTOKEN_NAME` is not required to hand it to `CreateProcessAsUser`
+ * (see MSDN).
+ */
+function spawnGlobalDummyProcess(options: NshmOptions): GlobalDummyProcess {
   const dummyExecutable = options.dummyExecutable ?? 'ping.exe';
   const dummyArgs = options.dummyArgs ?? ['127.0.0.1', '-t'];
+  const commandLine = `"${dummyExecutable}"${dummyArgs.length ? ` ${dummyArgs.join(' ')}` : ''}`;
+  const commandLineBuf = Buffer.concat([cstr(commandLine), Buffer.alloc(32)]);
 
-  const process = spawn(dummyExecutable, dummyArgs, { stdio: 'ignore' });
-  const pid = process.pid;
-  if (!pid) {
-    throw new SpawnDummyProcessFailedError(dummyExecutable);
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, DUMMY_STARTUP_GRACE_MS));
-
-  // The one direct OpenProcess this (Bun) process ever makes -- on the
-  // dummy it just spawned itself, never on a target -- done once and cached
-  // for every future call.
-  const localHandle = Number(
-    Kernel32Impl.OpenProcess(DUMMY_PROCESS_ACCESS, 0, pid),
+  const tokenOut = Buffer.alloc(8);
+  const gotToken = Advapi32Impl.OpenProcessToken(
+    Kernel32Impl.GetCurrentProcess(),
+    TokenAccess.combine(
+      TokenAccess.DUPLICATE,
+      TokenAccess.QUERY,
+      TokenAccess.ASSIGN_PRIMARY,
+      TokenAccess.ADJUST_DEFAULT,
+      TokenAccess.ADJUST_SESSIONID,
+    ),
+    tokenOut,
   );
-  if (localHandle === 0) {
-    throw new OpenDummyProcessFailedError(
-      pid,
+  if (!gotToken) {
+    throw new OpenProcessTokenFailedError(Number(Kernel32Impl.GetLastError()));
+  }
+  const hToken = tokenOut.readBigUInt64LE(0);
+
+  const restrictedOut = Buffer.alloc(8);
+  const restricted = Advapi32Impl.CreateRestrictedToken(
+    hToken,
+    CreateRestrictedTokenFlags.DISABLE_MAX_PRIVILEGE,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    restrictedOut,
+  );
+  Kernel32Impl.CloseHandle(hToken);
+  if (!restricted) {
+    throw new CreateRestrictedTokenFailedError(
       Number(Kernel32Impl.GetLastError()),
-      false,
+    );
+  }
+  const hRestrictedToken = restrictedOut.readBigUInt64LE(0);
+
+  const startupInfo = StartupInfoA.allocSync();
+  startupInfo.assign({
+    cb: StartupInfoA.computed.totalSize,
+    lpReserved: null,
+    lpDesktop: null,
+    lpTitle: null,
+    dwX: 0,
+    dwY: 0,
+    dwXSize: 0,
+    dwYSize: 0,
+    dwXCountChars: 0,
+    dwYCountChars: 0,
+    dwFillAttribute: 0,
+    dwFlags: 0,
+    wShowWindow: 0,
+    cbReserved2: 0,
+    lpReserved2: null,
+    hStdInput: 0n,
+    hStdOutput: 0n,
+    hStdError: 0n,
+  });
+
+  const processInfo = ProcessInformation.allocSync();
+  processInfo.assign({
+    hProcess: 0n,
+    hThread: 0n,
+    dwProcessId: 0,
+    dwThreadId: 0,
+  });
+
+  const created = Advapi32Impl.CreateProcessAsUserA(
+    hRestrictedToken,
+    0,
+    commandLineBuf,
+    0,
+    0,
+    0,
+    ProcessCreationFlags.CREATE_NO_WINDOW,
+    0,
+    0,
+    startupInfo,
+    processInfo,
+  );
+  Kernel32Impl.CloseHandle(hRestrictedToken);
+  if (!created) {
+    throw new SpawnDummyProcessFailedError(
+      dummyExecutable,
+      Number(Kernel32Impl.GetLastError()),
     );
   }
 
-  return { pid, process, localHandle };
+  const pid = Number(processInfo.dwProcessId);
+  // CreateProcessAsUser hands back a fully-usable process handle directly --
+  // no separate local OpenProcess needed.
+  const localHandle = Number(processInfo.hProcess);
+
+  return { pid, localHandle };
 }
 
 async function getTargetDummyHandle(
@@ -208,21 +288,19 @@ async function getTargetDummyHandle(
 }
 
 /**
- * Releases this (Bun) process's cached handle to the global dummy process,
- * kills the dummy (it was spawned solely to hold relayed handles -- nothing
- * else depends on it running), and forgets the cached global/per-target
- * state, so the next {@link createSharedMemory} call spawns a fresh dummy.
- * Existing `Nshm` instances remain valid (their own local mapping
- * handle/view are independent of the dummy once mapped).
+ * Terminates and releases this (Bun) process's handle to the global dummy
+ * process, and forgets the cached global/per-target state, so the next
+ * {@link createSharedMemory} call spawns a fresh dummy. Existing `Nshm`
+ * instances remain valid (their own local mapping handle/view are
+ * independent of the dummy once mapped).
  */
-export async function closeGlobalDummyProcess(): Promise<void> {
+export function closeGlobalDummyProcess(): void {
   const dummy = globalDummy;
   globalDummy = undefined;
   targetDummyHandles.clear();
   if (!dummy) return;
-  const { process, localHandle } = await dummy;
-  if (process.exitCode === null) process.kill();
-  Kernel32Impl.CloseHandle(localHandle);
+  Kernel32Impl.TerminateProcess(dummy.localHandle, 0);
+  Kernel32Impl.CloseHandle(dummy.localHandle);
 }
 
 /**
@@ -232,11 +310,13 @@ export async function closeGlobalDummyProcess(): Promise<void> {
  * target.
  *
  * Flow (see CLAUDE.md / task notes for the full rationale):
- *  1. This (Bun) process spawns a single relay ("dummy") process directly
- *     (a normal local child process, not a remote call into any target) the
- *     first time it's needed, and reuses it for every subsequent call
- *     regardless of which target/accessor/pid is asking -- different shared
- *     memory regions can all be relayed through the same dummy.
+ *  1. This (Bun) process spawns a single relay ("dummy") process directly,
+ *     in a de-elevated user-mode token via `CreateProcessAsUserA` (never
+ *     `child_process.spawn`, which would just inherit this process's own
+ *     token/privilege level unmodified). The dummy is reused for every
+ *     subsequent call regardless of which target/accessor/pid is asking --
+ *     different shared memory regions can all be relayed through the same
+ *     dummy.
  *  2. Inside the target (via `target.call`), all it ever does is:
  *     `CreateFileMappingA` creates the section, `OpenProcess` opens a
  *     target-local handle to the (shared) dummy PID (cached per target), and
@@ -286,8 +366,7 @@ export async function createSharedMemory(
     throw new CreateFileMappingFailedError(await getLastError(target));
   }
 
-  const resolvedDummy = await dummy;
-  const hDummyInTarget = await getTargetDummyHandle(target, resolvedDummy.pid);
+  const hDummyInTarget = await getTargetDummyHandle(target, dummy.pid);
 
   // ── DuplicateHandle inside the target: transfer the mapping to the dummy ─
   const dupOutAddr = await target.alloc(8);
@@ -311,7 +390,7 @@ export async function createSharedMemory(
   // ── DuplicateHandle locally: pull the mapping handle out of the dummy ────
   const localDupOut = Buffer.alloc(8);
   const localDupOk = Kernel32Impl.DuplicateHandle(
-    resolvedDummy.localHandle,
+    dummy.localHandle,
     dummyMappingHandle,
     CURRENT_PROCESS_PSEUDO_HANDLE,
     localDupOut,
@@ -340,7 +419,7 @@ export async function createSharedMemory(
     hMapping,
     localMappingHandle,
     localView,
-    resolvedDummy.pid,
-    resolvedDummy.localHandle,
+    dummy.pid,
+    dummy.localHandle,
   );
 }

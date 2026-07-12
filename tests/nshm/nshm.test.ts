@@ -14,8 +14,8 @@ import { TestProcess } from '../helpers.js';
 // (CreateFileMappingA/OpenProcess/DuplicateHandle) never running on a
 // freshly-created thread under Wine/GHA.
 describe('nshm > createSharedMemory (handle relay via a single shared dummy process)', () => {
-  afterAll(async () => {
-    await closeGlobalDummyProcess();
+  afterAll(() => {
+    closeGlobalDummyProcess();
   });
 
   test('shares memory between the target process and this process without OpenProcess on the target', async () => {

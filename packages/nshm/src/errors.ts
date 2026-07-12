@@ -19,9 +19,28 @@ export class CreateFileMappingFailedError extends NshmError {
   }
 }
 
+export class OpenProcessTokenFailedError extends NshmError {
+  constructor(public readonly lastError: number) {
+    super(
+      `OpenProcessToken failed for this (Bun) process's own token (GetLastError=${lastError})`,
+    );
+  }
+}
+
+export class CreateRestrictedTokenFailedError extends NshmError {
+  constructor(public readonly lastError: number) {
+    super(`CreateRestrictedToken failed (GetLastError=${lastError})`);
+  }
+}
+
 export class SpawnDummyProcessFailedError extends NshmError {
-  constructor(public readonly executable: string) {
-    super(`Failed to spawn dummy relay process (${executable})`);
+  constructor(
+    public readonly executable: string,
+    public readonly lastError: number,
+  ) {
+    super(
+      `CreateProcessAsUserA failed to spawn dummy relay process (${executable}, GetLastError=${lastError})`,
+    );
   }
 }
 

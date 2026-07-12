@@ -511,3 +511,34 @@ export const DuplicateHandleOptions = cdefines(
 export type DuplicateHandleOptions = CDefineValueType<
   typeof DuplicateHandleOptions
 >;
+
+// 26. TokenAccess (for OpenProcessToken)
+export const TokenAccess = cdefines(
+  {
+    ASSIGN_PRIMARY: 0x0001,
+    DUPLICATE: 0x0002,
+    IMPERSONATE: 0x0004,
+    QUERY: 0x0008,
+    QUERY_SOURCE: 0x0010,
+    ADJUST_PRIVILEGES: 0x0020,
+    ADJUST_GROUPS: 0x0040,
+    ADJUST_DEFAULT: 0x0080,
+    ADJUST_SESSIONID: 0x0100,
+  },
+  'TOKEN',
+);
+export type TokenAccess = CDefineValueType<typeof TokenAccess>;
+
+// 27. CreateRestrictedTokenFlags (for CreateRestrictedToken -- de-elevates a
+// token derived from the caller's own primary token, so no
+// SE_ASSIGN_PRIMARYTOKEN_NAME privilege is required to CreateProcessAsUser
+// with the result)
+export const CreateRestrictedTokenFlags = cdefines({
+  DISABLE_MAX_PRIVILEGE: 0x1,
+  SANDBOX_INERT: 0x2,
+  LUA_TOKEN: 0x4,
+  WRITE_RESTRICTED: 0x8,
+});
+export type CreateRestrictedTokenFlags = CDefineValueType<
+  typeof CreateRestrictedTokenFlags
+>;
