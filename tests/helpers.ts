@@ -1,9 +1,93 @@
 import { Kernel32Impl } from '../packages/xffi/src/win/kernel32.js';
-import { spawnDeElevatedProcess } from '../packages/nshm/src/nshm.js';
+import { StartupInfoA, ProcessInformation } from '../packages/xffi/src/win/structs.js';
+import { ProcessCreationFlags } from '../packages/xffi/src/win/defines.js';
 
 // Fixed duration for the spawned ping.exe -- generous enough that no test in
 // this suite ever runs long enough to see it exit underneath them.
 const PING_SECONDS = 60;
+
+/**
+ * Spawns `executable` directly via a plain `CreateProcessA` -- no
+ * `child_process` (its own signal-based kill / 'exit' event would race
+ * Wine's real process teardown, a likely contributor to the intermittent
+ * Bun/Wine segfault documented in CLAUDE.md), but also deliberately *not*
+ * `nshm`'s `spawnDeElevatedProcess` (`OpenProcessToken` +
+ * `CreateRestrictedToken` + `CreateProcessAsUserA`): that NT token/security
+ * API path reproducibly crashed Bun itself (hard segfault at address
+ * `0xFFFFFFFFFFFFFFFF`, `bun-report` frames inside `ntdll.dll`/
+ * `kernelbase.dll`) the moment the very first test file constructed a
+ * `TestProcess`, consistently across GitHub Actions runs, while passing
+ * locally -- Wine's NT security-token subsystem is a well-known incomplete
+ * area, and this suite's tests never actually needed a de-elevated token
+ * (that guarantee matters for `nshm`'s real dummy-relay process, not for a
+ * throwaway `ping.exe`/`notepad.exe` test target). Plain `CreateProcessA`
+ * gets the same "avoid child_process" benefit without touching advapi32.
+ */
+function spawnPlainProcess(
+  executable: string,
+  args: string[],
+): { pid: number; handle: number } {
+  const commandLine = `"${executable}"${args.length ? ` ${args.join(' ')}` : ''}`;
+  const commandLineBuf = Buffer.concat([
+    Buffer.from(commandLine + '\0', 'latin1'),
+    Buffer.alloc(32),
+  ]);
+
+  const startupInfo = StartupInfoA.allocSync();
+  startupInfo.assign({
+    cb: StartupInfoA.computed.totalSize,
+    lpReserved: null,
+    lpDesktop: null,
+    lpTitle: null,
+    dwX: 0,
+    dwY: 0,
+    dwXSize: 0,
+    dwYSize: 0,
+    dwXCountChars: 0,
+    dwYCountChars: 0,
+    dwFillAttribute: 0,
+    dwFlags: 0,
+    wShowWindow: 0,
+    cbReserved2: 0,
+    lpReserved2: null,
+    hStdInput: 0n,
+    hStdOutput: 0n,
+    hStdError: 0n,
+  });
+
+  const processInfo = ProcessInformation.allocSync();
+  processInfo.assign({
+    hProcess: 0n,
+    hThread: 0n,
+    dwProcessId: 0,
+    dwThreadId: 0,
+  });
+
+  const created = Kernel32Impl.CreateProcessA(
+    0,
+    commandLineBuf,
+    0,
+    0,
+    0,
+    ProcessCreationFlags.CREATE_NO_WINDOW,
+    0,
+    0,
+    startupInfo,
+    processInfo,
+  );
+  if (!created) {
+    throw new Error(
+      `Failed to spawn test process (${executable}), GetLastError=${Kernel32Impl.GetLastError()}`,
+    );
+  }
+
+  const pid = Number(processInfo.dwProcessId);
+  const handle = Number(processInfo.hProcess);
+  const threadHandle = Number(processInfo.hThread);
+  if (threadHandle) Kernel32Impl.CloseHandle(threadHandle);
+
+  return { pid, handle };
+}
 
 export class TestProcess {
   public pid: number;
@@ -31,13 +115,10 @@ export class TestProcess {
     executable: string = 'ping.exe',
     args: string[] = ['127.0.0.1', '-n', String(PING_SECONDS)],
   ) {
-    // Spawned the same de-elevated way nshm's own dummy relay process is
-    // (CreateProcessAsUserA, not child_process.spawn) -- it needs no
-    // elevated privileges either, and this sidesteps node's ChildProcess
-    // bookkeeping (its own signal-based kill, 'exit' event) racing against
-    // Wine's real process teardown, a likely contributor to the
-    // intermittent Bun/Wine segfaults documented in CLAUDE.md.
-    const spawned = spawnDeElevatedProcess(executable, args);
+    // See spawnPlainProcess() above for why this is a plain CreateProcessA,
+    // not child_process.spawn (Wine-teardown race) and not nshm's
+    // spawnDeElevatedProcess (crashed Bun outright on GitHub Actions).
+    const spawned = spawnPlainProcess(executable, args);
     this.pid = spawned.pid;
     this.handle = spawned.handle;
 
