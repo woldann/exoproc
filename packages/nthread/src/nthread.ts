@@ -1,6 +1,5 @@
 import {
   InittableMiddlewareAccessor,
-  HostAccessor,
   RemoteCallableMemoryAccessor,
   type ISyncCallableMemoryAccessor,
   type CCallResult,
@@ -14,6 +13,7 @@ import {
   resolveAddress,
   stackAlign16,
 } from 'bun-xffi';
+import { HostAccessor } from 'exoproc-accessors';
 import {
   getRandomSpinStub,
   getRandomPushretStub,

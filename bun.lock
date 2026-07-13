@@ -47,6 +47,17 @@
         "tailwindcss": "^4.0.0",
       },
     },
+    "packages/accessors": {
+      "name": "exoproc-accessors",
+      "version": "0.1.0",
+      "dependencies": {
+        "bun-xffi": "workspace:*",
+        "exoproc-utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "packages/capstone": {
       "name": "bun-capstone",
       "version": "0.1.0",
@@ -65,6 +76,7 @@
         "bun-nthread": "workspace:*",
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
+        "exoproc-accessors": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -94,6 +106,7 @@
       "version": "0.1.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
+        "exoproc-accessors": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -103,6 +116,7 @@
       "dependencies": {
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
+        "exoproc-accessors": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -640,6 +654,8 @@
     "execa": ["execa@8.0.1", "", { "dependencies": { "cross-spawn": "^7.0.3", "get-stream": "^8.0.1", "human-signals": "^5.0.0", "is-stream": "^3.0.0", "merge-stream": "^2.0.0", "npm-run-path": "^5.1.0", "onetime": "^6.0.0", "signal-exit": "^4.1.0", "strip-final-newline": "^3.0.0" } }, "sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg=="],
 
     "exoproc": ["exoproc@workspace:packages/exoproc"],
+
+    "exoproc-accessors": ["exoproc-accessors@workspace:packages/accessors"],
 
     "exoproc-examples": ["exoproc-examples@workspace:examples"],
 

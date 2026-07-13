@@ -41,6 +41,7 @@
     "paths": {
       "exoproc-utils": ["packages/utils/src/index.ts"],
       "bun-xffi": ["packages/xffi/src/index.ts"],
+      "exoproc-accessors": ["packages/accessors/src/index.ts"],
       "bun-capstone": ["packages/capstone/src/index.ts"],
       "bun-winapi": ["packages/winapi/src/index.ts"],
       "bun-nthread": ["packages/nthread/src/index.ts"],
@@ -54,6 +55,7 @@
   "references": [
     { "path": "./packages/utils" },
     { "path": "./packages/xffi" },
+    { "path": "./packages/accessors" },
     { "path": "./packages/capstone" },
     { "path": "./packages/winapi" },
     { "path": "./packages/nthread" },

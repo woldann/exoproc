@@ -1,11 +1,8 @@
 import { expect, test, describe } from 'bun:test';
-import {
-  ThrowingMemoryAccessor,
-  CType,
-  createCFunction,
-} from '../../packages/xffi/src/index.js';
+import { CType, createCFunction } from '../../packages/xffi/src/index.js';
+import { ThrowingMemoryAccessor } from '../../packages/accessors/src/index.js';
 
-describe('xffi > ThrowingMemoryAccessor Guard', () => {
+describe('accessors > ThrowingMemoryAccessor Guard', () => {
   test('should throw an explicit error for every memory operation', async () => {
     const accessor = new ThrowingMemoryAccessor(-1);
 

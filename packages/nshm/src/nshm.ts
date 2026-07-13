@@ -15,10 +15,10 @@ import {
   resolveAddress,
   MiddlewareAccessor,
   type AddressLike,
-  type HostAccessor,
   type ICallableMemoryAccessor,
   type ISyncCallableMemoryAccessor,
 } from 'bun-xffi';
+import { type HostAccessor } from 'exoproc-accessors';
 import {
   CreateFileMappingFailedError,
   OpenProcessTokenFailedError,

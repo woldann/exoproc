@@ -23,6 +23,7 @@ export default {
       'always',
       [
         'xffi',
+        'accessors',
         'winapi',
         'capstone',
         'nthread',

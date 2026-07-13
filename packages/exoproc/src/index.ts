@@ -1,5 +1,6 @@
 export * from 'bun-winapi';
 export * from 'bun-xffi';
+export * from 'exoproc-accessors';
 export * from 'bun-nthread';
 export * from 'bun-nhook';
 export * from 'bun-minhook';

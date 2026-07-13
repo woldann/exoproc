@@ -1,18 +1,20 @@
 import { expect, test, describe } from 'bun:test';
 import {
-  ProcessCacheAccessor,
   AbstractSyncCallableMemoryAccessor,
   type CFunction,
   type CCallResult,
   type AddressLike,
   Kernel32Impl,
   GetModuleHandleExFlag,
-  HostAccessor,
   MemoryBasicInformation,
 } from '../../packages/xffi/src/index.js';
 import { resolveAddress } from '../../packages/xffi/src/ffi.js';
+import {
+  ProcessCacheAccessor,
+  HostAccessor,
+} from '../../packages/accessors/src/index.js';
 
-describe('xffi > ProcessCacheAccessor', () => {
+describe('accessors > ProcessCacheAccessor', () => {
   test('should lazily cache process metadata and intercept/cache module handle lookups', async () => {
     let callCount = 0;
     const writeMemory = new Map<number, Buffer>();

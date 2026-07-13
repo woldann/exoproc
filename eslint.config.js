@@ -48,7 +48,10 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/xffi/src/**/*.{ts,js}'],
+    files: [
+      'packages/xffi/src/**/*.{ts,js}',
+      'packages/accessors/src/**/*.{ts,js}',
+    ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',

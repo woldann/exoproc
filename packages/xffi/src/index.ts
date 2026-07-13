@@ -3,16 +3,8 @@ export * from './pointer.js';
 export * from './win/defines.js';
 export * from './iaccessor.js';
 export * from './accessor.js';
-export { AllocNearRangeError } from './near-alloc.js';
+export * from './near-alloc.js';
 export * from './middleware-accessor.js';
-export {
-  FileTransferReadAccessor,
-  FileTransferWriteAccessor,
-  MemsetWriteAccessor,
-  MemcmpReadAccessor,
-  DebugMemoryAccessor,
-} from './middleware-accessor.js';
-export * from './host-accessor.js';
 export * from './callable-accessor.js';
 export * from './win/utils.js';
 export * from './waiter.js';

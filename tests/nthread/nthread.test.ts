@@ -1,13 +1,12 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import {
-  RedirectorHostAccessor,
-  IndirectCallableAccessor,
   RemoteCallableMemoryAccessor,
   Kernel32Impl,
   CrtImpl,
   cmachinecode,
 } from 'bun-xffi';
+import { RedirectorHostAccessor } from 'exoproc-accessors';
 
 // Compiled once at module load; reused across tests.
 const sum8f = cmachinecode({
@@ -17,6 +16,7 @@ const sum8f = cmachinecode({
 });
 import {
   NThread,
+  IndirectNThreadHostAccessor,
   getRandomSpinStub,
   getRandomPushretStub,
   getRandomJumpStub,
@@ -46,10 +46,10 @@ describe('NThread Integration with Indirect Accessor', () => {
         { timeoutMs: 15000 },
         redirector,
       );
-      const indirect = new IndirectCallableAccessor(nthread);
+      const indirect = new IndirectNThreadHostAccessor(nthread);
       expect(indirect).toBeDefined();
-
       redirector.target = indirect;
+
       indirect.enableDebug();
 
       // Test a simple direct call on the hijacked thread
@@ -111,7 +111,7 @@ describe('NThread Integration with Indirect Accessor', () => {
         { timeoutMs: 15000 },
         redirector,
       );
-      const indirect = new IndirectCallableAccessor(nthread);
+      const indirect = new IndirectNThreadHostAccessor(nthread);
       redirector.target = indirect;
 
       // Force the chain to finish initializing via one async call first --

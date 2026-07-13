@@ -1,6 +1,6 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
-import { ProcessCacheAccessor, HostAccessor } from 'bun-xffi';
+import { ProcessCacheAccessor, HostAccessor } from 'exoproc-accessors';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { TestProcess } from '../helpers.js';
 

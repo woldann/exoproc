@@ -1,17 +1,21 @@
 import { expect, test, describe } from 'bun:test';
 import {
-  MemcmpReadAccessor,
   localCallableMemoryAccessor,
   type ISyncCallableMemoryAccessor,
   type CFunction,
   type CCallResult,
-  HostAccessor,
 } from '../../packages/xffi/src/index.js';
 import { resolveAddress } from '../../packages/xffi/src/ffi.js';
+import {
+  MemsetWriteAccessor,
+  HostAccessor,
+} from '../../packages/accessors/src/index.js';
 
-describe('xffi > MemcmpReadAccessor', () => {
-  test('should resolve memory correctly byte-by-byte using memcmp binary search', async () => {
-    let callCount = 0;
+describe('accessors > MemsetWriteAccessor', () => {
+  test('should decompose and optimize write operations using memset runs', async () => {
+    const calls: { address: number; value: number; count: number }[] = [];
+
+    // Create a spy accessor wrapping localCallableMemoryAccessor
     const spyBackend: ISyncCallableMemoryAccessor = {
       isLocal: localCallableMemoryAccessor.isLocal,
       processId: localCallableMemoryAccessor.processId,
@@ -51,15 +55,38 @@ describe('xffi > MemcmpReadAccessor', () => {
       machineCode: (sc) => localCallableMemoryAccessor.machineCode(sc),
       machineCodeSync: (sc) => localCallableMemoryAccessor.machineCodeSync(sc),
 
+      // Override call to spy on memset and then forward to the local accessor
       call: async (func: CFunction, ...args: any[]): Promise<CCallResult> => {
-        callCount++;
+        // Record only the memset calls (3 arguments: targetAddr, runValue, runCount)
+        if (
+          args.length === 3 &&
+          typeof args[1] === 'number' &&
+          typeof args[2] === 'number'
+        ) {
+          calls.push({
+            address: Number(args[0]),
+            value: Number(args[1]),
+            count: Number(args[2]),
+          });
+        }
         return localCallableMemoryAccessor.call(func, ...args);
       },
       callSync: (func: CFunction, ...args: any[]): CCallResult => {
-        callCount++;
+        if (
+          args.length === 3 &&
+          typeof args[1] === 'number' &&
+          typeof args[2] === 'number'
+        ) {
+          calls.push({
+            address: Number(args[0]),
+            value: Number(args[1]),
+            count: Number(args[2]),
+          });
+        }
         return localCallableMemoryAccessor.callSync(func, ...args);
       },
 
+      // Stub for missing helper methods to satisfy interface
       readInt8: (addr, offset) =>
         localCallableMemoryAccessor.readInt8(addr, offset),
       readInt8Sync: (addr, offset) =>
@@ -152,28 +179,40 @@ describe('xffi > MemcmpReadAccessor', () => {
     };
 
     const host = new HostAccessor(spyBackend);
-    const accessor = new MemcmpReadAccessor(spyBackend, host);
+    const accessor = new MemsetWriteAccessor(spyBackend, host);
     host.backend = accessor;
 
-    await host.init();
+    const buf = Buffer.alloc(10);
+    const bufAddress = Number(resolveAddress(buf));
 
-    const testStr = 'Memcmp!';
-    const testBuf = Buffer.from(testStr);
-    const testAddr = resolveAddress(testBuf);
+    // Test pattern: 5 ones, 1 two, 4 threes
+    const testData = Buffer.from([1, 1, 1, 1, 1, 2, 3, 3, 3, 3]);
 
-    const readResult = await accessor.read(testAddr, testBuf.length);
-    // Compare against `testBuf` itself (not just re-deriving the string) so
-    // the buffer stays referenced across the many async memcmp round-trips
-    // above -- `resolveAddress` resolves to a raw address via bun:ffi's
-    // `ptr()`, which does not pin the buffer, so nothing else keeps it alive
-    // during the read and the GC is otherwise free to reclaim/move it,
-    // corrupting the blind byte-by-byte comparison mid-flight.
-    expect(readResult.equals(testBuf)).toBe(true);
-    expect(readResult.toString()).toBe(testStr);
+    const written = await accessor.write(bufAddress, testData);
+    expect(written).toBe(10);
 
-    // We resolved 7 bytes. Each byte search takes ~8 comparisons.
-    expect(callCount).toBeGreaterThan(0);
+    // Verify buffer content was written correctly via memset
+    expect(Array.from(buf)).toEqual([1, 1, 1, 1, 1, 2, 3, 3, 3, 3]);
 
-    host.close();
+    // Verify that memset calls were optimized into exactly 3 calls with combined counts!
+    expect(calls.length).toBe(3);
+
+    expect(calls[0]).toEqual({
+      address: bufAddress,
+      value: 1,
+      count: 5,
+    });
+
+    expect(calls[1]).toEqual({
+      address: bufAddress + 5,
+      value: 2,
+      count: 1,
+    });
+
+    expect(calls[2]).toEqual({
+      address: bufAddress + 6,
+      value: 3,
+      count: 4,
+    });
   });
 });

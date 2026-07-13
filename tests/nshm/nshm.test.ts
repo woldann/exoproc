@@ -1,6 +1,7 @@
 import { expect, test, describe, afterAll } from 'bun:test';
 import * as Native from 'bun-winapi';
-import { Kernel32Impl, HostAccessor } from 'bun-xffi';
+import { Kernel32Impl } from 'bun-xffi';
+import { HostAccessor } from 'exoproc-accessors';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { NShm, closeGlobalDummyProcess } from 'bun-nshm';
 import { TestProcess } from '../helpers.js';
