@@ -7,6 +7,7 @@ import {
   verifyCoreModulesSync,
   type CoreModulesStatus,
   isModuleLoadedInProcess,
+  isModuleLoadedInProcessSync,
 } from './win/utils.js';
 import {
   type ICallableMemoryAccessor,
@@ -213,6 +214,8 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
 export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
   protected isInitialized = false;
   private initPromise: Promise<void> | null = null;
+  /** Sync twin of `initPromise !== null` -- there's nothing to await synchronously, so this is a plain reentrancy flag instead of a shared in-flight promise. */
+  protected isInitializingSync = false;
 
   constructor(backend: ISyncCallableMemoryAccessor, root: HostAccessor) {
     super(backend, root);
@@ -223,7 +226,12 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
 
   protected abstract onInit(): Promise<void>;
 
+  /** Sync twin of {@link onInit}. Every subclass that implements `onInit` must implement this too -- see each's own comment for how its logic maps to *Sync calls. */
+  protected abstract onInitSync(): void;
+
   protected async onDeinit(): Promise<void> {}
+
+  protected onDeinitSync(): void {}
 
   protected async initNext(): Promise<void> {
     let next: MiddlewareAccessor | ISyncCallableMemoryAccessor = this.backend;
@@ -236,6 +244,23 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     }
     if (next instanceof InittableMiddlewareAccessor && !next.isInitializing) {
       await next.init();
+    }
+  }
+
+  protected initNextSync(): void {
+    let next: MiddlewareAccessor | ISyncCallableMemoryAccessor = this.backend;
+    while (
+      next &&
+      next instanceof MiddlewareAccessor &&
+      !(next instanceof InittableMiddlewareAccessor)
+    ) {
+      next = next.backend;
+    }
+    if (
+      next instanceof InittableMiddlewareAccessor &&
+      !next.isInitializingSync
+    ) {
+      next.initSync();
     }
   }
 
@@ -255,6 +280,22 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     }
   }
 
+  protected deinitNextSync(): void {
+    let next: MiddlewareAccessor | ISyncCallableMemoryAccessor = this.backend;
+    while (
+      next &&
+      next instanceof MiddlewareAccessor &&
+      !(next instanceof InittableMiddlewareAccessor)
+    ) {
+      next = next.backend;
+    }
+    if (next instanceof InittableMiddlewareAccessor) {
+      next.deinitSync();
+    } else {
+      super.close();
+    }
+  }
+
   public async deinit(): Promise<void> {
     if (!this.isInitialized) return;
     try {
@@ -263,6 +304,18 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
       this.isInitialized = false;
       this.initPromise = null;
       await this.deinitNext();
+    }
+  }
+
+  /** Sync twin of {@link deinit}. */
+  public deinitSync(): void {
+    if (!this.isInitialized) return;
+    try {
+      this.onDeinitSync();
+    } finally {
+      this.isInitialized = false;
+      this.initPromise = null;
+      this.deinitNextSync();
     }
   }
 
@@ -297,6 +350,29 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
       throw err;
     } finally {
       this.initPromise = null;
+    }
+  }
+
+  /**
+   * Sync twin of {@link init}. Whichever family (sync or async) a caller
+   * happens to use first is the one that actually initializes the chain --
+   * `readSync()`/`callSync()`/etc. call this the same way `read()`/`call()`
+   * call `init()`, so neither family depends on the other having run first.
+   * `isInitializingSync` guards against reentrancy (e.g. `onInitSync()`
+   * itself issuing a `this.root.*Sync()` call that would otherwise
+   * re-trigger `initSync()` on the same instance).
+   */
+  public initSync(): void {
+    if (this.isInitialized) return;
+    if (this.isInitializingSync) return;
+
+    this.isInitializingSync = true;
+    try {
+      this.initNextSync();
+      this.onInitSync();
+      this.isInitialized = true;
+    } finally {
+      this.isInitializingSync = false;
     }
   }
   override async read(
@@ -383,16 +459,16 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return this.machineCodeAfterInit(machineCode);
   }
 
-  // ── Sync twins of the dispatch overrides above. Unlike their async
-  //    counterparts, these have NO init guard -- a synchronous method can't
-  //    `await this.init()`, so the chain must already be initialized before
-  //    any of these are called (drive one async op first, e.g. `await
-  //    this.init()` or any plain async call, exactly like NThread.callSync's
-  //    own precedent). Each just forwards straight to its `XAfterInitSync`
-  //    twin, which subclasses override the same way they override the async
-  //    `XAfterInit` methods. ────────────────────────────────────────────────
+  // ── Sync twins of the dispatch overrides above. Same init guard shape as
+  //    their async counterparts, just via initSync()/isInitializingSync
+  //    instead of init()/isInitializing -- whichever family (sync or async)
+  //    a caller uses first is the one that actually initializes the chain,
+  //    so neither depends on the other having run first. ───────────────────
 
   override readSync(address: AddressLike, size: number, offset = 0): Buffer {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.readAfterInitSync(address, size, offset);
   }
 
@@ -401,6 +477,9 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     data: Buffer | Uint8Array,
     offset = 0,
   ): number {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.writeAfterInitSync(address, data, offset);
   }
 
@@ -410,10 +489,16 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     protection?: any,
     allocationType?: any,
   ): AddressLike {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.allocAfterInitSync(size, address, protection, allocationType);
   }
 
   override freeSync(address: AddressLike, size = 0, freeType?: any): boolean {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.freeAfterInitSync(address, size, freeType);
   }
 
@@ -422,18 +507,30 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     size: number,
     newProtect: any,
   ): number {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.protectAfterInitSync(address, size, newProtect);
   }
 
   override querySync(address: AddressLike): any {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.queryAfterInitSync(address);
   }
 
   override callSync(func: CFunction, ...args: any[]): CCallResult {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.callAfterInitSync(func, args);
   }
 
   override machineCodeSync(machineCode: CMachineCode): number {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.machineCodeAfterInitSync(machineCode);
   }
 
@@ -561,6 +658,15 @@ export abstract class MsvcrtDependentMiddlewareAccessor extends InittableMiddlew
       throw new Error('Target process does not have msvcrt.dll loaded.');
     }
   }
+
+  protected onInitSync(): void {
+    if (this.isLocal) return;
+    const msvcrtBase = MsvcrtLibrary.baseAddress;
+    const isMsvcrtLoaded = isModuleLoadedInProcessSync(this.root, msvcrtBase);
+    if (!isMsvcrtLoaded) {
+      throw new Error('Target process does not have msvcrt.dll loaded.');
+    }
+  }
 }
 
 /**
@@ -593,6 +699,10 @@ export class HostAccessor extends InittableMiddlewareAccessor {
     // No-op. Chain initialization is automatically propagated by init().
   }
 
+  protected override onInitSync(): void {
+    // No-op. Chain initialization is automatically propagated by initSync().
+  }
+
   public override async deinit(): Promise<void> {
     if (!this.isInitialized) return;
     try {
@@ -615,6 +725,30 @@ export class HostAccessor extends InittableMiddlewareAccessor {
       this.children.clear();
     } finally {
       await super.deinit();
+    }
+  }
+
+  /** Sync twin of {@link deinit}. */
+  public override deinitSync(): void {
+    if (!this.isInitialized) return;
+    try {
+      const active = new Set<InittableMiddlewareAccessor>();
+      let current: MiddlewareAccessor | ICallableMemoryAccessor = this.backend;
+      while (current && current instanceof MiddlewareAccessor) {
+        if (current instanceof InittableMiddlewareAccessor) {
+          active.add(current);
+        }
+        current = current.backend;
+      }
+
+      for (const child of this.children) {
+        if (!active.has(child)) {
+          child.deinitSync();
+        }
+      }
+      this.children.clear();
+    } finally {
+      super.deinitSync();
     }
   }
 }
@@ -866,6 +1000,10 @@ export class RedirectorHostAccessor extends HostAccessor {
   protected override async onInit(): Promise<void> {
     // No-op. The target is initialized separately.
   }
+
+  protected override onInitSync(): void {
+    // No-op. The target is initialized separately.
+  }
 }
 
 /**
@@ -882,6 +1020,11 @@ export class BootstrapHostAccessor extends RedirectorHostAccessor {
 
   protected override async onInit(): Promise<void> {
     await this.initNext();
+    this.target = this.root;
+  }
+
+  protected override onInitSync(): void {
+    this.initNextSync();
     this.target = this.root;
   }
 }
@@ -1513,7 +1656,7 @@ export class MemsetWriteAccessor extends MsvcrtDependentMiddlewareAccessor {
     data: Buffer | Uint8Array,
     offset = 0,
   ): number {
-    if (this.isInitializing || this._isExecuting) {
+    if (this.isInitializingSync || this._isExecuting) {
       return super.writeAfterInitSync(address, data, offset);
     }
     this._isExecuting = true;
@@ -1599,7 +1742,7 @@ export class MemcmpReadAccessor extends MsvcrtDependentMiddlewareAccessor {
     size: number,
     offset = 0,
   ): Buffer {
-    if (this.isInitializing || this._isExecuting) {
+    if (this.isInitializingSync || this._isExecuting) {
       return super.readAfterInitSync(address, size, offset);
     }
     this._isExecuting = true;
@@ -2016,6 +2159,14 @@ export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor 
     );
   }
 
+  protected override onInitSync(): void {
+    super.onInitSync();
+    this.tempFilePath = path.join(
+      os.tmpdir(),
+      `exoproc-read-${randomUUID()}.tmp`,
+    );
+  }
+
   private async ensureOpen(): Promise<void> {
     if (this.hFile) return;
     const pathBuf = Buffer.from(this.tempFilePath! + '\0', 'utf8');
@@ -2088,6 +2239,25 @@ export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor 
     }
   }
 
+  protected override onDeinitSync(): void {
+    if (this.hFile) {
+      try {
+        this.backend.callSync(MsvcrtImpl.fclose, this.hFile);
+      } catch {
+        /* ignore cleanup errors */
+      }
+      this.hFile = undefined;
+    }
+    if (this.tempFilePath) {
+      try {
+        fs.unlinkSync(this.tempFilePath);
+      } catch {
+        /* ignore cleanup errors */
+      }
+      this.tempFilePath = undefined;
+    }
+  }
+
   override async readAfterInit(
     address: AddressLike,
     size: number,
@@ -2136,7 +2306,7 @@ export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor 
     offset = 0,
   ): Buffer {
     if (
-      this.isInitializing ||
+      this.isInitializingSync ||
       this.root.isExecutingFileTransfer ||
       !this.tempFilePath
     ) {
@@ -2183,6 +2353,14 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
 
   protected override async onInit(): Promise<void> {
     await super.onInit();
+    this.tempFilePath = path.join(
+      os.tmpdir(),
+      `exoproc-write-${randomUUID()}.tmp`,
+    );
+  }
+
+  protected override onInitSync(): void {
+    super.onInitSync();
     this.tempFilePath = path.join(
       os.tmpdir(),
       `exoproc-write-${randomUUID()}.tmp`,
@@ -2260,6 +2438,25 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
     }
   }
 
+  protected override onDeinitSync(): void {
+    if (this.hFile) {
+      try {
+        this.backend.callSync(MsvcrtImpl.fclose, this.hFile);
+      } catch {
+        /* ignore cleanup errors */
+      }
+      this.hFile = undefined;
+    }
+    if (this.tempFilePath) {
+      try {
+        fs.unlinkSync(this.tempFilePath);
+      } catch {
+        /* ignore cleanup errors */
+      }
+      this.tempFilePath = undefined;
+    }
+  }
+
   override async writeAfterInit(
     address: AddressLike,
     data: Buffer | Uint8Array,
@@ -2308,7 +2505,7 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
     offset = 0,
   ): number {
     if (
-      this.isInitializing ||
+      this.isInitializingSync ||
       this.root.isExecutingFileTransfer ||
       !this.tempFilePath
     ) {
@@ -2401,6 +2598,10 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     // Empty JIT initialization since metadata is queried on demand
   }
 
+  protected onInitSync(): void {
+    // Empty JIT initialization since metadata is queried on demand
+  }
+
   /** Core of getIs64Bit()/getIs64BitSync() -- entirely local/synchronous Win32 calls already, so both share this verbatim. */
   private getIs64BitCore(): boolean {
     if (this.cachedIs64Bit !== null) {
@@ -2444,8 +2645,11 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     return this.getIs64BitCore();
   }
 
-  /** Sync twin of getIs64Bit() -- see NThread.callSync's precedent: no init guard, chain must already be initialized. */
+  /** Sync twin of getIs64Bit() -- initializes the chain via initSync() if it hasn't run yet. */
   public getIs64BitSync(): boolean {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.getIs64BitCore();
   }
 
@@ -2498,8 +2702,11 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     return this.getProcessNameCore();
   }
 
-  /** Sync twin of getProcessName() -- see getIs64BitSync's comment on the missing init guard. */
+  /** Sync twin of getProcessName() -- initializes the chain via initSync() if it hasn't run yet. */
   public getProcessNameSync(): string {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     return this.getProcessNameCore();
   }
 
@@ -2513,8 +2720,11 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     return this.cachedCoreModules;
   }
 
-  /** Sync twin of getCoreModules() -- see getIs64BitSync's comment on the missing init guard. */
+  /** Sync twin of getCoreModules() -- initializes the chain via initSync() if it hasn't run yet. */
   public getCoreModulesSync(): CoreModulesStatus {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     if (this.cachedCoreModules !== null) {
       return this.cachedCoreModules;
     }

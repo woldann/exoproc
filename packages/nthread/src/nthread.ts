@@ -497,10 +497,123 @@ export class NThread extends InittableMiddlewareAccessor {
     }
   }
 
+  /**
+   * Synchronous twin of {@link onInit}: identical thread-parking sequence --
+   * everything here besides the three bootstrap stub calls was already
+   * synchronous (register/context manipulation, stub lookup), so only those
+   * three `await this.root.call(...)` calls become `this.root.callSync(...)`.
+   */
+  protected override onInitSync(): void {
+    if (this.options.pollIntervalMs) {
+      const pollIntervalMs = Math.max(0, this.options.pollIntervalMs);
+      this.pollIntervalMs = pollIntervalMs;
+    }
+
+    if (!this.stubs.spinStub) {
+      const sleep = getRandomSpinStub();
+      if (!sleep) throw new NoSleepAddressError();
+      this.stubs.spinStub = sleep;
+    }
+    if (!this.stubs.pushRetStub || !this.stubs.pushRetRegKey) {
+      const randomPushret = getRandomPushretStub(this.stubs.pushRetRegKey);
+      if (!randomPushret) throw new NoPushretAddressError();
+      this.stubs.pushRetStub = randomPushret.stub;
+      this.stubs.pushRetRegKey = randomPushret.regKey;
+    }
+    if (!this.stubs.jumpStub || !this.stubs.jumpRegKey) {
+      const randomJump = getRandomJumpStub(this.stubs.jumpRegKey);
+      if (!randomJump) throw new NoJumpAddressError();
+      this.stubs.jumpStub = randomJump.stub;
+      this.stubs.jumpRegKey = randomJump.regKey;
+    }
+    if (!this.stubs.retStub) {
+      const ret = getRandomRetStub();
+      if (!ret) throw new NoRetAddressError();
+      this.stubs.retStub = ret;
+    }
+    if (!this.stubs.addRsp28RetStub) {
+      const addRsp = getRandomAddRsp28RetStub();
+      if (!addRsp) throw new NoAddRsp28RetAddressError();
+      this.stubs.addRsp28RetStub = addRsp;
+    }
+
+    const stubs = this.stubs as ThreadStubs;
+    this.nativeThread = Native.Thread.open(this.threadId);
+
+    try {
+      this.onceSuspendThread();
+
+      this.fetchContext();
+      this.savedContext = this.ctx.clone();
+
+      const originalRip = this.savedContext.Rip;
+      const originalJumpReg = (this.savedContext as any)[stubs.jumpRegKey];
+
+      this.setJumpStubReg(BigInt(stubs.spinStub.address));
+
+      nthreadLog.debug(
+        `Parking thread ${this.tid} at spinStub 0x${stubs.spinStub.address.toString(16)}...`,
+      );
+
+      this.root.callSync(stubs.jumpStub as any);
+
+      this.fetchContext();
+      this.savedContext = this.ctx.clone();
+      (this.savedContext as any)[stubs.jumpRegKey] = originalJumpReg;
+      this.savedContext.Rip = originalRip;
+
+      if (!this.isCallRspSet()) {
+        const baseRsp = BigInt(this.getContext().Rsp);
+        const stackBegin = this.calcStackBegin();
+        const callRsp = stackBegin - 136n;
+        nthreadLog.trace(
+          `[NThread.onInitSync] baseRsp: 0x${baseRsp.toString(16)}, stackBegin: 0x${stackBegin.toString(16)}, callRsp: 0x${callRsp.toString(16)}`,
+        );
+
+        this.setPushRetStubReg(BigInt(stubs.spinStub.address));
+        this.setRSP(callRsp + 56n);
+        this.root.callSync(stubs.pushRetStub as any);
+
+        nthreadLog.trace(
+          `Stage A complete. callRsp: 0x${callRsp.toString(16)}`,
+        );
+
+        this.setPushRetStubReg(BigInt(stubs.addRsp28RetStub.address));
+        this.setRSP(callRsp + 8n);
+        this.root.callSync(stubs.pushRetStub as any);
+
+        nthreadLog.trace(
+          `Stage B complete. callRsp: 0x${callRsp.toString(16)}`,
+        );
+
+        this.callRsp = callRsp;
+      }
+    } catch (err) {
+      this.closeThread();
+      this.nativeThread = undefined;
+      throw err;
+    }
+  }
+
   protected override async onDeinit(): Promise<void> {
     for (const [, addr] of this._stackArgStubs) {
       try {
         await this.free(addr);
+      } catch {
+        /* ignore */
+      }
+    }
+    this._stackArgStubs.clear();
+    if (this.nativeThread) {
+      this.closeThread();
+      this.nativeThread = undefined;
+    }
+  }
+
+  protected override onDeinitSync(): void {
+    for (const [, addr] of this._stackArgStubs) {
+      try {
+        this.freeSync(addr);
       } catch {
         /* ignore */
       }
@@ -715,6 +828,9 @@ export class NThread extends InittableMiddlewareAccessor {
    * async `call()` for that instead.
    */
   public override callSync(func: CFunction, ...args: any[]): CCallResult {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
     if (!this.nativeThread) {
       throw new Error('NThread is not initialized.');
     }
