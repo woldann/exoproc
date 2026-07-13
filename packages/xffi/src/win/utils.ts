@@ -1,4 +1,7 @@
-import { type ICallableMemoryAccessor } from '../iaccessor.js';
+import {
+  type ICallableMemoryAccessor,
+  type ISyncCallableMemoryAccessor,
+} from '../iaccessor.js';
 import { type AddressLike } from '../pointer.js';
 import { resolveAddress, alignUp } from '../ffi.js';
 import { GetModuleHandleExFlag } from './defines.js';
@@ -127,6 +130,30 @@ export async function isModuleLoadedInProcess(
   }
 }
 
+/** Synchronous twin of {@link isModuleLoadedInProcess}. */
+export function isModuleLoadedInProcessSync(
+  accessor: ISyncCallableMemoryAccessor,
+  moduleAddress: AddressLike,
+): boolean {
+  try {
+    const targetAddress = resolveAddress(moduleAddress);
+    const scratchAddr = findKernel32ScratchAddress();
+
+    const flags =
+      GetModuleHandleExFlag.UNCHANGED_REFCOUNT |
+      GetModuleHandleExFlag.FROM_ADDRESS;
+    const success = accessor.callSync(
+      Kernel32Impl.GetModuleHandleExA,
+      flags,
+      targetAddress,
+      scratchAddr,
+    );
+    return Number(success) !== 0;
+  } catch {
+    return false;
+  }
+}
+
 export interface CoreModulesStatus {
   ntdll: boolean;
   kernel32: boolean;
@@ -162,6 +189,35 @@ export async function verifyCoreModules(
       : false,
     user32: !user32Base.isNull()
       ? await isModuleLoadedInProcess(accessor, user32Base)
+      : false,
+  };
+}
+
+/** Synchronous twin of {@link verifyCoreModules}. */
+export function verifyCoreModulesSync(
+  accessor: ISyncCallableMemoryAccessor,
+): CoreModulesStatus {
+  if (accessor.isLocal) {
+    return {
+      ntdll: true,
+      kernel32: true,
+      kernelbase: true,
+      msvcrt: true,
+      user32: true,
+    };
+  }
+  const msvcrtBase = MsvcrtLibrary.baseAddress;
+  const user32Base = User32Library.baseAddress;
+
+  return {
+    ntdll: true,
+    kernel32: true,
+    kernelbase: true,
+    msvcrt: !msvcrtBase.isNull()
+      ? isModuleLoadedInProcessSync(accessor, msvcrtBase)
+      : false,
+    user32: !user32Base.isNull()
+      ? isModuleLoadedInProcessSync(accessor, user32Base)
       : false,
   };
 }

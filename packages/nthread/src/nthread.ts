@@ -757,12 +757,12 @@ export class NThread extends InittableMiddlewareAccessor {
                 0xc3,
               ];
         while (stubBytes.length < 16) stubBytes.push(0x90);
-        const allocAddr = this.root.allocSync(
+        const allocAddr = this.allocSync(
           16,
           null,
           MemoryProtection.EXECUTE_READWRITE,
         );
-        this.root.writeSync(allocAddr, Buffer.from(stubBytes));
+        this.writeSync(allocAddr, Buffer.from(stubBytes));
         stubAddr = BigInt(resolveAddress(allocAddr));
         this._stackArgStubs.set(N_stack, stubAddr);
       }
@@ -770,7 +770,7 @@ export class NThread extends InittableMiddlewareAccessor {
       // Overwrite [callRsp] with stub address (replaces addRsp28RetStub)
       const retBuf = Buffer.allocUnsafe(8);
       retBuf.writeBigUInt64LE(stubAddr);
-      this.root.writeSync(callRsp, retBuf);
+      this.writeSync(callRsp, retBuf);
 
       // Write each stack arg at [callRsp + 40 + i*8]
       for (let i = 4; i < args.length; i++) {
@@ -785,13 +785,13 @@ export class NThread extends InittableMiddlewareAccessor {
         } else {
           slotBuf.writeBigUInt64LE(BigInt(resolveAddress(v)));
         }
-        this.root.writeSync(callRsp + 40n + BigInt(n * 8), slotBuf);
+        this.writeSync(callRsp + 40n + BigInt(n * 8), slotBuf);
       }
 
       // Write spinStub at [callRsp + 48 + N_stack*8]
       const sleepBuf = Buffer.allocUnsafe(8);
       sleepBuf.writeBigUInt64LE(BigInt(stubs.spinStub.address));
-      this.root.writeSync(callRsp + 48n + BigInt(N_stack * 8), sleepBuf);
+      this.writeSync(callRsp + 48n + BigInt(N_stack * 8), sleepBuf);
     }
 
     const ctx = this.getContext();
@@ -846,10 +846,10 @@ export class NThread extends InittableMiddlewareAccessor {
           const callRsp = this.callRsp;
           const retBuf = Buffer.allocUnsafe(8);
           retBuf.writeBigUInt64LE(BigInt(stubs.addRsp28RetStub.address));
-          this.root.writeSync(callRsp, retBuf);
+          this.writeSync(callRsp, retBuf);
           const sleepBuf = Buffer.allocUnsafe(8);
           sleepBuf.writeBigUInt64LE(BigInt(stubs.spinStub.address));
-          this.root.writeSync(callRsp + 48n, sleepBuf);
+          this.writeSync(callRsp + 48n, sleepBuf);
         } catch {
           /* ignore restore errors */
         }

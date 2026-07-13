@@ -4,6 +4,7 @@ import { AbstractSyncMemoryAccessor } from './accessor.js';
 import * as debug from './debug-helper.js';
 import {
   verifyCoreModules,
+  verifyCoreModulesSync,
   type CoreModulesStatus,
   isModuleLoadedInProcess,
 } from './win/utils.js';
@@ -19,7 +20,11 @@ import {
   freeRegionCandidate,
   AllocNearRangeError,
 } from './near-alloc.js';
-import { type CCallResult, normalizeType } from './types.js';
+import {
+  type CCallResult,
+  type CTypeOrString,
+  normalizeType,
+} from './types.js';
 import { resolveAddress, alignUp } from './ffi.js';
 import { Kernel32Impl } from './win/kernel32.js';
 import { MsvcrtImpl, MsvcrtLibrary } from './win/msvcrt.js';
@@ -378,6 +383,60 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return this.machineCodeAfterInit(machineCode);
   }
 
+  // ── Sync twins of the dispatch overrides above. Unlike their async
+  //    counterparts, these have NO init guard -- a synchronous method can't
+  //    `await this.init()`, so the chain must already be initialized before
+  //    any of these are called (drive one async op first, e.g. `await
+  //    this.init()` or any plain async call, exactly like NThread.callSync's
+  //    own precedent). Each just forwards straight to its `XAfterInitSync`
+  //    twin, which subclasses override the same way they override the async
+  //    `XAfterInit` methods. ────────────────────────────────────────────────
+
+  override readSync(address: AddressLike, size: number, offset = 0): Buffer {
+    return this.readAfterInitSync(address, size, offset);
+  }
+
+  override writeSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    return this.writeAfterInitSync(address, data, offset);
+  }
+
+  override allocSync(
+    size: number | any,
+    address: AddressLike | null = null,
+    protection?: any,
+    allocationType?: any,
+  ): AddressLike {
+    return this.allocAfterInitSync(size, address, protection, allocationType);
+  }
+
+  override freeSync(address: AddressLike, size = 0, freeType?: any): boolean {
+    return this.freeAfterInitSync(address, size, freeType);
+  }
+
+  override protectSync(
+    address: AddressLike,
+    size: number,
+    newProtect: any,
+  ): number {
+    return this.protectAfterInitSync(address, size, newProtect);
+  }
+
+  override querySync(address: AddressLike): any {
+    return this.queryAfterInitSync(address);
+  }
+
+  override callSync(func: CFunction, ...args: any[]): CCallResult {
+    return this.callAfterInitSync(func, args);
+  }
+
+  override machineCodeSync(machineCode: CMachineCode): number {
+    return this.machineCodeAfterInitSync(machineCode);
+  }
+
   protected async readAfterInit(
     address: AddressLike,
     size: number,
@@ -386,12 +445,28 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.read(address, size, offset);
   }
 
+  protected readAfterInitSync(
+    address: AddressLike,
+    size: number,
+    offset = 0,
+  ): Buffer {
+    return super.readSync(address, size, offset);
+  }
+
   protected async writeAfterInit(
     address: AddressLike,
     data: Buffer | Uint8Array,
     offset = 0,
   ): Promise<number> {
     return super.write(address, data, offset);
+  }
+
+  protected writeAfterInitSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    return super.writeSync(address, data, offset);
   }
 
   protected async allocAfterInit(
@@ -403,12 +478,29 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.alloc(size, address, protection, allocationType);
   }
 
+  protected allocAfterInitSync(
+    size: number | any,
+    address: AddressLike | null = null,
+    protection?: any,
+    allocationType?: any,
+  ): AddressLike {
+    return super.allocSync(size, address, protection, allocationType);
+  }
+
   protected async freeAfterInit(
     address: AddressLike,
     size = 0,
     freeType?: any,
   ): Promise<boolean> {
     return super.free(address, size, freeType);
+  }
+
+  protected freeAfterInitSync(
+    address: AddressLike,
+    size = 0,
+    freeType?: any,
+  ): boolean {
+    return super.freeSync(address, size, freeType);
   }
 
   protected async protectAfterInit(
@@ -419,8 +511,20 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.protect(address, size, newProtect);
   }
 
+  protected protectAfterInitSync(
+    address: AddressLike,
+    size: number,
+    newProtect: any,
+  ): number {
+    return super.protectSync(address, size, newProtect);
+  }
+
   protected async queryAfterInit(address: AddressLike): Promise<any> {
     return super.query(address);
+  }
+
+  protected queryAfterInitSync(address: AddressLike): any {
+    return super.querySync(address);
   }
 
   protected async callAfterInit(
@@ -430,10 +534,18 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.call(func, ...args);
   }
 
+  protected callAfterInitSync(func: CFunction, args: any[]): CCallResult {
+    return super.callSync(func, ...args);
+  }
+
   protected async machineCodeAfterInit(
     machineCode: CMachineCode,
   ): Promise<number> {
     return super.machineCode(machineCode);
+  }
+
+  protected machineCodeAfterInitSync(machineCode: CMachineCode): number {
+    return super.machineCodeSync(machineCode);
   }
 }
 
@@ -800,12 +912,46 @@ export class CallRedirectorAccessor extends MiddlewareAccessor {
     return result;
   }
 
+  override allocSync(
+    size: number,
+    address: AddressLike | null = null,
+    protection: number = MemoryProtection.READWRITE,
+    allocationType: number = MemoryState.COMMIT | MemoryState.RESERVE,
+  ): AddressLike {
+    const addressVal = address ? resolveAddress(address) : null;
+    const result = this.root.callSync(
+      Kernel32Impl.VirtualAlloc,
+      addressVal,
+      size,
+      allocationType,
+      protection,
+    );
+    if (!result || Number(result) === 0) {
+      throw new Error(`VirtualAlloc failed in remote process for size ${size}`);
+    }
+    return result;
+  }
+
   override async free(
     address: AddressLike,
     size = 0,
     freeType: number = MemoryFreeType.RELEASE,
   ): Promise<boolean> {
     const success = await this.root.call(
+      Kernel32Impl.VirtualFree,
+      resolveAddress(address),
+      size,
+      freeType,
+    );
+    return success !== 0 && success !== false;
+  }
+
+  override freeSync(
+    address: AddressLike,
+    size = 0,
+    freeType: number = MemoryFreeType.RELEASE,
+  ): boolean {
+    const success = this.root.callSync(
       Kernel32Impl.VirtualFree,
       resolveAddress(address),
       size,
@@ -842,6 +988,32 @@ export class CallRedirectorAccessor extends MiddlewareAccessor {
     }
   }
 
+  override protectSync(
+    address: AddressLike,
+    size: number,
+    newProtect: number,
+  ): number {
+    // Sync twin of protect() -- see its comment for the temp-buffer rationale.
+    const tempAddr = this.root.allocSync(4);
+    try {
+      const success = this.root.callSync(
+        Kernel32Impl.VirtualProtect,
+        resolveAddress(address),
+        size,
+        newProtect,
+        tempAddr,
+      );
+      if (!success || success === 0) {
+        throw new Error(
+          `VirtualProtect failed in remote process at address ${resolveAddress(address)}`,
+        );
+      }
+      return this.root.readUInt32Sync(tempAddr);
+    } finally {
+      this.root.freeSync(tempAddr);
+    }
+  }
+
   override async query(address: AddressLike): Promise<MemoryBasicInformation> {
     const info = new MemoryBasicInformation();
     // Allocate a temporary 48-byte buffer in the target process using root.alloc
@@ -864,6 +1036,30 @@ export class CallRedirectorAccessor extends MiddlewareAccessor {
       return info;
     } finally {
       await this.root.free(tempAddr);
+    }
+  }
+
+  override querySync(address: AddressLike): MemoryBasicInformation {
+    // Sync twin of query() -- see its comment for the temp-buffer rationale.
+    const info = new MemoryBasicInformation();
+    const tempAddr = this.root.allocSync(info.size);
+    try {
+      const bytesReturned = this.root.callSync(
+        Kernel32Impl.VirtualQuery,
+        resolveAddress(address),
+        tempAddr,
+        info.size,
+      );
+      if (!bytesReturned || Number(bytesReturned) === 0) {
+        throw new Error(
+          `VirtualQuery failed in remote process at address ${resolveAddress(address)}`,
+        );
+      }
+      const buffer = this.root.readSync(tempAddr, info.size);
+      info.writeSync(buffer, 0);
+      return info;
+    } finally {
+      this.root.freeSync(tempAddr);
     }
   }
 
@@ -940,6 +1136,60 @@ export class CallRedirectorAccessor extends MiddlewareAccessor {
 
     throw new AllocNearRangeError(range.target, range.maxDistance);
   }
+
+  override allocNearSync(
+    target: AddressLike,
+    size: number,
+    options: AllocNearOptions = {},
+  ): AddressLike {
+    // Sync twin of allocNear() -- same walk, same shared computeNearAllocRange/
+    // freeRegionCandidate helpers, driven with querySync/allocSync instead.
+    const range = computeNearAllocRange(target, options);
+    const protection = options.protection ?? MemoryProtection.EXECUTE_READWRITE;
+    const allocationType = (MemoryState.COMMIT |
+      MemoryState.RESERVE) as MemoryState;
+
+    const tryRegion = (info: MemoryBasicInformation): AddressLike | null => {
+      const candidate = freeRegionCandidate(info, size, range);
+      if (candidate === null) return null;
+      try {
+        return this.allocSync(size, candidate, protection, allocationType);
+      } catch {
+        return null;
+      }
+    };
+
+    const first = this.querySync(range.target);
+    const firstHit = tryRegion(first);
+    if (firstHit !== null) return firstHit;
+    const firstBase = BigInt(resolveAddress(first.BaseAddress));
+    const firstSize = BigInt(first.RegionSize) || 0x10000n;
+
+    let cursor = firstBase - 1n;
+    while (cursor >= range.minAddr) {
+      const info = this.querySync(cursor);
+      const hit = tryRegion(info);
+      if (hit !== null) return hit;
+      const base = BigInt(resolveAddress(info.BaseAddress));
+      const next = base - 1n;
+      if (next >= cursor) break;
+      cursor = next;
+    }
+
+    cursor = firstBase + firstSize;
+    while (cursor <= range.maxAddr) {
+      const info = this.querySync(cursor);
+      const hit = tryRegion(info);
+      if (hit !== null) return hit;
+      const base = BigInt(resolveAddress(info.BaseAddress));
+      const regionSize = BigInt(info.RegionSize) || 0x10000n;
+      const next = base + regionSize;
+      if (next <= cursor) break;
+      cursor = next;
+    }
+
+    throw new AllocNearRangeError(range.target, range.maxDistance);
+  }
 }
 
 /**
@@ -960,6 +1210,25 @@ export class IndirectCallRedirectorAccessor extends CallRedirectorAccessor {
       }
     }
     return null;
+  }
+
+  /** Shared by query()/querySync() -- pure, no I/O, so no need for two copies. */
+  private buildMallocBlockInfo(block: {
+    base: number;
+    size: number;
+  }): MemoryBasicInformation {
+    const info = new MemoryBasicInformation();
+    info.assign({
+      BaseAddress: block.base,
+      AllocationBase: block.base,
+      AllocationProtect: MemoryProtection.READWRITE,
+      PartitionId: 0,
+      RegionSize: BigInt(block.size),
+      State: MemoryState.COMMIT,
+      Protect: MemoryProtection.READWRITE,
+      Type: 0x20000, // MEM_PRIVATE
+    } as any);
+    return info;
   }
 
   override async alloc(
@@ -986,6 +1255,28 @@ export class IndirectCallRedirectorAccessor extends CallRedirectorAccessor {
     return super.alloc(size, address, protection, allocationType);
   }
 
+  override allocSync(
+    size: number,
+    address: AddressLike | null = null,
+    protection: number = MemoryProtection.READWRITE,
+    allocationType: number = MemoryState.COMMIT | MemoryState.RESERVE,
+  ): AddressLike {
+    if (
+      protection === MemoryProtection.READWRITE &&
+      (address === null || address === undefined)
+    ) {
+      const result = this.root.callSync(MsvcrtImpl.malloc, size);
+      if (!result || Number(result) === 0) {
+        throw new Error(`malloc failed in remote process for size ${size}`);
+      }
+      const allocatedAddr = Number(result);
+      this.mallocs.set(allocatedAddr, size);
+      return allocatedAddr;
+    }
+
+    return super.allocSync(size, address, protection, allocationType);
+  }
+
   override async free(
     address: AddressLike,
     size = 0,
@@ -998,6 +1289,20 @@ export class IndirectCallRedirectorAccessor extends CallRedirectorAccessor {
       return true;
     }
     return super.free(address, size, freeType);
+  }
+
+  override freeSync(
+    address: AddressLike,
+    size = 0,
+    freeType: number = MemoryFreeType.RELEASE,
+  ): boolean {
+    const addrVal = Number(resolveAddress(address));
+    if (this.mallocs.has(addrVal)) {
+      this.root.callSync(MsvcrtImpl.free, addrVal);
+      this.mallocs.delete(addrVal);
+      return true;
+    }
+    return super.freeSync(address, size, freeType);
   }
 
   override async protect(
@@ -1018,24 +1323,40 @@ export class IndirectCallRedirectorAccessor extends CallRedirectorAccessor {
     return super.protect(address, size, newProtect);
   }
 
+  override protectSync(
+    address: AddressLike,
+    size: number,
+    newProtect: number,
+  ): number {
+    const addrVal = Number(resolveAddress(address));
+    const block = this.findMallocBlock(addrVal);
+    if (block) {
+      if (newProtect !== MemoryProtection.READWRITE) {
+        throw new Error(
+          `Cannot change protection of indirect heap block at 0x${addrVal.toString(16)} to ${newProtect}. Only READWRITE is allowed.`,
+        );
+      }
+      return MemoryProtection.READWRITE;
+    }
+    return super.protectSync(address, size, newProtect);
+  }
+
   override async query(address: AddressLike): Promise<MemoryBasicInformation> {
     const addrVal = Number(resolveAddress(address));
     const block = this.findMallocBlock(addrVal);
     if (block) {
-      const info = new MemoryBasicInformation();
-      info.assign({
-        BaseAddress: block.base,
-        AllocationBase: block.base,
-        AllocationProtect: MemoryProtection.READWRITE,
-        PartitionId: 0,
-        RegionSize: BigInt(block.size),
-        State: MemoryState.COMMIT,
-        Protect: MemoryProtection.READWRITE,
-        Type: 0x20000, // MEM_PRIVATE
-      } as any);
-      return info;
+      return this.buildMallocBlockInfo(block);
     }
     return super.query(address);
+  }
+
+  override querySync(address: AddressLike): MemoryBasicInformation {
+    const addrVal = Number(resolveAddress(address));
+    const block = this.findMallocBlock(addrVal);
+    if (block) {
+      return this.buildMallocBlockInfo(block);
+    }
+    return super.querySync(address);
   }
 }
 
@@ -1045,36 +1366,42 @@ export class IndirectCallRedirectorAccessor extends CallRedirectorAccessor {
  * executes the native call, and cleans up the temporary allocations.
  */
 export class MarshallingCallableAccessor extends MiddlewareAccessor {
+  /**
+   * Shared by call()/callSync() -- pure decision of "does this argument need
+   * marshalling to a remote buffer, and if so, what bytes", with no I/O.
+   * Returns `null` for args that pass through unmodified.
+   */
+  private static bufferToMarshal(
+    type: CTypeOrString | undefined | null,
+    val: any,
+  ): Buffer | null {
+    const normType = normalizeType(type);
+    if (normType === 'cstring' && typeof val === 'string') {
+      return Buffer.from(val + '\0', 'utf8');
+    } else if (normType === 'cwstring' && typeof val === 'string') {
+      return Buffer.from(val + '\0', 'utf16le');
+    } else if (val && typeof val === 'object' && Buffer.isBuffer(val)) {
+      return val;
+    }
+    return null;
+  }
+
   override async call(func: CFunction, ...args: any[]): Promise<CCallResult> {
-    const originalArgs = [...args];
     const modifiedArgs = [...args];
     const tempAllocations: { address: number; size: number }[] = [];
 
     try {
       const signatureArgs = func.args || [];
       for (let i = 0; i < signatureArgs.length; i++) {
-        const type = signatureArgs[i];
-        const val = originalArgs[i];
-        const normType = normalizeType(type);
-
-        if (normType === 'cstring' && typeof val === 'string') {
-          const buf = Buffer.from(val + '\0', 'utf8');
-          const remoteAddr = Number(await this.root.alloc(buf.length));
-          await this.root.write(remoteAddr, buf);
-          tempAllocations.push({ address: remoteAddr, size: buf.length });
-          modifiedArgs[i] = remoteAddr;
-        } else if (normType === 'cwstring' && typeof val === 'string') {
-          const buf = Buffer.from(val + '\0', 'utf16le');
-          const remoteAddr = Number(await this.root.alloc(buf.length));
-          await this.root.write(remoteAddr, buf);
-          tempAllocations.push({ address: remoteAddr, size: buf.length });
-          modifiedArgs[i] = remoteAddr;
-        } else if (val && typeof val === 'object' && Buffer.isBuffer(val)) {
-          const remoteAddr = Number(await this.root.alloc(val.length));
-          await this.root.write(remoteAddr, val);
-          tempAllocations.push({ address: remoteAddr, size: val.length });
-          modifiedArgs[i] = remoteAddr;
-        }
+        const buf = MarshallingCallableAccessor.bufferToMarshal(
+          signatureArgs[i],
+          args[i],
+        );
+        if (!buf) continue;
+        const remoteAddr = Number(await this.root.alloc(buf.length));
+        await this.root.write(remoteAddr, buf);
+        tempAllocations.push({ address: remoteAddr, size: buf.length });
+        modifiedArgs[i] = remoteAddr;
       }
 
       return await this.backend.call(func, ...modifiedArgs);
@@ -1082,6 +1409,36 @@ export class MarshallingCallableAccessor extends MiddlewareAccessor {
       for (const alloc of tempAllocations) {
         try {
           await this.root.free(alloc.address, alloc.size);
+        } catch {
+          // ignore cleanup errors
+        }
+      }
+    }
+  }
+
+  override callSync(func: CFunction, ...args: any[]): CCallResult {
+    const modifiedArgs = [...args];
+    const tempAllocations: { address: number; size: number }[] = [];
+
+    try {
+      const signatureArgs = func.args || [];
+      for (let i = 0; i < signatureArgs.length; i++) {
+        const buf = MarshallingCallableAccessor.bufferToMarshal(
+          signatureArgs[i],
+          args[i],
+        );
+        if (!buf) continue;
+        const remoteAddr = Number(this.root.allocSync(buf.length));
+        this.root.writeSync(remoteAddr, buf);
+        tempAllocations.push({ address: remoteAddr, size: buf.length });
+        modifiedArgs[i] = remoteAddr;
+      }
+
+      return this.backend.callSync(func, ...modifiedArgs);
+    } finally {
+      for (const alloc of tempAllocations) {
+        try {
+          this.root.freeSync(alloc.address, alloc.size);
         } catch {
           // ignore cleanup errors
         }
@@ -1099,6 +1456,28 @@ export class MarshallingCallableAccessor extends MiddlewareAccessor {
 export class MemsetWriteAccessor extends MsvcrtDependentMiddlewareAccessor {
   private _isExecuting = false;
 
+  /**
+   * Shared by writeAfterInit()/writeAfterInitSync() -- pure run-length scan
+   * over the buffer, no I/O, so no need for two copies.
+   */
+  private static computeRuns(
+    buffer: Buffer,
+  ): { startOffset: number; value: number; count: number }[] {
+    const runs: { startOffset: number; value: number; count: number }[] = [];
+    let i = 0;
+    while (i < buffer.length) {
+      const val = buffer[i];
+      if (val === undefined) break;
+      let runLength = 1;
+      while (i + runLength < buffer.length && buffer[i + runLength] === val) {
+        runLength++;
+      }
+      runs.push({ startOffset: i, value: val, count: runLength });
+      i += runLength;
+    }
+    return runs;
+  }
+
   override async writeAfterInit(
     address: AddressLike,
     data: Buffer | Uint8Array,
@@ -1111,23 +1490,7 @@ export class MemsetWriteAccessor extends MsvcrtDependentMiddlewareAccessor {
     try {
       const baseAddress = resolveAddress(address) + offset;
       const buffer = data instanceof Buffer ? data : Buffer.from(data);
-      const runs: { startOffset: number; value: number; count: number }[] = [];
-
-      let i = 0;
-      while (i < buffer.length) {
-        const val = buffer[i];
-        if (val === undefined) break;
-        let runLength = 1;
-        while (i + runLength < buffer.length && buffer[i + runLength] === val) {
-          runLength++;
-        }
-        runs.push({
-          startOffset: i,
-          value: val,
-          count: runLength,
-        });
-        i += runLength;
-      }
+      const runs = MemsetWriteAccessor.computeRuns(buffer);
       let totalWritten = 0;
       for (const run of runs) {
         const targetAddr = baseAddress + run.startOffset;
@@ -1137,6 +1500,31 @@ export class MemsetWriteAccessor extends MsvcrtDependentMiddlewareAccessor {
           run.value,
           run.count,
         );
+        totalWritten += run.count;
+      }
+      return totalWritten;
+    } finally {
+      this._isExecuting = false;
+    }
+  }
+
+  override writeAfterInitSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    if (this.isInitializing || this._isExecuting) {
+      return super.writeAfterInitSync(address, data, offset);
+    }
+    this._isExecuting = true;
+    try {
+      const baseAddress = resolveAddress(address) + offset;
+      const buffer = data instanceof Buffer ? data : Buffer.from(data);
+      const runs = MemsetWriteAccessor.computeRuns(buffer);
+      let totalWritten = 0;
+      for (const run of runs) {
+        const targetAddr = baseAddress + run.startOffset;
+        this.root.callSync(MsvcrtImpl.memset, targetAddr, run.value, run.count);
         totalWritten += run.count;
       }
       return totalWritten;
@@ -1203,6 +1591,62 @@ export class MemcmpReadAccessor extends MsvcrtDependentMiddlewareAccessor {
     } finally {
       this._isExecuting = false;
       await this.root.free(candidateAddr).catch(() => {});
+    }
+  }
+
+  override readAfterInitSync(
+    address: AddressLike,
+    size: number,
+    offset = 0,
+  ): Buffer {
+    if (this.isInitializing || this._isExecuting) {
+      return super.readAfterInitSync(address, size, offset);
+    }
+    this._isExecuting = true;
+    const baseAddress = resolveAddress(address) + offset;
+    const candidateAddr = Number(resolveAddress(this.root.allocSync(1)));
+    const candidateBuf = Buffer.alloc(1);
+
+    try {
+      const result = Buffer.alloc(size);
+
+      for (let i = 0; i < size; i++) {
+        let low = 0;
+        let high = 255;
+        let foundByte = 0;
+
+        while (low <= high) {
+          const mid = (low + high) >> 1;
+          candidateBuf[0] = mid;
+          this.root.writeSync(candidateAddr, candidateBuf);
+
+          const cmp = this.root.callSync(
+            MsvcrtImpl.memcmp,
+            baseAddress + i,
+            candidateAddr,
+            1,
+          );
+
+          const cmpVal = Number(cmp);
+          if (cmpVal === 0) {
+            foundByte = mid;
+            break;
+          } else if (cmpVal < 0) {
+            high = mid - 1;
+          } else {
+            low = mid + 1;
+          }
+        }
+        result[i] = foundByte;
+      }
+      return result;
+    } finally {
+      this._isExecuting = false;
+      try {
+        this.root.freeSync(candidateAddr);
+      } catch {
+        /* ignore cleanup errors */
+      }
     }
   }
 }
@@ -1595,6 +2039,36 @@ export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor 
     }
   }
 
+  private ensureOpenSync(): void {
+    if (this.hFile) return;
+    const pathBuf = Buffer.from(this.tempFilePath! + '\0', 'utf8');
+    const modeBuf = Buffer.from('wb\0', 'utf8');
+
+    const pathPtr = this.root.allocSync(pathBuf.length);
+    const modePtr = this.root.allocSync(modeBuf.length);
+    this.root.writeSync(pathPtr, pathBuf);
+    this.root.writeSync(modePtr, modeBuf);
+
+    this.hFile = this.root.callSync(MsvcrtImpl.fopen, pathPtr, modePtr);
+    try {
+      this.root.freeSync(pathPtr);
+    } catch {
+      /* ignore cleanup errors */
+    }
+    try {
+      this.root.freeSync(modePtr);
+    } catch {
+      /* ignore cleanup errors */
+    }
+
+    if (!this.hFile || Number(this.hFile) === 0) {
+      this.hFile = undefined;
+      throw new Error(
+        `fopen failed to open temp file in write mode: ${this.tempFilePath}`,
+      );
+    }
+  }
+
   protected override async onDeinit(): Promise<void> {
     // Close via `this.backend` (not `this.root`): during teardown the chain
     // deinits top-down, so `this.root` is already deinitialized here and a
@@ -1655,6 +2129,44 @@ export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor 
       this.root.isExecutingFileTransfer = false;
     }
   }
+
+  override readAfterInitSync(
+    address: AddressLike,
+    size: number,
+    offset = 0,
+  ): Buffer {
+    if (
+      this.isInitializing ||
+      this.root.isExecutingFileTransfer ||
+      !this.tempFilePath
+    ) {
+      return super.readAfterInitSync(address, size, offset);
+    }
+    this.root.isExecutingFileTransfer = true;
+    try {
+      this.ensureOpenSync();
+      const targetAddr = resolveAddress(address) + offset;
+
+      this.root.callSync(MsvcrtImpl.rewind, this.hFile);
+      const written = this.root.callSync(
+        MsvcrtImpl.fwrite,
+        targetAddr,
+        1,
+        size,
+        this.hFile,
+      );
+      if (Number(written) !== size) {
+        throw new Error(
+          `fwrite failed to write entire memory block of size ${size} (wrote ${written})`,
+        );
+      }
+      this.root.callSync(MsvcrtImpl.fflush, this.hFile);
+
+      return fs.readFileSync(this.tempFilePath!).subarray(0, size);
+    } finally {
+      this.root.isExecutingFileTransfer = false;
+    }
+  }
 }
 
 /**
@@ -1693,6 +2205,36 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
     this.hFile = await this.root.call(MsvcrtImpl.fopen, pathPtr, modePtr);
     await this.root.free(pathPtr).catch(() => {});
     await this.root.free(modePtr).catch(() => {});
+
+    if (!this.hFile || Number(this.hFile) === 0) {
+      this.hFile = undefined;
+      throw new Error(
+        `fopen failed to open temp file in read mode: ${this.tempFilePath}`,
+      );
+    }
+  }
+
+  private ensureOpenSync(): void {
+    if (this.hFile) return;
+    const pathBuf = Buffer.from(this.tempFilePath! + '\0', 'utf8');
+    const modeBuf = Buffer.from('rb\0', 'utf8');
+
+    const pathPtr = this.root.allocSync(pathBuf.length);
+    const modePtr = this.root.allocSync(modeBuf.length);
+    this.root.writeSync(pathPtr, pathBuf);
+    this.root.writeSync(modePtr, modeBuf);
+
+    this.hFile = this.root.callSync(MsvcrtImpl.fopen, pathPtr, modePtr);
+    try {
+      this.root.freeSync(pathPtr);
+    } catch {
+      /* ignore cleanup errors */
+    }
+    try {
+      this.root.freeSync(modePtr);
+    } catch {
+      /* ignore cleanup errors */
+    }
 
     if (!this.hFile || Number(this.hFile) === 0) {
       this.hFile = undefined;
@@ -1759,6 +2301,45 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
       this.root.isExecutingFileTransfer = false;
     }
   }
+
+  override writeAfterInitSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    if (
+      this.isInitializing ||
+      this.root.isExecutingFileTransfer ||
+      !this.tempFilePath
+    ) {
+      return super.writeAfterInitSync(address, data, offset);
+    }
+    this.root.isExecutingFileTransfer = true;
+    try {
+      const targetAddr = resolveAddress(address) + offset;
+      const buffer = data instanceof Buffer ? data : Buffer.from(data);
+
+      fs.writeFileSync(this.tempFilePath!, buffer);
+      this.ensureOpenSync();
+      this.root.callSync(MsvcrtImpl.rewind, this.hFile);
+
+      const readBytes = this.root.callSync(
+        MsvcrtImpl.fread,
+        targetAddr,
+        1,
+        buffer.length,
+        this.hFile,
+      );
+      if (Number(readBytes) !== buffer.length) {
+        throw new Error(
+          `fread failed to read entire file block of size ${buffer.length} (read ${readBytes})`,
+        );
+      }
+      return Number(readBytes);
+    } finally {
+      this.root.isExecutingFileTransfer = false;
+    }
+  }
 }
 
 /**
@@ -1766,6 +2347,50 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
  * on demand, and intercepts dynamic module queries to cache returned module handles.
  */
 export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
+  private static readonly TARGET_MODULE_NAMES = new Set([
+    'msvcrt',
+    'msvcrt.dll',
+    'user32',
+    'user32.dll',
+  ]);
+
+  /** Pure, no I/O -- shared by every place that needs to trim/lowercase a module name buffer. */
+  private static extractModuleName(buf: Buffer): string {
+    let len = buf.indexOf(0);
+    if (len === -1) len = buf.length;
+    return buf.subarray(0, len).toString('utf8').toLowerCase();
+  }
+
+  /** Pure, no I/O -- shared by callAfterInit()/callAfterInitSync(). */
+  private static resolveTrackedAddrs() {
+    return {
+      getModuleHandleExAAddr: resolveAddress(
+        Kernel32Impl.GetModuleHandleExA.ptr,
+      ),
+      getModuleHandleAAddr: resolveAddress(Kernel32Impl.GetModuleHandleA.ptr),
+      getCurrentProcessAddr: resolveAddress(Kernel32Impl.GetCurrentProcess.ptr),
+      getCurrentProcessIdAddr: resolveAddress(
+        Kernel32Impl.GetCurrentProcessId.ptr,
+      ),
+    };
+  }
+
+  /** Pure, no I/O -- shared by getIs64Bit()/getIs64BitSync() to find an already-open handle in the chain. */
+  private static findOpenHandleInChain(backend: any): any {
+    let curr: any = backend;
+    while (curr) {
+      if (
+        curr.handle !== undefined &&
+        curr.handle !== null &&
+        Number(curr.handle) !== 0
+      ) {
+        return curr.handle;
+      }
+      curr = curr.backend;
+    }
+    return null;
+  }
+
   private writeMemoryCache = new Map<number, Buffer>();
   private moduleHandleCache = new Map<string, bigint>();
   private cachedIs64Bit: boolean | null = null;
@@ -1776,26 +2401,13 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     // Empty JIT initialization since metadata is queried on demand
   }
 
-  public async getIs64Bit(): Promise<boolean> {
-    await this.init();
+  /** Core of getIs64Bit()/getIs64BitSync() -- entirely local/synchronous Win32 calls already, so both share this verbatim. */
+  private getIs64BitCore(): boolean {
     if (this.cachedIs64Bit !== null) {
       return this.cachedIs64Bit;
     }
 
-    let handle: any = null;
-    let curr: any = this.backend;
-    while (curr) {
-      if (
-        curr.handle !== undefined &&
-        curr.handle !== null &&
-        Number(curr.handle) !== 0
-      ) {
-        handle = curr.handle;
-        break;
-      }
-      curr = curr.backend;
-    }
-
+    const handle = ProcessCacheAccessor.findOpenHandleInChain(this.backend);
     const hProcess =
       handle ||
       Kernel32Impl.OpenProcess(
@@ -1827,8 +2439,18 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     return this.cachedIs64Bit;
   }
 
-  public async getProcessName(): Promise<string> {
+  public async getIs64Bit(): Promise<boolean> {
     await this.init();
+    return this.getIs64BitCore();
+  }
+
+  /** Sync twin of getIs64Bit() -- see NThread.callSync's precedent: no init guard, chain must already be initialized. */
+  public getIs64BitSync(): boolean {
+    return this.getIs64BitCore();
+  }
+
+  /** Core of getProcessName()/getProcessNameSync() -- entirely local/synchronous Win32 calls already, so both share this verbatim. */
+  private getProcessNameCore(): string {
     if (this.cachedProcessName !== null) {
       return this.cachedProcessName;
     }
@@ -1871,6 +2493,16 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     return this.cachedProcessName ?? '';
   }
 
+  public async getProcessName(): Promise<string> {
+    await this.init();
+    return this.getProcessNameCore();
+  }
+
+  /** Sync twin of getProcessName() -- see getIs64BitSync's comment on the missing init guard. */
+  public getProcessNameSync(): string {
+    return this.getProcessNameCore();
+  }
+
   public async getCoreModules(): Promise<CoreModulesStatus> {
     await this.init();
     if (this.cachedCoreModules !== null) {
@@ -1878,6 +2510,16 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     }
 
     this.cachedCoreModules = await verifyCoreModules(this);
+    return this.cachedCoreModules;
+  }
+
+  /** Sync twin of getCoreModules() -- see getIs64BitSync's comment on the missing init guard. */
+  public getCoreModulesSync(): CoreModulesStatus {
+    if (this.cachedCoreModules !== null) {
+      return this.cachedCoreModules;
+    }
+
+    this.cachedCoreModules = verifyCoreModulesSync(this);
     return this.cachedCoreModules;
   }
 
@@ -1892,23 +2534,58 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     return super.writeAfterInit(address, data, offset);
   }
 
+  protected override writeAfterInitSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    const addrVal = resolveAddress(address) + offset;
+    const buf = data instanceof Buffer ? data : Buffer.from(data);
+    this.writeMemoryCache.set(addrVal, buf);
+    return super.writeAfterInitSync(address, data, offset);
+  }
+
+  /** Cache lookup for a module name buffer at `namePtr` -- pure, no I/O; `null` means the caller must read it remotely. */
+  private cachedModuleName(namePtr: number): string | null {
+    const writtenBuf = this.writeMemoryCache.get(namePtr);
+    return writtenBuf
+      ? ProcessCacheAccessor.extractModuleName(writtenBuf)
+      : null;
+  }
+
+  private async resolveModuleName(namePtr: number): Promise<string> {
+    const cached = this.cachedModuleName(namePtr);
+    if (cached !== null) return cached;
+    try {
+      const buf = await this.root.read(namePtr, 256);
+      return ProcessCacheAccessor.extractModuleName(buf);
+    } catch {
+      return '';
+    }
+  }
+
+  private resolveModuleNameSync(namePtr: number): string {
+    const cached = this.cachedModuleName(namePtr);
+    if (cached !== null) return cached;
+    try {
+      const buf = this.root.readSync(namePtr, 256);
+      return ProcessCacheAccessor.extractModuleName(buf);
+    } catch {
+      return '';
+    }
+  }
+
   protected override async callAfterInit(
     func: CFunction,
     args: any[],
   ): Promise<CCallResult> {
     const funcAddr = resolveAddress(func.ptr);
-    const getModuleHandleExAAddr = resolveAddress(
-      Kernel32Impl.GetModuleHandleExA.ptr,
-    );
-    const getModuleHandleAAddr = resolveAddress(
-      Kernel32Impl.GetModuleHandleA.ptr,
-    );
-    const getCurrentProcessAddr = resolveAddress(
-      Kernel32Impl.GetCurrentProcess.ptr,
-    );
-    const getCurrentProcessIdAddr = resolveAddress(
-      Kernel32Impl.GetCurrentProcessId.ptr,
-    );
+    const {
+      getModuleHandleExAAddr,
+      getModuleHandleAAddr,
+      getCurrentProcessAddr,
+      getCurrentProcessIdAddr,
+    } = ProcessCacheAccessor.resolveTrackedAddrs();
 
     if (funcAddr === getCurrentProcessAddr) {
       return 0xffffffffffffffffn;
@@ -1923,31 +2600,9 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
 
       const isFromAddress = (flags & 4) !== 0;
       if (!isFromAddress && BigInt(namePtr) !== 0n) {
-        let moduleName = '';
-        const writtenBuf = this.writeMemoryCache.get(namePtr);
-        if (writtenBuf) {
-          let len = writtenBuf.indexOf(0);
-          if (len === -1) len = writtenBuf.length;
-          moduleName = writtenBuf
-            .subarray(0, len)
-            .toString('utf8')
-            .toLowerCase();
-        } else {
-          try {
-            const buf = await this.root.read(namePtr, 256);
-            let len = buf.indexOf(0);
-            if (len === -1) len = buf.length;
-            moduleName = buf.subarray(0, len).toString('utf8').toLowerCase();
-          } catch {
-            /* ignore read errors for module name */
-          }
-        }
-
+        const moduleName = await this.resolveModuleName(namePtr);
         const isTargetModule =
-          moduleName === 'msvcrt' ||
-          moduleName === 'msvcrt.dll' ||
-          moduleName === 'user32' ||
-          moduleName === 'user32.dll';
+          ProcessCacheAccessor.TARGET_MODULE_NAMES.has(moduleName);
 
         if (isTargetModule && this.moduleHandleCache.has(moduleName)) {
           const cachedHModule = this.moduleHandleCache.get(moduleName)!;
@@ -1968,31 +2623,9 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     } else if (funcAddr === getModuleHandleAAddr && args.length >= 1) {
       const namePtr = resolveAddress(args[0]);
       if (BigInt(namePtr) !== 0n) {
-        let moduleName = '';
-        const writtenBuf = this.writeMemoryCache.get(namePtr);
-        if (writtenBuf) {
-          let len = writtenBuf.indexOf(0);
-          if (len === -1) len = writtenBuf.length;
-          moduleName = writtenBuf
-            .subarray(0, len)
-            .toString('utf8')
-            .toLowerCase();
-        } else {
-          try {
-            const buf = await this.root.read(namePtr, 256);
-            let len = buf.indexOf(0);
-            if (len === -1) len = buf.length;
-            moduleName = buf.subarray(0, len).toString('utf8').toLowerCase();
-          } catch {
-            /* ignore read errors for module name */
-          }
-        }
-
+        const moduleName = await this.resolveModuleName(namePtr);
         const isTargetModule =
-          moduleName === 'msvcrt' ||
-          moduleName === 'msvcrt.dll' ||
-          moduleName === 'user32' ||
-          moduleName === 'user32.dll';
+          ProcessCacheAccessor.TARGET_MODULE_NAMES.has(moduleName);
 
         if (isTargetModule && this.moduleHandleCache.has(moduleName)) {
           return this.moduleHandleCache.get(moduleName)!;
@@ -2009,6 +2642,73 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     return super.callAfterInit(func, args);
   }
 
+  protected override callAfterInitSync(
+    func: CFunction,
+    args: any[],
+  ): CCallResult {
+    const funcAddr = resolveAddress(func.ptr);
+    const {
+      getModuleHandleExAAddr,
+      getModuleHandleAAddr,
+      getCurrentProcessAddr,
+      getCurrentProcessIdAddr,
+    } = ProcessCacheAccessor.resolveTrackedAddrs();
+
+    if (funcAddr === getCurrentProcessAddr) {
+      return 0xffffffffffffffffn;
+    } else if (funcAddr === getCurrentProcessIdAddr) {
+      return this.processId;
+    }
+
+    if (funcAddr === getModuleHandleExAAddr && args.length >= 3) {
+      const flags = Number(args[0]);
+      const namePtr = resolveAddress(args[1]);
+      const outPtr = resolveAddress(args[2]);
+
+      const isFromAddress = (flags & 4) !== 0;
+      if (!isFromAddress && BigInt(namePtr) !== 0n) {
+        const moduleName = this.resolveModuleNameSync(namePtr);
+        const isTargetModule =
+          ProcessCacheAccessor.TARGET_MODULE_NAMES.has(moduleName);
+
+        if (isTargetModule && this.moduleHandleCache.has(moduleName)) {
+          const cachedHModule = this.moduleHandleCache.get(moduleName)!;
+          const hModuleBuf = Buffer.alloc(8);
+          hModuleBuf.writeBigUInt64LE(cachedHModule, 0);
+          this.root.writeSync(outPtr, hModuleBuf);
+          return 1;
+        }
+
+        const result = this.backend.callSync(func, args);
+        if (isTargetModule && Number(result) !== 0) {
+          const hModuleBuf = this.root.readSync(outPtr, 8);
+          const hModule = hModuleBuf.readBigUInt64LE(0);
+          this.moduleHandleCache.set(moduleName, hModule);
+        }
+        return result;
+      }
+    } else if (funcAddr === getModuleHandleAAddr && args.length >= 1) {
+      const namePtr = resolveAddress(args[0]);
+      if (BigInt(namePtr) !== 0n) {
+        const moduleName = this.resolveModuleNameSync(namePtr);
+        const isTargetModule =
+          ProcessCacheAccessor.TARGET_MODULE_NAMES.has(moduleName);
+
+        if (isTargetModule && this.moduleHandleCache.has(moduleName)) {
+          return this.moduleHandleCache.get(moduleName)!;
+        }
+
+        const result = this.backend.callSync(func, args);
+        if (isTargetModule && result && Number(result) !== 0) {
+          this.moduleHandleCache.set(moduleName, BigInt(result));
+        }
+        return result;
+      }
+    }
+
+    return super.callAfterInitSync(func, args);
+  }
+
   protected override async freeAfterInit(
     address: AddressLike,
     size?: number,
@@ -2018,6 +2718,16 @@ export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
     this.writeMemoryCache.delete(addrVal);
     return super.freeAfterInit(address, size, freeType);
   }
+
+  protected override freeAfterInitSync(
+    address: AddressLike,
+    size?: number,
+    freeType?: number,
+  ): boolean {
+    const addrVal = resolveAddress(address);
+    this.writeMemoryCache.delete(addrVal);
+    return super.freeAfterInitSync(address, size, freeType);
+  }
 }
 
 export class MachineCodePoolMiddleware extends MiddlewareAccessor {
@@ -2025,9 +2735,14 @@ export class MachineCodePoolMiddleware extends MiddlewareAccessor {
   private alignment = DEFAULT_MACHINECODE_ALIGNMENT;
   private defaultBlockSize = 4096;
 
-  private async getOrAllocBlock(
+  /**
+   * Shared by getOrAllocBlock()/getOrAllocBlockSync() -- pure scan for
+   * existing space, no I/O, so no need for two copies. `null` means the
+   * caller must allocate a fresh block itself (the only part that needs I/O).
+   */
+  private findBlockWithSpace(
     needed: number,
-  ): Promise<{ address: number; offset: number; blockIdx: number }> {
+  ): { address: number; offset: number; blockIdx: number } | null {
     for (let i = 0; i < this.blocks.length; i++) {
       const block = this.blocks[i]!;
       const alignedUsed = alignUp(block.used, this.alignment);
@@ -2035,8 +2750,34 @@ export class MachineCodePoolMiddleware extends MiddlewareAccessor {
         return { address: block.address, offset: alignedUsed, blockIdx: i };
       }
     }
+    return null;
+  }
+
+  private async getOrAllocBlock(
+    needed: number,
+  ): Promise<{ address: number; offset: number; blockIdx: number }> {
+    const existing = this.findBlockWithSpace(needed);
+    if (existing) return existing;
     const blockSize = Math.max(this.defaultBlockSize, needed);
     const blockAddr = await this.root.alloc(
+      blockSize,
+      null,
+      MemoryProtection.EXECUTE_READWRITE,
+    );
+    const address = Number(resolveAddress(blockAddr));
+    this.blocks.push({ address, size: blockSize, used: 0 });
+    return { address, offset: 0, blockIdx: this.blocks.length - 1 };
+  }
+
+  private getOrAllocBlockSync(needed: number): {
+    address: number;
+    offset: number;
+    blockIdx: number;
+  } {
+    const existing = this.findBlockWithSpace(needed);
+    if (existing) return existing;
+    const blockSize = Math.max(this.defaultBlockSize, needed);
+    const blockAddr = this.root.allocSync(
       blockSize,
       null,
       MemoryProtection.EXECUTE_READWRITE,
@@ -2057,9 +2798,65 @@ export class MachineCodePoolMiddleware extends MiddlewareAccessor {
     this.blocks[blockIdx]!.used = offset + size;
     return targetAddr;
   }
+
+  override machineCodeSync(machineCode: CMachineCode): number {
+    const size = machineCode.size;
+    const bytes = Array.isArray(machineCode.bytes)
+      ? new Uint8Array(machineCode.bytes)
+      : machineCode.bytes;
+    const { address, offset, blockIdx } = this.getOrAllocBlockSync(size);
+    const targetAddr = address + offset;
+    this.root.writeSync(targetAddr, bytes);
+    this.blocks[blockIdx]!.used = offset + size;
+    return targetAddr;
+  }
 }
 
 export class ScannerMiddleware extends MiddlewareAccessor {
+  /**
+   * Shared by scan()/scanSync() -- pure decision of which memmemN machineCode
+   * to upload and how to encode the needle for a given pattern width, no I/O.
+   * `sc` still needs uploading (await machineCode() vs machineCodeSync()) by
+   * the caller; `needleVal`/`isWithoutBuffer` are used directly once uploaded.
+   */
+  private static pickMemmemVariant(
+    n: number,
+    patBytes: Buffer,
+  ): { sc: any; needleVal: bigint; isWithoutBuffer: boolean } {
+    if (n === 1) {
+      return {
+        sc: memmem1,
+        needleVal: BigInt(patBytes.readUInt8(0)),
+        isWithoutBuffer: true,
+      };
+    } else if (n === 2) {
+      return {
+        sc: memmem2,
+        needleVal: BigInt(patBytes.readUInt16LE(0)),
+        isWithoutBuffer: true,
+      };
+    } else if (n === 3 || n === 5 || n === 6 || n === 7) {
+      let val = 0n;
+      for (let i = 0; i < n; i++) {
+        val |= BigInt(patBytes[i]!) << BigInt(i * 8);
+      }
+      return { sc: memmemWithoutBuffer, needleVal: val, isWithoutBuffer: true };
+    } else if (n === 4) {
+      return {
+        sc: memmem4,
+        needleVal: BigInt(patBytes.readUInt32LE(0)),
+        isWithoutBuffer: true,
+      };
+    } else if (n === 8) {
+      return {
+        sc: memmem8,
+        needleVal: patBytes.readBigUInt64LE(0),
+        isWithoutBuffer: true,
+      };
+    }
+    return { sc: memmem, needleVal: 0n, isWithoutBuffer: false };
+  }
+
   override async *scan(
     address: AddressLike,
     size: number,
@@ -2086,43 +2883,18 @@ export class ScannerMiddleware extends MiddlewareAccessor {
         const scanSize = Number(scanEnd - scanStart);
         if (scanSize >= pat.length) {
           const n = pat.length;
-          let memmemFnRemote: any;
-          let needleVal: any = 0;
+          const { sc, needleVal, isWithoutBuffer } =
+            ScannerMiddleware.pickMemmemVariant(n, pat.bytes);
+          const addr = await this.root.machineCode(sc);
+          const memmemFnRemote = sc.cloneForAddress(addr);
           let needleRemoteAddr: any = 0n;
-
-          const uploadMachineCode = async (sc: any) => {
-            const addr = await this.root.machineCode(sc);
-            return sc.cloneForAddress(addr);
-          };
-
-          if (n === 1) {
-            memmemFnRemote = await uploadMachineCode(memmem1);
-            needleVal = BigInt(pat.bytes.readUInt8(0));
-          } else if (n === 2) {
-            memmemFnRemote = await uploadMachineCode(memmem2);
-            needleVal = BigInt(pat.bytes.readUInt16LE(0));
-          } else if (n === 3 || n === 5 || n === 6 || n === 7) {
-            memmemFnRemote = await uploadMachineCode(memmemWithoutBuffer);
-            let val = 0n;
-            for (let i = 0; i < n; i++) {
-              val |= BigInt(pat.bytes[i]!) << BigInt(i * 8);
-            }
-            needleVal = val;
-          } else if (n === 4) {
-            memmemFnRemote = await uploadMachineCode(memmem4);
-            needleVal = BigInt(pat.bytes.readUInt32LE(0));
-          } else if (n === 8) {
-            memmemFnRemote = await uploadMachineCode(memmem8);
-            needleVal = pat.bytes.readBigUInt64LE(0);
-          } else {
-            memmemFnRemote = await uploadMachineCode(memmem);
+          if (!isWithoutBuffer) {
             needleRemoteAddr = await this.root.alloc(n);
             await this.root.write(needleRemoteAddr, pat.bytes);
           }
 
           try {
             const memmemFn = async (haystack: bigint, haystackLen: bigint) => {
-              const isWithoutBuffer = n >= 1 && n <= 8;
               const callArgs: any[] = [
                 haystack,
                 haystackLen,
@@ -2143,6 +2915,73 @@ export class ScannerMiddleware extends MiddlewareAccessor {
           } finally {
             if (BigInt(resolveAddress(needleRemoteAddr)) !== 0n) {
               await this.root.free(needleRemoteAddr, n);
+            }
+          }
+        }
+      }
+      if (regionEnd <= current) break;
+      current = regionEnd;
+    }
+  }
+
+  override *scanSync(
+    address: AddressLike,
+    size: number,
+    pattern: Pattern | string,
+  ): Generator<NativeMemory> {
+    const pat = typeof pattern === 'string' ? new Pattern(pattern) : pattern;
+    const startAddr = BigInt(resolveAddress(address));
+    const end = startAddr + BigInt(size);
+    let current = startAddr;
+
+    while (current < end) {
+      const mbi = this.root.querySync(current);
+      const regionBase = BigInt(resolveAddress(mbi.BaseAddress));
+      const regionSize = BigInt(mbi.RegionSize);
+      const regionEnd = regionBase + regionSize;
+      const isReadable =
+        mbi.State === MemoryState.COMMIT &&
+        !(mbi.Protect & MemoryProtection.GUARD) &&
+        !!(mbi.Protect & pat.protect);
+
+      if (isReadable) {
+        const scanStart = current > regionBase ? current : regionBase;
+        const scanEnd = end < regionEnd ? end : regionEnd;
+        const scanSize = Number(scanEnd - scanStart);
+        if (scanSize >= pat.length) {
+          const n = pat.length;
+          const { sc, needleVal, isWithoutBuffer } =
+            ScannerMiddleware.pickMemmemVariant(n, pat.bytes);
+          const addr = this.root.machineCodeSync(sc);
+          const memmemFnRemote = sc.cloneForAddress(addr);
+          let needleRemoteAddr: any = 0n;
+          if (!isWithoutBuffer) {
+            needleRemoteAddr = this.root.allocSync(n);
+            this.root.writeSync(needleRemoteAddr, pat.bytes);
+          }
+
+          try {
+            const memmemFn = (haystack: bigint, haystackLen: bigint) => {
+              const callArgs: any[] = [
+                haystack,
+                haystackLen,
+                isWithoutBuffer ? needleVal : needleRemoteAddr,
+              ];
+              if (n !== 1 && n !== 2 && n !== 4 && n !== 8) {
+                callArgs.push(BigInt(n));
+              }
+              const res = this.root.callSync(memmemFnRemote, ...callArgs);
+              return BigInt(resolveAddress(res));
+            };
+
+            yield* Scanner.scanSync(
+              new NativeMemory(scanStart, scanSize),
+              pat,
+              memmemFn,
+            );
+          } finally {
+            if (BigInt(resolveAddress(needleRemoteAddr)) !== 0n) {
+              this.root.freeSync(needleRemoteAddr, n);
             }
           }
         }

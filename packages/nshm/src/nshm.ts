@@ -273,6 +273,29 @@ async function openDummyHandleInTarget(
   return hDummyInTarget;
 }
 
+/** Synchronous twin of {@link openDummyHandleInTarget}. */
+function openDummyHandleInTargetSync(
+  target: ISyncCallableMemoryAccessor,
+  dummyPid: number,
+): bigint {
+  const hDummyInTarget = BigInt(
+    target.callSync(
+      Kernel32Impl.OpenProcess,
+      DUMMY_PROCESS_ACCESS,
+      0,
+      dummyPid,
+    ),
+  );
+  if (hDummyInTarget === 0n) {
+    throw new OpenDummyProcessFailedError(
+      dummyPid,
+      Number(target.callSync(Kernel32Impl.GetLastError)),
+      true,
+    );
+  }
+  return hDummyInTarget;
+}
+
 /**
  * Terminates and releases this (Bun) process's handle to the global dummy
  * process, and forgets the cached state, so the next region allocated
@@ -533,6 +556,129 @@ export class NShm extends MiddlewareAccessor {
     return targetView;
   }
 
+  /** Synchronous twin of {@link NShm.alloc} -- same relay flow, driven with *Sync calls throughout. */
+  override allocSync(
+    size: number,
+    address: AddressLike | null = null,
+    protection: number = MemoryProtection.READWRITE,
+    allocationType?: number,
+  ): AddressLike {
+    if (protection !== MemoryProtection.READWRITE || address !== null) {
+      return super.allocSync(size, address, protection, allocationType);
+    }
+
+    // Same rationale as alloc(): always through `this.backend` directly, never
+    // `this.root` (which could recurse back into this override).
+    const target = this.backend;
+    const mapAccess =
+      this.options.mapAccess ??
+      FileMapAccess.combine(FileMapAccess.READ, FileMapAccess.WRITE);
+    const sizeLow = size >>> 0;
+    const sizeHigh = Math.floor(size / 0x100000000) >>> 0;
+
+    const dummy = getGlobalDummyProcess(this.options);
+
+    const hMapping = BigInt(
+      target.callSync(
+        Kernel32Impl.CreateFileMappingA,
+        INVALID_HANDLE_VALUE,
+        0,
+        protection,
+        sizeHigh,
+        sizeLow,
+        0,
+      ),
+    );
+    if (hMapping === 0n) {
+      throw new CreateFileMappingFailedError(
+        Number(target.callSync(Kernel32Impl.GetLastError)),
+      );
+    }
+
+    const targetView = Number(
+      target.callSync(
+        Kernel32Impl.MapViewOfFile,
+        hMapping,
+        mapAccess,
+        0,
+        0,
+        size,
+      ),
+    );
+    if (targetView === 0) {
+      throw new MapViewOfFileFailedError(
+        Number(target.callSync(Kernel32Impl.GetLastError)),
+        true,
+      );
+    }
+
+    const hDummyInTarget = openDummyHandleInTargetSync(target, dummy.pid);
+
+    const dupOutAddr = target.allocSync(8);
+    const dupOk = target.callSync(
+      Kernel32Impl.DuplicateHandle,
+      INVALID_HANDLE_VALUE,
+      hMapping,
+      hDummyInTarget,
+      resolveAddress(dupOutAddr),
+      0,
+      0,
+      DuplicateHandleOptions.combine(
+        DuplicateHandleOptions.SAME_ACCESS,
+        DuplicateHandleOptions.CLOSE_SOURCE,
+      ),
+    );
+    if (!dupOk) {
+      throw new DuplicateHandleFailedError(
+        Number(target.callSync(Kernel32Impl.GetLastError)),
+        true,
+      );
+    }
+    const dummyMappingHandle = target
+      .readSync(dupOutAddr, 8)
+      .readBigUInt64LE(0);
+
+    const localDupOut = Buffer.alloc(8);
+    const localDupOk = Kernel32Impl.DuplicateHandle(
+      dummy.localHandle,
+      dummyMappingHandle,
+      CURRENT_PROCESS_PSEUDO_HANDLE,
+      localDupOut,
+      0,
+      0,
+      DuplicateHandleOptions.combine(
+        DuplicateHandleOptions.SAME_ACCESS,
+        DuplicateHandleOptions.CLOSE_SOURCE,
+      ),
+    );
+    if (!localDupOk) {
+      throw new DuplicateHandleFailedError(
+        Number(Kernel32Impl.GetLastError()),
+        false,
+      );
+    }
+    const localMappingHandle = Number(localDupOut.readBigUInt64LE(0));
+
+    const localView = Number(
+      Kernel32Impl.MapViewOfFile(localMappingHandle, mapAccess, 0, 0, size),
+    );
+    if (localView === 0) {
+      throw new MapViewOfFileFailedError(
+        Number(Kernel32Impl.GetLastError()),
+        false,
+      );
+    }
+
+    this.regions.set(targetView, {
+      targetMappingHandle: hMapping,
+      targetView,
+      localMappingHandle,
+      localView,
+      size,
+    });
+    return targetView;
+  }
+
   /**
    * Releases a region's own *local* (Bun-side) view/handle only -- does
    * *not* touch the target: the target's own view is its actual, intended
@@ -552,6 +698,23 @@ export class NShm extends MiddlewareAccessor {
     const region = this.regions.get(addr);
     if (!region) {
       return super.free(address, size, freeType);
+    }
+    Kernel32Impl.UnmapViewOfFile(region.localView);
+    Kernel32Impl.CloseHandle(region.localMappingHandle);
+    this.regions.delete(addr);
+    return true;
+  }
+
+  /** Synchronous twin of {@link NShm.free} -- the body is already fully synchronous, this only swaps the fallback to freeSync(). */
+  override freeSync(
+    address: AddressLike,
+    size = 0,
+    freeType?: number,
+  ): boolean {
+    const addr = Number(resolveAddress(address));
+    const region = this.regions.get(addr);
+    if (!region) {
+      return super.freeSync(address, size, freeType);
     }
     Kernel32Impl.UnmapViewOfFile(region.localView);
     Kernel32Impl.CloseHandle(region.localMappingHandle);
