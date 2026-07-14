@@ -30,6 +30,7 @@ export default {
         'nhook',
         'minhook',
         'nshm',
+        'dummy',
         'utils',
         'exoproc',
         'deps',

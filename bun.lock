@@ -31,6 +31,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "exoproc": "workspace:*",
+        "exoproc-dummy": "workspace:*",
         "hono": "^4.12.28",
         "lucide-react": "^1.23.0",
         "radix-ui": "^1.6.2",
@@ -60,6 +61,13 @@
     },
     "packages/capstone": {
       "name": "bun-capstone",
+      "version": "0.1.0",
+      "dependencies": {
+        "bun-xffi": "workspace:*",
+      },
+    },
+    "packages/dummy": {
+      "name": "exoproc-dummy",
       "version": "0.1.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
@@ -107,6 +115,7 @@
       "dependencies": {
         "bun-xffi": "workspace:*",
         "exoproc-accessors": "workspace:*",
+        "exoproc-dummy": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -656,6 +665,8 @@
     "exoproc": ["exoproc@workspace:packages/exoproc"],
 
     "exoproc-accessors": ["exoproc-accessors@workspace:packages/accessors"],
+
+    "exoproc-dummy": ["exoproc-dummy@workspace:packages/dummy"],
 
     "exoproc-examples": ["exoproc-examples@workspace:examples"],
 
