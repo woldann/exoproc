@@ -47,7 +47,7 @@
  * argument data itself, which is exactly what `hit.args`/`resume()` are for.
  *
  * Scope/ethics: this only spawns and watches *its own* freshly-spawned
- * notepad.exe instance (via `tests/helpers.ts`'s `TestNotepadProcess`) --
+ * notepad.exe instance (via `exoproc-dummy`'s `DummyProcess`) --
  * `NHook.poll()` only scans threads belonging to that one pid, so nothing
  * outside this script's own test process is ever touched, logged, or
  * affected.
@@ -76,7 +76,7 @@ import {
   NHook,
   ProcessExitedError,
 } from 'exoproc';
-import { TestNotepadProcess } from '../../tests/helpers.js';
+import { DummyProcess } from 'exoproc-dummy';
 import { createDemo } from '../kit/server.js';
 
 const HOOK_DURATION_MS = 60_000;
@@ -140,7 +140,7 @@ const demo = createDemo({
   },
 });
 
-const notepad = new TestNotepadProcess();
+const notepad = new DummyProcess({ executable: 'notepad.exe', args: [] });
 demo.publishProcess(notepad.pid, true);
 demo.publishStatus(
   `Spawned notepad.exe (pid=${notepad.pid}). Installing hook...`,
@@ -149,9 +149,9 @@ demo.publishStatus(
 const target = User32Impl.TranslateMessage;
 const nhook = new NHook(notepad.pid);
 // Reusing notepad.handle -- closeHandle: false is required here, otherwise
-// memory.close() and TestNotepadProcess.stop() would both call CloseHandle
-// on the same handle (see CLAUDE.md / the accessor.test.ts fix for exactly
-// this double-CloseHandle bug).
+// memory.close() and notepad.stop() would both call CloseHandle on the same
+// handle (see CLAUDE.md / the accessor.test.ts fix for exactly this
+// double-CloseHandle bug).
 const memory = new RemoteCallableMemoryAccessor(notepad.pid, {
   handle: notepad.handle,
   closeHandle: false,

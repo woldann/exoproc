@@ -19,7 +19,7 @@ import {
   type AddressLike,
   type ISyncMemoryAccessor,
 } from '../../packages/xffi/src/index';
-import { TestProcess } from '../helpers';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 describe('xffi > MemoryAccessor and Custom Accessors', () => {
   test('should support allocating and freeing memory using localMemoryAccessor', () => {
     const addr = localMemoryAccessor.allocSync(16);
@@ -35,7 +35,7 @@ describe('xffi > MemoryAccessor and Custom Accessors', () => {
   test('should route remote process operations through a real process', async () => {
     if (process.platform !== 'win32') return;
 
-    const tp = new TestProcess();
+    const tp = getGlobalDummyProcess();
 
     const remote = new RemoteProcessMemoryAccessor(tp.pid, {
       handle: tp.handle,
@@ -57,7 +57,6 @@ describe('xffi > MemoryAccessor and Custom Accessors', () => {
     // Cleanup
     remote.freeSync(remoteStruct.address);
     remote.close();
-    await tp.stop();
   });
 
   test('should support protect and query (Windows only)', async () => {
@@ -80,7 +79,7 @@ describe('xffi > MemoryAccessor and Custom Accessors', () => {
     // which is exactly the "drive it through a real process" pattern issue #5
     // prescribes (and VirtualProtectEx/VirtualQueryEx are already proven on CI
     // by the winapi remote-scan and struct tests).
-    const tp = new TestProcess();
+    const tp = getGlobalDummyProcess();
 
     const remote = new RemoteProcessMemoryAccessor(tp.pid, {
       handle: tp.handle,
@@ -102,7 +101,6 @@ describe('xffi > MemoryAccessor and Custom Accessors', () => {
     remote.freeSync(addr);
 
     remote.close();
-    await tp.stop();
   });
 
   test('should seamlessly route struct operations through a custom/mock remote memory accessor', () => {

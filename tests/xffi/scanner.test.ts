@@ -11,7 +11,7 @@ import {
   InvalidPatternError,
   MemoryProtection,
 } from '../../packages/xffi/src/index';
-import { TestProcess } from '../helpers';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 describe('xffi > Scanner & Pattern Scanning API', () => {
   describe('Pattern Parsing', () => {
@@ -198,7 +198,7 @@ describe('xffi > Scanner & Pattern Scanning API', () => {
     test('should support scanSync and scan on remote memory using RemoteProcessMemoryAccessor (JS-based)', async () => {
       if (process.platform !== 'win32') return;
 
-      const tp = new TestProcess();
+      const tp = getGlobalDummyProcess();
 
       const remote = new RemoteProcessMemoryAccessor(tp.pid, {
         handle: tp.handle,
@@ -231,7 +231,6 @@ describe('xffi > Scanner & Pattern Scanning API', () => {
 
       remote.freeSync(addr);
       remote.close();
-      await tp.stop();
     });
 
     // The "remote process JIT pattern scan using IndirectCallableAccessor

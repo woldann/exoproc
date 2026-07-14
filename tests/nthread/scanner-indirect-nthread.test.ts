@@ -2,7 +2,7 @@ import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { resolveAddress } from 'bun-xffi';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/scanner.test.ts ("should support remote process JIT
 // pattern scan using IndirectCallableAccessor template") -- the indirect chain's
@@ -14,7 +14,7 @@ describe('nthread > Scanner over IndirectNThreadHostAccessor', () => {
   test('should support remote process JIT pattern scan', async () => {
     if (process.platform !== 'win32') return;
 
-    const tp = new TestProcess();
+    const tp = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -63,7 +63,6 @@ describe('nthread > Scanner over IndirectNThreadHostAccessor', () => {
       await accessor.free(addr);
     } finally {
       await accessor.deinit();
-      await tp.stop();
     }
   }, 60000);
 });

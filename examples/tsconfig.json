@@ -16,11 +16,12 @@
       "bun-nthread": ["packages/nthread/src/index.ts"],
       "bun-nhook": ["packages/nhook/src/index.ts"],
       "bun-minhook": ["packages/minhook/src/index.ts"],
+      "exoproc-dummy": ["packages/dummy/src/index.ts"],
       "exoproc": ["packages/exoproc/src/index.ts"],
       "@/*": ["examples/*"]
     }
   },
 
-  "include": [".", "../packages/**/*.ts", "../tests/helpers.ts"],
+  "include": [".", "../packages/**/*.ts"],
   "exclude": ["../packages/*/node_modules"]
 }

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import * as Native from 'exoproc';
 import {
   cmachinecode,
@@ -8,7 +8,7 @@ import {
   IndirectNThreadHostAccessor,
   MinHook,
 } from 'exoproc';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Real end-to-end proof that MinHook works over an IndirectNThreadHostAccessor:
 // hook a function injected into *another* process, then actually *invoke* it on
@@ -22,11 +22,7 @@ import { TestProcess } from '../helpers.js';
 //   B) `return 1234;`                                -> proves a detour fully
 //      overrides the function, and that detours hot-swap.
 describe('MinHook over IndirectNThreadHostAccessor (cross-process, thread-hijack backend)', () => {
-  const proc = new TestProcess();
-
-  afterAll(async () => {
-    await proc.stop();
-  });
+  const proc = getGlobalDummyProcess();
 
   test('hooks a function in another process and its detours run when invoked via the hijacked thread', async () => {
     const thread = Native.Thread.getThreads(proc.pid)[0];

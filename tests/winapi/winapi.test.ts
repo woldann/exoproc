@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import * as Native from 'exoproc';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 describe('WinAPI Package Tests', () => {
   describe('Encoding & Decoding', () => {
@@ -72,64 +72,60 @@ describe('WinAPI Package Tests', () => {
     });
 
     test('memory pattern scan on remote process accessor should work', async () => {
-      const tp = new TestProcess();
+      const tp = getGlobalDummyProcess();
       const { pid } = tp;
 
-      try {
-        const process = Native.Process.open(pid);
-        const mem = process.memory;
+      const process = Native.Process.open(pid);
+      const mem = process.memory;
 
-        const addr = await mem.alloc(1024);
-        expect(addr).not.toBeNull();
+      const addr = await mem.alloc(1024);
+      expect(addr).not.toBeNull();
 
-        // 1. Write multi-byte pattern (len = 5)
-        const patternBuf = Buffer.from([0x11, 0x22, 0x33, 0x44, 0x55]);
-        await mem.write(addr, patternBuf);
+      // 1. Write multi-byte pattern (len = 5)
+      const patternBuf = Buffer.from([0x11, 0x22, 0x33, 0x44, 0x55]);
+      await mem.write(addr, patternBuf);
 
-        // 2. Write 2-byte pattern (len = 2)
-        const patternBuf2 = Buffer.from([0xaa, 0xbb]);
-        const addr2 = BigInt(Native.resolveAddress(addr)) + 10n;
-        await mem.write(addr2, patternBuf2);
+      // 2. Write 2-byte pattern (len = 2)
+      const patternBuf2 = Buffer.from([0xaa, 0xbb]);
+      const addr2 = BigInt(Native.resolveAddress(addr)) + 10n;
+      await mem.write(addr2, patternBuf2);
 
-        // 3. Write 4-byte pattern (len = 4)
-        const patternBuf4 = Buffer.from([0xcc, 0xdd, 0xee, 0xff]);
-        const addr4 = BigInt(Native.resolveAddress(addr)) + 20n;
-        await mem.write(addr4, patternBuf4);
+      // 3. Write 4-byte pattern (len = 4)
+      const patternBuf4 = Buffer.from([0xcc, 0xdd, 0xee, 0xff]);
+      const addr4 = BigInt(Native.resolveAddress(addr)) + 20n;
+      await mem.write(addr4, patternBuf4);
 
-        // Scan for multi-byte pattern (remote memmem)
-        const p1 = new Native.Pattern([0x11, 0x22, 0x33, 0x44, 0x55]);
-        const res1 = (
-          await process.memory
-            .scan(BigInt(Native.resolveAddress(addr)), 1024, p1)
-            .next()
-        ).value;
-        expect(res1).toBeDefined();
-        expect(BigInt(res1!.address)).toBe(BigInt(Native.resolveAddress(addr)));
+      // Scan for multi-byte pattern (remote memmem)
+      const p1 = new Native.Pattern([0x11, 0x22, 0x33, 0x44, 0x55]);
+      const res1 = (
+        await process.memory
+          .scan(BigInt(Native.resolveAddress(addr)), 1024, p1)
+          .next()
+      ).value;
+      expect(res1).toBeDefined();
+      expect(BigInt(res1!.address)).toBe(BigInt(Native.resolveAddress(addr)));
 
-        // Scan for 2-byte pattern (remote memmem2)
-        const p2 = new Native.Pattern([0xaa, 0xbb]);
-        const res2 = (
-          await process.memory
-            .scan(BigInt(Native.resolveAddress(addr)), 1024, p2)
-            .next()
-        ).value;
-        expect(res2).toBeDefined();
-        expect(BigInt(res2!.address)).toBe(addr2);
+      // Scan for 2-byte pattern (remote memmem2)
+      const p2 = new Native.Pattern([0xaa, 0xbb]);
+      const res2 = (
+        await process.memory
+          .scan(BigInt(Native.resolveAddress(addr)), 1024, p2)
+          .next()
+      ).value;
+      expect(res2).toBeDefined();
+      expect(BigInt(res2!.address)).toBe(addr2);
 
-        // Scan for 4-byte pattern (remote memmem4)
-        const p4 = new Native.Pattern([0xcc, 0xdd, 0xee, 0xff]);
-        const res4 = (
-          await process.memory
-            .scan(BigInt(Native.resolveAddress(addr)), 1024, p4)
-            .next()
-        ).value;
-        expect(res4).toBeDefined();
-        expect(BigInt(res4!.address)).toBe(addr4);
+      // Scan for 4-byte pattern (remote memmem4)
+      const p4 = new Native.Pattern([0xcc, 0xdd, 0xee, 0xff]);
+      const res4 = (
+        await process.memory
+          .scan(BigInt(Native.resolveAddress(addr)), 1024, p4)
+          .next()
+      ).value;
+      expect(res4).toBeDefined();
+      expect(BigInt(res4!.address)).toBe(addr4);
 
-        await mem.free(addr, 1024);
-      } finally {
-        await tp.stop();
-      }
+      await mem.free(addr, 1024);
     });
   });
 

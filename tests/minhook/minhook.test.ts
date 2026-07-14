@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import * as Native from 'exoproc';
 import {
   cmachinecode,
@@ -6,7 +6,7 @@ import {
   IndirectNThreadHostAccessor,
   MinHook,
 } from 'exoproc';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Native.Thread.create() (raw CreateThread) on the current process has a
 // CI-environment-specific bug: the entry point's argument arrives corrupted
@@ -17,11 +17,7 @@ import { TestProcess } from '../helpers.js';
 // a real process and invokes through a hijacked thread there, exactly like
 // that test, rather than creating a new local thread.
 describe('MinHook end-to-end lifecycle (real compiled target + real compiled detour)', () => {
-  const proc = new TestProcess();
-
-  afterAll(async () => {
-    await proc.stop();
-  });
+  const proc = getGlobalDummyProcess();
 
   test('create() builds a trampoline without touching the target; enable() installs the JMP and the detour actually runs', async () => {
     const thread = Native.Thread.getThreads(proc.pid)[0];

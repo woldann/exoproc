@@ -2,7 +2,7 @@ import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { ProcessCacheAccessor, HostAccessor } from 'exoproc-accessors';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/process-cache-accessor.test.ts -- ProcessCacheAccessor.
 // getCoreModules() -> verifyCoreModules() -> isModuleLoadedInProcess() calls
@@ -19,7 +19,7 @@ import { TestProcess } from '../helpers.js';
 // hijacked thread) instead, whose call() properly marshals every argument.
 describe('nthread > ProcessCacheAccessor', () => {
   test('should resolve metadata and cache status using a real target process', async () => {
-    const tp = new TestProcess();
+    const tp = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -57,7 +57,6 @@ describe('nthread > ProcessCacheAccessor', () => {
       expect(coreModulesCached).toEqual(coreModules);
     } finally {
       await nthreadAccessor.deinit();
-      await tp.stop();
     }
   }, 60000);
 });

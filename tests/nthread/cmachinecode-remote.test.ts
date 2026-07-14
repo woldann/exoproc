@@ -2,7 +2,7 @@ import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { cmachinecode, CType, createCFunction } from 'bun-xffi';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/cmachinecode.test.ts -- the injected shell itself calls
 // VirtualAlloc/VirtualFree, which needs to run on an already-live thread rather
@@ -76,7 +76,7 @@ describe('nthread > cmachinecode remote execution', () => {
       args: [],
     });
 
-    const tp = new TestProcess();
+    const tp = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -95,7 +95,6 @@ describe('nthread > cmachinecode remote execution', () => {
       expect(result).toBe(48n);
     } finally {
       await accessor.deinit();
-      await tp.stop();
     }
   }, 60000);
 });

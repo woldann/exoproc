@@ -7,7 +7,7 @@ import {
   resolveAddress,
 } from 'bun-xffi';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Pre-wired form of the manual chain in nthread.test.ts: a full indirect host
 // (IndirectCallRedirector + memset/memcmp/file-transfer/marshalling) sitting on
@@ -15,7 +15,7 @@ import { TestProcess } from '../helpers.js';
 // thread in the target -- no CreateRemoteThread, no injected pipe-loop.
 describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', () => {
   test('runs remote calls on the hijacked thread and does indirect alloc/write/read', async () => {
-    const proc = new TestProcess();
+    const proc = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -40,7 +40,6 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
       await memory.free(addr);
     } finally {
       await memory.deinit();
-      await proc.stop();
     }
   }, 30000);
 
@@ -50,7 +49,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
   // and a generous timeout. It's the operation minhook leans on for trampoline
   // space, so proving it works here is what makes minhook-over-indirect viable.
   test('allocNear finds executable space near an anchor entirely via the hijacked thread', async () => {
-    const proc = new TestProcess();
+    const proc = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -81,7 +80,6 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
       await memory.free(anchor);
     } finally {
       await memory.deinit();
-      await proc.stop();
     }
   }, 120000);
 });
