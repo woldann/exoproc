@@ -19,31 +19,6 @@ export class CreateFileMappingFailedError extends NShmError {
   }
 }
 
-export class OpenProcessTokenFailedError extends NShmError {
-  constructor(public readonly lastError: number) {
-    super(
-      `OpenProcessToken failed for this (Bun) process's own token (GetLastError=${lastError})`,
-    );
-  }
-}
-
-export class CreateRestrictedTokenFailedError extends NShmError {
-  constructor(public readonly lastError: number) {
-    super(`CreateRestrictedToken failed (GetLastError=${lastError})`);
-  }
-}
-
-export class SpawnProcessFailedError extends NShmError {
-  constructor(
-    public readonly executable: string,
-    public readonly lastError: number,
-  ) {
-    super(
-      `CreateProcessAsUserA failed to spawn process (${executable}, GetLastError=${lastError})`,
-    );
-  }
-}
-
 export class OpenDummyProcessFailedError extends NShmError {
   constructor(
     public readonly pid: number,

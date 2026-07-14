@@ -4,7 +4,7 @@
     "access": "public"
   },
   "version": "0.1.0",
-  "description": "Cross-process shared memory for Bun via a low-privilege dummy-process handle relay — the caller never OpenProcess's the target directly.",
+  "description": "Cross-process shared memory for Bun via a dummy-process handle relay — the caller never OpenProcess's the target directly.",
   "main": "./dist/index.js",
   "exports": {
     ".": {
@@ -44,6 +44,7 @@
   "dependencies": {
     "bun-xffi": "workspace:*",
     "exoproc-accessors": "workspace:*",
+    "exoproc-dummy": "workspace:*",
     "exoproc-utils": "workspace:*"
   }
 }

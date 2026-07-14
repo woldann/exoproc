@@ -1,16 +1,10 @@
 import { toArrayBuffer } from 'bun:ffi';
 import {
   Kernel32Impl,
-  Advapi32Impl,
   ProcessAccess,
-  TokenAccess,
-  CreateRestrictedTokenFlags,
   MemoryProtection,
   FileMapAccess,
   DuplicateHandleOptions,
-  ProcessCreationFlags,
-  StartupInfoA,
-  ProcessInformation,
   INVALID_HANDLE_VALUE,
   resolveAddress,
   MiddlewareAccessor,
@@ -20,10 +14,12 @@ import {
 } from 'bun-xffi';
 import { type HostAccessor } from 'exoproc-accessors';
 import {
+  type DummyProcess,
+  getGlobalDummyProcess as getSharedDummyProcess,
+  closeGlobalDummyProcess as closeSharedDummyProcess,
+} from 'exoproc-dummy';
+import {
   CreateFileMappingFailedError,
-  OpenProcessTokenFailedError,
-  CreateRestrictedTokenFailedError,
-  SpawnProcessFailedError,
   OpenDummyProcessFailedError,
   DuplicateHandleFailedError,
   MapViewOfFileFailedError,
@@ -42,10 +38,11 @@ const CURRENT_PROCESS_PSEUDO_HANDLE = INVALID_HANDLE_VALUE;
 
 export interface NShmOptions {
   /**
-   * Executable this (Bun) process spawns directly, in a de-elevated user-mode
-   * token, as the relay ("dummy") process the first time a global dummy is
-   * needed. Default: `ping.exe` (an idle, long-lived process). Ignored once
-   * a global dummy process already exists.
+   * Executable the shared dummy process (see `exoproc-dummy`) is spawned
+   * from, the first time any `NShm` needs one. Default: `ping.exe` (an idle,
+   * long-lived process). Ignored once a shared dummy process already exists
+   * -- it's reused across every `NShm`/target regardless of which one asked
+   * for it first.
    */
   dummyExecutable?: string;
   /**
@@ -77,168 +74,17 @@ interface NShmRegion {
   size: number;
 }
 
-interface GlobalDummyProcess {
-  pid: number;
-  /** This (Bun) process's own handle to the dummy, opened once and reused. */
-  localHandle: number;
-}
-
-// This (Bun) process spawns and owns a single relay process directly -- not
-// via a remote call into any target. It's shared by every `NShm.alloc()` call
-// regardless of which target/instance asked for it, since different shared
-// memory regions all get relayed through the same dummy. Lazily spawned on
-// first use.
-let globalDummy: GlobalDummyProcess | undefined;
-
-function getGlobalDummyProcess(options: NShmOptions): GlobalDummyProcess {
-  if (!globalDummy) {
-    globalDummy = spawnGlobalDummyProcess(options);
-  }
-  return globalDummy;
-}
-
-/** A process spawned by {@link spawnDeElevatedProcess}. */
-export interface SpawnedProcess {
-  pid: number;
-  /** Fully-usable process handle, opened directly by `CreateProcessAsUser` -- no separate `OpenProcess` needed. */
-  handle: number;
-}
-
 /**
- * Spawns `executable` directly via `CreateProcessAsUserA` with a token
- * derived (via `CreateRestrictedToken`) from this (Bun) process's own
- * token, rather than `child_process.spawn` -- the spawned process must run
- * in a plain user-mode context even when this process itself is elevated,
- * and `spawn` would just inherit this process's token unmodified.
- * `CreateRestrictedToken` with `DISABLE_MAX_PRIVILEGE` strips administrative
- * privileges from a duplicate of the caller's own token; because the
- * resulting token is still derived from the caller's own primary token (not
- * an arbitrary one), `SE_ASSIGN_PRIMARYTOKEN_NAME` is not required to hand
- * it to `CreateProcessAsUser` (see MSDN).
- *
- * This is the same spawn mechanism {@link spawnGlobalDummyProcess} uses for
- * nshm's own relay process -- exported so any caller that needs a plain,
- * de-elevated Windows process (e.g. test helpers spawning a throwaway
- * `ping.exe`/`notepad.exe`) can reuse it instead of `child_process.spawn`,
- * which inherits this (Bun) process's own token/privilege level unmodified
- * and races its own `ChildProcess` bookkeeping against Wine's real process
- * teardown (see CLAUDE.md's Wine/GHA segfault notes).
+ * Adapts `NShmOptions`'s `dummyExecutable`/`dummyArgs` onto `exoproc-dummy`'s
+ * shared singleton -- every `NShm`/target relays through the *same* dummy
+ * process regardless of which one asked for it first (options are only
+ * honored the first time, exactly like the singleton they now wrap).
  */
-export function spawnDeElevatedProcess(
-  executable: string,
-  args: string[] = [],
-): SpawnedProcess {
-  const commandLine = `"${executable}"${args.length ? ` ${args.join(' ')}` : ''}`;
-  const commandLineBuf = Buffer.concat([
-    Buffer.from(commandLine + '\0', 'latin1'),
-    Buffer.alloc(32),
-  ]);
-
-  const tokenOut = Buffer.alloc(8);
-  const gotToken = Advapi32Impl.OpenProcessToken(
-    Kernel32Impl.GetCurrentProcess(),
-    TokenAccess.combine(
-      TokenAccess.DUPLICATE,
-      TokenAccess.QUERY,
-      TokenAccess.ASSIGN_PRIMARY,
-      TokenAccess.ADJUST_DEFAULT,
-      TokenAccess.ADJUST_SESSIONID,
-    ),
-    tokenOut,
-  );
-  if (!gotToken) {
-    throw new OpenProcessTokenFailedError(Number(Kernel32Impl.GetLastError()));
-  }
-  const hToken = tokenOut.readBigUInt64LE(0);
-
-  const restrictedOut = Buffer.alloc(8);
-  const restricted = Advapi32Impl.CreateRestrictedToken(
-    hToken,
-    CreateRestrictedTokenFlags.DISABLE_MAX_PRIVILEGE,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    restrictedOut,
-  );
-  Kernel32Impl.CloseHandle(hToken);
-  if (!restricted) {
-    throw new CreateRestrictedTokenFailedError(
-      Number(Kernel32Impl.GetLastError()),
-    );
-  }
-  const hRestrictedToken = restrictedOut.readBigUInt64LE(0);
-
-  const startupInfo = StartupInfoA.allocSync();
-  startupInfo.assign({
-    cb: StartupInfoA.computed.totalSize,
-    lpReserved: null,
-    lpDesktop: null,
-    lpTitle: null,
-    dwX: 0,
-    dwY: 0,
-    dwXSize: 0,
-    dwYSize: 0,
-    dwXCountChars: 0,
-    dwYCountChars: 0,
-    dwFillAttribute: 0,
-    dwFlags: 0,
-    wShowWindow: 0,
-    cbReserved2: 0,
-    lpReserved2: null,
-    hStdInput: 0n,
-    hStdOutput: 0n,
-    hStdError: 0n,
+function getGlobalDummyProcess(options: NShmOptions): DummyProcess {
+  return getSharedDummyProcess({
+    executable: options.dummyExecutable,
+    args: options.dummyArgs,
   });
-
-  const processInfo = ProcessInformation.allocSync();
-  processInfo.assign({
-    hProcess: 0n,
-    hThread: 0n,
-    dwProcessId: 0,
-    dwThreadId: 0,
-  });
-
-  const created = Advapi32Impl.CreateProcessAsUserA(
-    hRestrictedToken,
-    0,
-    commandLineBuf,
-    0,
-    0,
-    0,
-    ProcessCreationFlags.CREATE_NO_WINDOW,
-    0,
-    0,
-    startupInfo,
-    processInfo,
-  );
-  Kernel32Impl.CloseHandle(hRestrictedToken);
-  if (!created) {
-    throw new SpawnProcessFailedError(
-      executable,
-      Number(Kernel32Impl.GetLastError()),
-    );
-  }
-
-  const pid = Number(processInfo.dwProcessId);
-  // CreateProcessAsUser hands back a fully-usable process handle directly --
-  // no separate local OpenProcess needed.
-  const handle = Number(processInfo.hProcess);
-
-  return { pid, handle };
-}
-
-/**
- * Spawns the dummy directly via {@link spawnDeElevatedProcess} -- see its
- * doc comment for why `CreateProcessAsUserA` is used over `child_process.spawn`.
- */
-function spawnGlobalDummyProcess(options: NShmOptions): GlobalDummyProcess {
-  const dummyExecutable = options.dummyExecutable ?? 'ping.exe';
-  const dummyArgs = options.dummyArgs ?? ['127.0.0.1', '-n', '1000000'];
-  const { pid, handle } = spawnDeElevatedProcess(dummyExecutable, dummyArgs);
-  return { pid, localHandle: handle };
 }
 
 /**
@@ -297,37 +143,13 @@ function openDummyHandleInTargetSync(
 }
 
 /**
- * Terminates and releases this (Bun) process's handle to the global dummy
- * process, and forgets the cached state, so the next region allocated
- * through any `NShm` spawns a fresh dummy. Existing regions remain valid
- * (their own local mapping handle/view are independent of the dummy once
- * mapped).
- *
- * Waits for the dummy to actually finish dying (`WaitForSingleObject`
- * polled with a 0 timeout, never a blocking wait) before closing the handle
- * and returning -- firing `TerminateProcess`/`CloseHandle` back-to-back
- * without confirming the process is gone races the caller (and whatever
- * runs next) against Wine's own mid-rundown teardown of the killed process,
- * a likely contributor to the intermittent Wine page-fault/Bun segfault
- * documented in CLAUDE.md. Same pattern as `TestProcess.stop()` in
- * `tests/helpers.ts`.
+ * Terminates and releases the shared dummy process (see `exoproc-dummy`),
+ * so the next region allocated through any `NShm` spawns a fresh one.
+ * Existing regions remain valid (their own local mapping handle/view are
+ * independent of the dummy once mapped). Re-exported here for existing
+ * callers/tests -- forwards straight to `exoproc-dummy`'s own teardown.
  */
-export async function closeGlobalDummyProcess(): Promise<void> {
-  const dummy = globalDummy;
-  globalDummy = undefined;
-  if (!dummy) return;
-
-  Kernel32Impl.TerminateProcess(dummy.localHandle, 0);
-
-  const deadline = Date.now() + 5000;
-  while (Date.now() < deadline) {
-    if (Kernel32Impl.WaitForSingleObject(dummy.localHandle, 0) === 0) break;
-    Bun.sleepSync(25);
-  }
-  Kernel32Impl.CloseHandle(dummy.localHandle);
-
-  await new Promise((r) => setTimeout(r, 250));
-}
+export const closeGlobalDummyProcess = closeSharedDummyProcess;
 
 /**
  * A `MiddlewareAccessor` wrapping `backend` (an already hijacked/attached
@@ -516,7 +338,7 @@ export class NShm extends MiddlewareAccessor {
     //    doesn't grow without bound across many allocations ─────────────────
     const localDupOut = Buffer.alloc(8);
     const localDupOk = Kernel32Impl.DuplicateHandle(
-      dummy.localHandle,
+      dummy.handle,
       dummyMappingHandle,
       CURRENT_PROCESS_PSEUDO_HANDLE,
       localDupOut,
@@ -640,7 +462,7 @@ export class NShm extends MiddlewareAccessor {
 
     const localDupOut = Buffer.alloc(8);
     const localDupOk = Kernel32Impl.DuplicateHandle(
-      dummy.localHandle,
+      dummy.handle,
       dummyMappingHandle,
       CURRENT_PROCESS_PSEUDO_HANDLE,
       localDupOut,
