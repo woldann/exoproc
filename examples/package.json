@@ -8,6 +8,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "exoproc": "workspace:*",
+    "exoproc-dummy": "workspace:*",
     "hono": "^4.12.28",
     "lucide-react": "^1.23.0",
     "radix-ui": "^1.6.2",

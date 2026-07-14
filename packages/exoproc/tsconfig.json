@@ -14,6 +14,7 @@
     { "path": "../winapi" },
     { "path": "../nhook" },
     { "path": "../nthread" },
+    { "path": "../nshm" },
     { "path": "../utils" }
   ]
 }

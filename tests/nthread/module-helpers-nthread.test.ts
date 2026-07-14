@@ -6,16 +6,17 @@ import {
   Kernel32Impl,
 } from 'bun-xffi';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/module-helpers.test.ts -- GetModuleHandleExA(FROM_ADDRESS)
-// with a deliberately bogus address crashed Wine ("Unhandled page fault...
-// starting debugger") when dispatched via a bare RemoteCallableMemoryAccessor
-// (a fresh CreateRemoteThread thread); driven through IndirectNThreadHostAccessor
-// (an already-live, hijacked thread) instead.
+// with a deliberately bogus address crashed ("Unhandled page fault... starting
+// debugger" under Wine, the same underlying fault on real windows-latest CI
+// runners too -- see CLAUDE.md, not Wine-specific) when dispatched via a bare
+// RemoteCallableMemoryAccessor (a fresh CreateRemoteThread thread); driven
+// through IndirectNThreadHostAccessor (an already-live, hijacked thread) instead.
 describe('nthread > Module Loading Helpers', () => {
   test('should check loaded modules in the current process', async () => {
-    const tp = new TestProcess();
+    const tp = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -54,7 +55,6 @@ describe('nthread > Module Loading Helpers', () => {
       expect(coreStatus.msvcrt).toBe(true);
     } finally {
       await accessor.deinit();
-      await tp.stop();
     }
   }, 60000);
 });

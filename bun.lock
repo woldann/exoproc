@@ -31,6 +31,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "exoproc": "workspace:*",
+        "exoproc-dummy": "workspace:*",
         "hono": "^4.12.28",
         "lucide-react": "^1.23.0",
         "radix-ui": "^1.6.2",
@@ -47,8 +48,26 @@
         "tailwindcss": "^4.0.0",
       },
     },
+    "packages/accessors": {
+      "name": "exoproc-accessors",
+      "version": "0.1.0",
+      "dependencies": {
+        "bun-xffi": "workspace:*",
+        "exoproc-utils": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "packages/capstone": {
       "name": "bun-capstone",
+      "version": "0.1.0",
+      "dependencies": {
+        "bun-xffi": "workspace:*",
+      },
+    },
+    "packages/dummy": {
+      "name": "exoproc-dummy",
       "version": "0.1.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
@@ -61,9 +80,11 @@
         "bun-capstone": "workspace:*",
         "bun-minhook": "workspace:*",
         "bun-nhook": "workspace:*",
+        "bun-nshm": "workspace:*",
         "bun-nthread": "workspace:*",
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
+        "exoproc-accessors": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -88,12 +109,23 @@
         "exoproc-utils": "workspace:*",
       },
     },
+    "packages/nshm": {
+      "name": "bun-nshm",
+      "version": "0.1.0",
+      "dependencies": {
+        "bun-xffi": "workspace:*",
+        "exoproc-accessors": "workspace:*",
+        "exoproc-dummy": "workspace:*",
+        "exoproc-utils": "workspace:*",
+      },
+    },
     "packages/nthread": {
       "name": "bun-nthread",
       "version": "0.1.0",
       "dependencies": {
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
+        "exoproc-accessors": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -508,6 +540,8 @@
 
     "bun-nhook": ["bun-nhook@workspace:packages/nhook"],
 
+    "bun-nshm": ["bun-nshm@workspace:packages/nshm"],
+
     "bun-nthread": ["bun-nthread@workspace:packages/nthread"],
 
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
@@ -629,6 +663,10 @@
     "execa": ["execa@8.0.1", "", { "dependencies": { "cross-spawn": "^7.0.3", "get-stream": "^8.0.1", "human-signals": "^5.0.0", "is-stream": "^3.0.0", "merge-stream": "^2.0.0", "npm-run-path": "^5.1.0", "onetime": "^6.0.0", "signal-exit": "^4.1.0", "strip-final-newline": "^3.0.0" } }, "sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg=="],
 
     "exoproc": ["exoproc@workspace:packages/exoproc"],
+
+    "exoproc-accessors": ["exoproc-accessors@workspace:packages/accessors"],
+
+    "exoproc-dummy": ["exoproc-dummy@workspace:packages/dummy"],
 
     "exoproc-examples": ["exoproc-examples@workspace:examples"],
 

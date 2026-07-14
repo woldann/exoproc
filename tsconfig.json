@@ -41,11 +41,14 @@
     "paths": {
       "exoproc-utils": ["packages/utils/src/index.ts"],
       "bun-xffi": ["packages/xffi/src/index.ts"],
+      "exoproc-accessors": ["packages/accessors/src/index.ts"],
+      "exoproc-dummy": ["packages/dummy/src/index.ts"],
       "bun-capstone": ["packages/capstone/src/index.ts"],
       "bun-winapi": ["packages/winapi/src/index.ts"],
       "bun-nthread": ["packages/nthread/src/index.ts"],
       "bun-nhook": ["packages/nhook/src/index.ts"],
       "bun-minhook": ["packages/minhook/src/index.ts"],
+      "bun-nshm": ["packages/nshm/src/index.ts"],
       "exoproc": ["packages/exoproc/src/index.ts"]
     }
   },
@@ -53,11 +56,14 @@
   "references": [
     { "path": "./packages/utils" },
     { "path": "./packages/xffi" },
+    { "path": "./packages/accessors" },
+    { "path": "./packages/dummy" },
     { "path": "./packages/capstone" },
     { "path": "./packages/winapi" },
     { "path": "./packages/nthread" },
     { "path": "./packages/nhook" },
     { "path": "./packages/minhook" },
+    { "path": "./packages/nshm" },
     { "path": "./packages/exoproc" }
   ]
 }

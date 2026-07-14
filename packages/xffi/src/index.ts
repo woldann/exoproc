@@ -3,16 +3,8 @@ export * from './pointer.js';
 export * from './win/defines.js';
 export * from './iaccessor.js';
 export * from './accessor.js';
-export { AllocNearRangeError } from './near-alloc.js';
+export * from './near-alloc.js';
 export * from './middleware-accessor.js';
-export {
-  FileTransferReadAccessor,
-  FileTransferWriteAccessor,
-  MemsetWriteAccessor,
-  MemcmpReadAccessor,
-  DebugMemoryAccessor,
-} from './middleware-accessor.js';
-export * from './host-accessor.js';
 export * from './callable-accessor.js';
 export * from './win/utils.js';
 export * from './waiter.js';
@@ -72,6 +64,7 @@ export * from './win/structs.js';
 export * from './win/user32.js';
 export * from './win/gdi32.js';
 export * from './win/psapi.js';
+export * from './win/advapi32.js';
 export * from './cdefine.js';
 export * from './cmacro.js';
 export * from './win/memmem.js';
@@ -85,6 +78,7 @@ import { CrtLibrary } from './win/msvcrt.js';
 import { User32Library } from './win/user32.js';
 import { Gdi32Library } from './win/gdi32.js';
 import { PsapiLibrary } from './win/psapi.js';
+import { Advapi32Library } from './win/advapi32.js';
 import {
   Rect,
   PaintStruct,
@@ -113,6 +107,8 @@ import {
   ToolhelpSnapshotFlag,
   GetModuleHandleExFlag,
   WaitReturn,
+  TokenAccess,
+  CreateRestrictedTokenFlags,
 } from './win/defines.js';
 
 // Register global Windows defaults for CJit
@@ -124,6 +120,7 @@ addCJitDefault({
     User32Library,
     Gdi32Library,
     PsapiLibrary,
+    Advapi32Library,
   ],
   structs: [
     Rect,
@@ -154,6 +151,8 @@ addCJitDefault({
       ToolhelpSnapshotFlag,
       GetModuleHandleExFlag,
       WaitReturn,
+      TokenAccess,
+      CreateRestrictedTokenFlags,
     },
   ],
 });

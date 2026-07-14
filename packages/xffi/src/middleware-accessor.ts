@@ -1,52 +1,100 @@
 import { type AddressLike, NativeMemory } from './pointer.js';
-import { randomUUID } from 'crypto';
 import { AbstractSyncMemoryAccessor } from './accessor.js';
 import * as debug from './debug-helper.js';
-import {
-  verifyCoreModules,
-  type CoreModulesStatus,
-  isModuleLoadedInProcess,
-} from './win/utils.js';
-import {
-  type ICallableMemoryAccessor,
-  type AllocNearOptions,
-} from './iaccessor.js';
+import { type ISyncCallableMemoryAccessor } from './iaccessor.js';
 import { type CFunction } from './cfunction.js';
 import { type CMachineCode } from './cmachinecode.js';
-import {
-  computeNearAllocRange,
-  freeRegionCandidate,
-  AllocNearRangeError,
-} from './near-alloc.js';
-import { type CCallResult, normalizeType } from './types.js';
-import { resolveAddress, alignUp } from './ffi.js';
-import { Kernel32Impl } from './win/kernel32.js';
-import { MsvcrtImpl, MsvcrtLibrary } from './win/msvcrt.js';
-import { MemoryBasicInformation, PROCESSENTRY32W_SIZE } from './win/structs.js';
-import {
-  MemoryState,
-  MemoryProtection,
-  MemoryFreeType,
-  ToolhelpSnapshotFlag,
-  ProcessAccess,
-  DEFAULT_MACHINECODE_ALIGNMENT,
-} from './win/defines.js';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import {
-  memmem,
-  memmem1,
-  memmem2,
-  memmem4,
-  memmem8,
-  memmemWithoutBuffer,
-} from './win/memmem.js';
-import { Pattern, Scanner } from './win/scanner.js';
+import { type CCallResult } from './types.js';
+import { type Pattern } from './win/scanner.js';
+
+/**
+ * Minimal surface `MiddlewareAccessor`/`InittableMiddlewareAccessor` (and
+ * `DebugMemoryAccessor`) need from a `root` accessor. The concrete
+ * `HostAccessor` class (and its whole family -- `RedirectorHostAccessor`,
+ * `BootstrapHostAccessor`, etc.) lives in `exoproc-accessors`, a package that
+ * depends on `bun-xffi`; typing `root` as the concrete class here would make
+ * `bun-xffi` depend back on `exoproc-accessors`, a cycle. `HostAccessor`
+ * structurally satisfies this interface already (it extends
+ * `InittableMiddlewareAccessor`, which provides every `ISyncCallableMemoryAccessor`
+ * method), so nothing downstream needs to change to conform to it.
+ */
+export interface IHostAccessor extends ISyncCallableMemoryAccessor {
+  close(): void;
+}
+
+/**
+ * Structural counterpart to `MiddlewareAccessor`, used instead of
+ * `instanceof MiddlewareAccessor` for chain-walking (`initNext`, the
+ * `backend`-chain pid lookup, etc.). `instanceof` compares against a
+ * *specific loaded copy* of the `MiddlewareAccessor` class -- when a chain
+ * crosses a package boundary (e.g. `nthread`'s `NThread` and `accessors`'s
+ * `MemsetWriteAccessor` each resolve their own `bun-xffi` via their own
+ * `node_modules` symlink), Bun-under-Wine has been observed to load two
+ * separate copies of `bun-xffi` even though both symlinks resolve to the
+ * same canonical directory -- so an instance built from one copy silently
+ * fails `instanceof` against the other copy's class, despite being
+ * structurally identical. Checking for the shape instead of the class
+ * reference sidesteps the whole problem.
+ */
+export interface IMiddlewareAccessor extends ISyncCallableMemoryAccessor {
+  backend: ISyncCallableMemoryAccessor;
+  readonly root: IHostAccessor;
+}
+
+export function isMiddlewareAccessor(obj: unknown): obj is IMiddlewareAccessor {
+  return (
+    !!obj &&
+    typeof obj === 'object' &&
+    'backend' in obj &&
+    'root' in obj &&
+    typeof (obj as { call?: unknown }).call === 'function' &&
+    typeof (obj as { read?: unknown }).read === 'function'
+  );
+}
+
+/** Structural counterpart to `InittableMiddlewareAccessor` -- see {@link IMiddlewareAccessor} for why this exists instead of `instanceof`. */
+export interface IInittableAccessor extends IMiddlewareAccessor {
+  readonly isInitializing: boolean;
+  readonly isInitializingSync: boolean;
+  init(): Promise<void>;
+  initSync(): void;
+  deinit(): Promise<void>;
+  deinitSync(): void;
+}
+
+export function isInittableAccessor(obj: unknown): obj is IInittableAccessor {
+  return (
+    isMiddlewareAccessor(obj) &&
+    typeof (obj as { init?: unknown }).init === 'function' &&
+    typeof (obj as { initSync?: unknown }).initSync === 'function' &&
+    typeof (obj as { deinit?: unknown }).deinit === 'function' &&
+    typeof (obj as { deinitSync?: unknown }).deinitSync === 'function'
+  );
+}
+
+/**
+ * Thrown when `init()` and `initSync()` are attempted concurrently on the same
+ * accessor. A sync caller cannot `await` an in-flight async init -- there is
+ * no way to block the JS thread on a Promise without an event-loop tick -- so
+ * rather than silently letting both paths race (each running `initNext()`/
+ * `onInit()` independently, double-executing side effects like suspending a
+ * hijacked thread twice), whichever call notices the other is in progress
+ * throws immediately instead.
+ */
+export class ConcurrentInitError extends Error {
+  constructor(kind: 'sync-during-async' | 'async-during-sync') {
+    super(
+      kind === 'sync-during-async'
+        ? 'initSync() called while an async init() is already in progress on this accessor -- await the async init first, or use only the sync API on this accessor.'
+        : 'init() called while a sync initSync() is already in progress on this accessor -- this should be structurally unreachable (initSync() never yields), so seeing it means onInitSync() (or something it calls) itself triggered an async init().',
+    );
+    this.name = 'ConcurrentInitError';
+  }
+}
 
 export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
-  public backend: ICallableMemoryAccessor;
-  public readonly root: HostAccessor;
+  public backend: ISyncCallableMemoryAccessor;
+  public readonly root: IHostAccessor;
 
   override get processId(): number {
     if ((this.root as any) === this) {
@@ -55,9 +103,9 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     return this.root.processId;
   }
 
-  constructor(backend: ICallableMemoryAccessor, root: HostAccessor) {
-    let b: MiddlewareAccessor | ICallableMemoryAccessor = backend;
-    while (b && b instanceof MiddlewareAccessor) {
+  constructor(backend: ISyncCallableMemoryAccessor, root: IHostAccessor) {
+    let b: ISyncCallableMemoryAccessor = backend;
+    while (isMiddlewareAccessor(b)) {
       b = b.backend;
     }
     const pid = b ? b.processId : backend.processId;
@@ -128,12 +176,7 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
   }
 
   override machineCodeSync(machineCode: CMachineCode): number {
-    if (typeof (this.backend as any).machineCodeSync === 'function') {
-      return (this.backend as any).machineCodeSync(machineCode);
-    }
-    throw new Error(
-      'machineCodeSync is not supported by the backend accessor.',
-    );
+    return this.backend.machineCodeSync(machineCode);
   }
 
   override async *scan(
@@ -149,11 +192,11 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     size: number,
     pattern: Pattern | string,
   ): Generator<NativeMemory> {
-    yield* (this.backend as any).scanSync(address, size, pattern);
+    yield* this.backend.scanSync(address, size, pattern);
   }
 
   readSync(address: AddressLike, size: number, offset = 0): Buffer {
-    return (this.backend as any).readSync(address, size, offset);
+    return this.backend.readSync(address, size, offset);
   }
 
   writeSync(
@@ -161,7 +204,7 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     data: Buffer | Uint8Array,
     offset = 0,
   ): number {
-    return (this.backend as any).writeSync(address, data, offset);
+    return this.backend.writeSync(address, data, offset);
   }
 
   allocSync(
@@ -170,28 +213,23 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     protection?: any,
     allocationType?: any,
   ): AddressLike {
-    return (this.backend as any).allocSync(
-      size,
-      address,
-      protection,
-      allocationType,
-    );
+    return this.backend.allocSync(size, address, protection, allocationType);
   }
 
   freeSync(address: AddressLike, size = 0, freeType?: any): boolean {
-    return (this.backend as any).freeSync(address, size, freeType);
+    return this.backend.freeSync(address, size, freeType);
   }
 
   protectSync(address: AddressLike, size: number, newProtect: any): any {
-    return (this.backend as any).protectSync(address, size, newProtect);
+    return this.backend.protectSync(address, size, newProtect);
   }
 
   querySync(address: AddressLike): any {
-    return (this.backend as any).querySync(address);
+    return this.backend.querySync(address);
   }
 
   callSync(func: CFunction, ...args: any[]): CCallResult {
-    return (this.backend as any).callSync(func, ...args);
+    return this.backend.callSync(func, ...args);
   }
 
   // Forward close if backend exposes it
@@ -214,46 +252,90 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
   }
 }
 
-export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
-  protected isInitialized = false;
-  private initPromise: Promise<void> | null = null;
+/**
+ * `isInitialized`/`isInitializing`(async)/`isInitializingSync` are mutually
+ * exclusive by construction (entering one while another is active throws --
+ * see `ConcurrentInitError`), so instead of three independently-mutable
+ * fields that could in principle drift out of sync with each other, they're
+ * all views onto one tagged-union state. `async` carries the in-flight
+ * promise itself (needed so concurrent async callers coalesce onto the same
+ * promise instead of racing); `idle`/`sync`/`done` carry no per-instance data
+ * so they're shared singletons, not allocated per instance.
+ */
+type InitState =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'async'; readonly promise: Promise<void> }
+  | { readonly kind: 'sync' }
+  | { readonly kind: 'done' };
 
-  constructor(backend: ICallableMemoryAccessor, root: HostAccessor) {
-    super(backend, root);
-    if (this.root && (this.root as any) !== this) {
-      this.root.children.add(this);
-    }
+const INIT_STATE_IDLE: InitState = { kind: 'idle' };
+const INIT_STATE_SYNC: InitState = { kind: 'sync' };
+const INIT_STATE_DONE: InitState = { kind: 'done' };
+
+export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
+  private initState: InitState = INIT_STATE_IDLE;
+
+  protected get isInitialized(): boolean {
+    return this.initState.kind === 'done';
+  }
+
+  protected get isInitializing(): boolean {
+    return this.initState.kind === 'async';
+  }
+
+  /** Sync twin of {@link isInitializing} -- there's nothing to await synchronously, so this is a plain reentrancy flag instead of a shared in-flight promise. */
+  protected get isInitializingSync(): boolean {
+    return this.initState.kind === 'sync';
   }
 
   protected abstract onInit(): Promise<void>;
 
+  /** Sync twin of {@link onInit}. Every subclass that implements `onInit` must implement this too -- see each's own comment for how its logic maps to *Sync calls. */
+  protected abstract onInitSync(): void;
+
   protected async onDeinit(): Promise<void> {}
 
+  protected onDeinitSync(): void {}
+
   protected async initNext(): Promise<void> {
-    let next: MiddlewareAccessor | ICallableMemoryAccessor = this.backend;
-    while (
-      next &&
-      next instanceof MiddlewareAccessor &&
-      !(next instanceof InittableMiddlewareAccessor)
-    ) {
+    let next: ISyncCallableMemoryAccessor = this.backend;
+    while (isMiddlewareAccessor(next) && !isInittableAccessor(next)) {
       next = next.backend;
     }
-    if (next instanceof InittableMiddlewareAccessor && !next.isInitializing) {
+    if (isInittableAccessor(next) && !next.isInitializing) {
       await next.init();
     }
   }
 
-  protected async deinitNext(): Promise<void> {
-    let next: MiddlewareAccessor | ICallableMemoryAccessor = this.backend;
-    while (
-      next &&
-      next instanceof MiddlewareAccessor &&
-      !(next instanceof InittableMiddlewareAccessor)
-    ) {
+  protected initNextSync(): void {
+    let next: ISyncCallableMemoryAccessor = this.backend;
+    while (isMiddlewareAccessor(next) && !isInittableAccessor(next)) {
       next = next.backend;
     }
-    if (next instanceof InittableMiddlewareAccessor) {
+    if (isInittableAccessor(next) && !next.isInitializingSync) {
+      next.initSync();
+    }
+  }
+
+  protected async deinitNext(): Promise<void> {
+    let next: ISyncCallableMemoryAccessor = this.backend;
+    while (isMiddlewareAccessor(next) && !isInittableAccessor(next)) {
+      next = next.backend;
+    }
+    if (isInittableAccessor(next)) {
       await next.deinit();
+    } else {
+      super.close();
+    }
+  }
+
+  protected deinitNextSync(): void {
+    let next: ISyncCallableMemoryAccessor = this.backend;
+    while (isMiddlewareAccessor(next) && !isInittableAccessor(next)) {
+      next = next.backend;
+    }
+    if (isInittableAccessor(next)) {
+      next.deinitSync();
     } else {
       super.close();
     }
@@ -264,9 +346,19 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     try {
       await this.onDeinit();
     } finally {
-      this.isInitialized = false;
-      this.initPromise = null;
+      this.initState = INIT_STATE_IDLE;
       await this.deinitNext();
+    }
+  }
+
+  /** Sync twin of {@link deinit}. */
+  public deinitSync(): void {
+    if (!this.isInitialized) return;
+    try {
+      this.onDeinitSync();
+    } finally {
+      this.initState = INIT_STATE_IDLE;
+      this.deinitNextSync();
     }
   }
 
@@ -274,35 +366,64 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     this.deinit().catch(() => {});
   }
 
-  protected get isInitializing(): boolean {
-    return this.initPromise !== null;
-  }
-
   public async init(): Promise<void> {
-    if (this.isInitialized) return;
-    if (this.initPromise) return this.initPromise;
+    if (this.initState.kind === 'done') return;
+    if (this.initState.kind === 'async') return this.initState.promise;
+    if (this.initState.kind === 'sync') {
+      throw new ConcurrentInitError('async-during-sync');
+    }
 
     let resolvePromise!: () => void;
     let rejectPromise!: (err: any) => void;
-    this.initPromise = new Promise<void>((resolve, reject) => {
+    const promise = new Promise<void>((resolve, reject) => {
       resolvePromise = resolve;
       rejectPromise = reject;
     });
-    this.initPromise.catch(() => {});
+    promise.catch(() => {});
+    this.initState = { kind: 'async', promise };
 
     try {
       await this.initNext();
 
       await this.onInit();
-      this.isInitialized = true;
+      this.initState = INIT_STATE_DONE;
       resolvePromise();
     } catch (err) {
+      this.initState = INIT_STATE_IDLE;
       rejectPromise(err);
       throw err;
-    } finally {
-      this.initPromise = null;
     }
   }
+
+  /**
+   * Sync twin of {@link init}. Whichever family (sync or async) a caller
+   * happens to use first is the one that actually initializes the chain --
+   * `readSync()`/`callSync()`/etc. call this the same way `read()`/`call()`
+   * call `init()`, so neither family depends on the other having run first.
+   * The `sync` state guards against reentrancy (e.g. `onInitSync()` itself
+   * issuing a `this.root.*Sync()` call that would otherwise re-trigger
+   * `initSync()` on the same instance). A sync caller can't `await` an
+   * in-flight async promise, so if one is already running this throws
+   * instead of racing it -- see {@link ConcurrentInitError}.
+   */
+  public initSync(): void {
+    if (this.initState.kind === 'done') return;
+    if (this.initState.kind === 'sync') return;
+    if (this.initState.kind === 'async') {
+      throw new ConcurrentInitError('sync-during-async');
+    }
+
+    this.initState = INIT_STATE_SYNC;
+    try {
+      this.initNextSync();
+      this.onInitSync();
+      this.initState = INIT_STATE_DONE;
+    } catch (err) {
+      this.initState = INIT_STATE_IDLE;
+      throw err;
+    }
+  }
+
   override async read(
     address: AddressLike,
     size: number,
@@ -387,6 +508,81 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return this.machineCodeAfterInit(machineCode);
   }
 
+  // ── Sync twins of the dispatch overrides above. Same init guard shape as
+  //    their async counterparts, just via initSync()/isInitializingSync
+  //    instead of init()/isInitializing -- whichever family (sync or async)
+  //    a caller uses first is the one that actually initializes the chain,
+  //    so neither depends on the other having run first. ───────────────────
+
+  override readSync(address: AddressLike, size: number, offset = 0): Buffer {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.readAfterInitSync(address, size, offset);
+  }
+
+  override writeSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.writeAfterInitSync(address, data, offset);
+  }
+
+  override allocSync(
+    size: number | any,
+    address: AddressLike | null = null,
+    protection?: any,
+    allocationType?: any,
+  ): AddressLike {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.allocAfterInitSync(size, address, protection, allocationType);
+  }
+
+  override freeSync(address: AddressLike, size = 0, freeType?: any): boolean {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.freeAfterInitSync(address, size, freeType);
+  }
+
+  override protectSync(
+    address: AddressLike,
+    size: number,
+    newProtect: any,
+  ): number {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.protectAfterInitSync(address, size, newProtect);
+  }
+
+  override querySync(address: AddressLike): any {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.queryAfterInitSync(address);
+  }
+
+  override callSync(func: CFunction, ...args: any[]): CCallResult {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.callAfterInitSync(func, args);
+  }
+
+  override machineCodeSync(machineCode: CMachineCode): number {
+    if (!this.isInitializingSync) {
+      this.initSync();
+    }
+    return this.machineCodeAfterInitSync(machineCode);
+  }
+
   protected async readAfterInit(
     address: AddressLike,
     size: number,
@@ -395,12 +591,28 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.read(address, size, offset);
   }
 
+  protected readAfterInitSync(
+    address: AddressLike,
+    size: number,
+    offset = 0,
+  ): Buffer {
+    return super.readSync(address, size, offset);
+  }
+
   protected async writeAfterInit(
     address: AddressLike,
     data: Buffer | Uint8Array,
     offset = 0,
   ): Promise<number> {
     return super.write(address, data, offset);
+  }
+
+  protected writeAfterInitSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    return super.writeSync(address, data, offset);
   }
 
   protected async allocAfterInit(
@@ -412,12 +624,29 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.alloc(size, address, protection, allocationType);
   }
 
+  protected allocAfterInitSync(
+    size: number | any,
+    address: AddressLike | null = null,
+    protection?: any,
+    allocationType?: any,
+  ): AddressLike {
+    return super.allocSync(size, address, protection, allocationType);
+  }
+
   protected async freeAfterInit(
     address: AddressLike,
     size = 0,
     freeType?: any,
   ): Promise<boolean> {
     return super.free(address, size, freeType);
+  }
+
+  protected freeAfterInitSync(
+    address: AddressLike,
+    size = 0,
+    freeType?: any,
+  ): boolean {
+    return super.freeSync(address, size, freeType);
   }
 
   protected async protectAfterInit(
@@ -428,8 +657,20 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.protect(address, size, newProtect);
   }
 
+  protected protectAfterInitSync(
+    address: AddressLike,
+    size: number,
+    newProtect: any,
+  ): number {
+    return super.protectSync(address, size, newProtect);
+  }
+
   protected async queryAfterInit(address: AddressLike): Promise<any> {
     return super.query(address);
+  }
+
+  protected queryAfterInitSync(address: AddressLike): any {
+    return super.querySync(address);
   }
 
   protected async callAfterInit(
@@ -439,1504 +680,26 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return super.call(func, ...args);
   }
 
+  protected callAfterInitSync(func: CFunction, args: any[]): CCallResult {
+    return super.callSync(func, ...args);
+  }
+
   protected async machineCodeAfterInit(
     machineCode: CMachineCode,
   ): Promise<number> {
     return super.machineCode(machineCode);
+  }
+
+  protected machineCodeAfterInitSync(machineCode: CMachineCode): number {
+    return super.machineCodeSync(machineCode);
   }
 }
 
 /**
  * Base middleware accessor for components that require msvcrt.dll in the target process.
  */
-export abstract class MsvcrtDependentMiddlewareAccessor extends InittableMiddlewareAccessor {
-  protected async onInit(): Promise<void> {
-    if (this.isLocal) return;
-    const msvcrtBase = MsvcrtLibrary.baseAddress;
-    const isMsvcrtLoaded = await isModuleLoadedInProcess(this.root, msvcrtBase);
-    if (!isMsvcrtLoaded) {
-      throw new Error('Target process does not have msvcrt.dll loaded.');
-    }
-  }
-}
-
-/**
- * HostAccessor is a base class that automatically initializes all nested InittableMiddlewareAccessors
- * in the backend decorator chain.
- */
-export class HostAccessor extends InittableMiddlewareAccessor {
-  public readonly children = new Set<InittableMiddlewareAccessor>();
-  public isExecutingFileTransfer = false;
-
-  override get processId(): number {
-    return this._processId;
-  }
-
-  constructor(backend: ICallableMemoryAccessor, root?: HostAccessor) {
-    super(backend, root ?? (null as any));
-    if (!root) {
-      (this as any).root = this;
-    }
-    let b: MiddlewareAccessor | ICallableMemoryAccessor = backend;
-    while (b && b instanceof MiddlewareAccessor) {
-      b = b.backend;
-    }
-    if (b) {
-      this._processId = b.processId;
-    }
-  }
-
-  protected override async onInit(): Promise<void> {
-    // No-op. Chain initialization is automatically propagated by init().
-  }
-
-  public override async deinit(): Promise<void> {
-    if (!this.isInitialized) return;
-    try {
-      // 1. Calculate active backend inittables in the chain
-      const active = new Set<InittableMiddlewareAccessor>();
-      let current: MiddlewareAccessor | ICallableMemoryAccessor = this.backend;
-      while (current && current instanceof MiddlewareAccessor) {
-        if (current instanceof InittableMiddlewareAccessor) {
-          active.add(current);
-        }
-        current = current.backend;
-      }
-
-      // 2. Deinit any other registered children that are NOT in the active chain (e.g. detached ones)
-      for (const child of this.children) {
-        if (!active.has(child)) {
-          await child.deinit();
-        }
-      }
-      this.children.clear();
-    } finally {
-      await super.deinit();
-    }
-  }
-}
-
-/**
- * A HostAccessor that forwards all operations to a dynamically changeable target HostAccessor.
- * This is useful for resolving circular dependencies in middleware chains where the root
- * reference is readonly and needs to be set after construction.
- *
- * Usage:
- *   const redirector = new RedirectorHostAccessor(pid);
- *   // ... build middleware chain using redirector as root ...
- *   redirector.target = actualHostAccessor; // wire it up later
- */
-/**
- * HostAccessor that throws an error for all operations. Used as the default/unconfigured target for redirectors.
- */
-export class ThrowingHostAccessor extends HostAccessor {
-  constructor(processId: number, root?: HostAccessor) {
-    super(new ThrowingMemoryAccessor(processId), root);
-  }
-}
-
-/**
- * A HostAccessor that forwards all operations to a dynamically changeable target HostAccessor.
- * If target is set to `this`, it delegates calls directly to its own backend (acting like a normal HostAccessor).
- */
-export class RedirectorHostAccessor extends HostAccessor {
-  private _target: HostAccessor;
-
-  constructor(processId: number, root?: HostAccessor) {
-    super(new ThrowingMemoryAccessor(processId), root);
-    this._target = new ThrowingHostAccessor(processId, this.root);
-  }
-
-  get target(): HostAccessor {
-    return this._target;
-  }
-
-  set target(value: HostAccessor) {
-    this._target = value;
-    this._processId = value.processId;
-  }
-
-  private getTarget(): HostAccessor {
-    return this._target;
-  }
-
-  override async read(
-    address: AddressLike,
-    size: number,
-    offset = 0,
-  ): Promise<Buffer> {
-    const t = this.getTarget();
-    if (t === this) {
-      return super.read(address, size, offset);
-    }
-    return t.read(address, size, offset);
-  }
-
-  override async write(
-    address: AddressLike,
-    data: Buffer | Uint8Array,
-    offset = 0,
-  ): Promise<number> {
-    const t = this.getTarget();
-    if (t === this) {
-      return super.write(address, data, offset);
-    }
-    return t.write(address, data, offset);
-  }
-
-  override async alloc(
-    size: number | any,
-    address: AddressLike | null = null,
-    protection?: any,
-    allocationType?: any,
-  ): Promise<AddressLike> {
-    const t = this.getTarget();
-    if (t === this) {
-      return super.alloc(size, address, protection, allocationType);
-    }
-    return t.alloc(size, address, protection, allocationType);
-  }
-
-  override async free(
-    address: AddressLike,
-    size = 0,
-    freeType?: any,
-  ): Promise<boolean> {
-    const t = this.getTarget();
-    if (t === this) {
-      return super.free(address, size, freeType);
-    }
-    return t.free(address, size, freeType);
-  }
-
-  override async protect(
-    address: AddressLike,
-    size: number,
-    newProtect: any,
-  ): Promise<number> {
-    const t = this.getTarget();
-    if (t === this) {
-      return super.protect(address, size, newProtect);
-    }
-    return t.protect(address, size, newProtect);
-  }
-
-  override async query(address: AddressLike): Promise<any> {
-    const t = this.getTarget();
-    if (t === this) {
-      return super.query(address);
-    }
-    return t.query(address);
-  }
-
-  override async call(func: CFunction, ...args: any[]): Promise<CCallResult> {
-    const t = this.getTarget();
-    if (t === this) {
-      return super.call(func, ...args);
-    }
-    return t.call(func, ...args);
-  }
-
-  override async *scan(
-    address: AddressLike,
-    size: number,
-    pattern: Pattern | string,
-  ): AsyncGenerator<NativeMemory> {
-    const t = this.getTarget();
-    if (t === this) {
-      yield* super.scan(address, size, pattern);
-    } else {
-      yield* t.scan(address, size, pattern);
-    }
-  }
-
-  override close(): void {
-    if (this._target && this._target !== this) {
-      this._target.close();
-    }
-  }
-
-  protected override async onInit(): Promise<void> {
-    // No-op. The target is initialized separately.
-  }
-}
-
-/**
- * BootstrapHostAccessor is a specialized RedirectorHostAccessor designed to resolve circular dependencies
- * during the initialization of decorator/middleware chains.
- * It acts as a temporary root, redirecting calls to itself (direct backend execution)
- * during initialization, and then automatically switches to the actual root once its backend is initialized.
- */
-export class BootstrapHostAccessor extends RedirectorHostAccessor {
-  constructor(processId: number, root: HostAccessor) {
-    super(processId, root);
-    this.target = this;
-  }
-
-  protected override async onInit(): Promise<void> {
-    await this.initNext();
-    this.target = this.root;
-  }
-}
-
-/**
- * Advanced Middleware Accessor that redirects virtual memory operations
- * (alloc, free, protect, query) to run inside the target process's context via the call method.
- * This performs memory operations directly in the target process's thread context, optimizing access and avoiding cross-process overhead.
- */
-export class CallRedirectorAccessor extends MiddlewareAccessor {
-  override async alloc(
-    size: number,
-    address: AddressLike | null = null,
-    protection: number = MemoryProtection.READWRITE,
-    allocationType: number = MemoryState.COMMIT | MemoryState.RESERVE,
-  ): Promise<AddressLike> {
-    const addressVal = address ? resolveAddress(address) : null;
-    const result = await this.root.call(
-      Kernel32Impl.VirtualAlloc,
-      addressVal,
-      size,
-      allocationType,
-      protection,
-    );
-    if (!result || Number(result) === 0) {
-      throw new Error(`VirtualAlloc failed in remote process for size ${size}`);
-    }
-    return result;
-  }
-
-  override async free(
-    address: AddressLike,
-    size = 0,
-    freeType: number = MemoryFreeType.RELEASE,
-  ): Promise<boolean> {
-    const success = await this.root.call(
-      Kernel32Impl.VirtualFree,
-      resolveAddress(address),
-      size,
-      freeType,
-    );
-    return success !== 0 && success !== false;
-  }
-
-  override async protect(
-    address: AddressLike,
-    size: number,
-    newProtect: number,
-  ): Promise<number> {
-    // Allocate a temporary 4-byte buffer in the target process using root.alloc
-    // to store the old protection value returned by VirtualProtect
-    const tempAddr = await this.root.alloc(4);
-    try {
-      const success = await this.root.call(
-        Kernel32Impl.VirtualProtect,
-        resolveAddress(address),
-        size,
-        newProtect,
-        tempAddr,
-      );
-      if (!success || success === 0) {
-        throw new Error(
-          `VirtualProtect failed in remote process at address ${resolveAddress(address)}`,
-        );
-      }
-      const oldProtect = await this.root.readUInt32(tempAddr);
-      return oldProtect;
-    } finally {
-      await this.root.free(tempAddr);
-    }
-  }
-
-  override async query(address: AddressLike): Promise<MemoryBasicInformation> {
-    const info = new MemoryBasicInformation();
-    // Allocate a temporary 48-byte buffer in the target process using root.alloc
-    // to store the MEMORY_BASIC_INFORMATION structure
-    const tempAddr = await this.root.alloc(info.size);
-    try {
-      const bytesReturned = await this.root.call(
-        Kernel32Impl.VirtualQuery,
-        resolveAddress(address),
-        tempAddr,
-        info.size,
-      );
-      if (!bytesReturned || Number(bytesReturned) === 0) {
-        throw new Error(
-          `VirtualQuery failed in remote process at address ${resolveAddress(address)}`,
-        );
-      }
-      const buffer = await this.root.read(tempAddr, info.size);
-      info.writeSync(buffer, 0);
-      return info;
-    } finally {
-      await this.root.free(tempAddr);
-    }
-  }
-
-  /**
-   * Same principle as this class's alloc/free/protect/query: the *target*
-   * process does the work itself via `call` (in-process VirtualQuery /
-   * VirtualAlloc), not VirtualQueryEx/VirtualAllocEx reaching in from ours.
-   *
-   * `allocNear` is a search loop rather than a single Win32 call, so this
-   * override drives it entirely through the sibling `this.query()` /
-   * `this.alloc()` (each already a remote `call`, and each still composed with
-   * subclasses like {@link IndirectCallRedirectorAccessor}). Because every probe
-   * is an expensive round-trip here, it walks one region per `VirtualQuery`
-   * using the reported `RegionSize`, instead of the base accessor's naive
-   * fixed 64KB grid steps.
-   */
-  override async allocNear(
-    target: AddressLike,
-    size: number,
-    options: AllocNearOptions = {},
-  ): Promise<AddressLike> {
-    const range = computeNearAllocRange(target, options);
-    const protection = options.protection ?? MemoryProtection.EXECUTE_READWRITE;
-    const allocationType = (MemoryState.COMMIT |
-      MemoryState.RESERVE) as MemoryState;
-
-    // Try to claim a free region: VirtualAlloc runs in the target (sibling
-    // override) at the exact granularity-aligned candidate -- the allocation
-    // is made by the process itself.
-    const tryRegion = async (
-      info: MemoryBasicInformation,
-    ): Promise<AddressLike | null> => {
-      const candidate = freeRegionCandidate(info, size, range);
-      if (candidate === null) return null;
-      try {
-        return await this.alloc(size, candidate, protection, allocationType);
-      } catch {
-        // Region got claimed/rejected between query and alloc -- skip it.
-        return null;
-      }
-    };
-
-    // Probe the target's own region once, then walk outward from its edges.
-    const first = await this.query(range.target);
-    const firstHit = await tryRegion(first);
-    if (firstHit !== null) return firstHit;
-    const firstBase = BigInt(resolveAddress(first.BaseAddress));
-    const firstSize = BigInt(first.RegionSize) || 0x10000n;
-
-    // Downward: each VirtualQuery jumps to the region just below the last.
-    let cursor = firstBase - 1n;
-    while (cursor >= range.minAddr) {
-      const info = await this.query(cursor);
-      const hit = await tryRegion(info);
-      if (hit !== null) return hit;
-      const base = BigInt(resolveAddress(info.BaseAddress));
-      const next = base - 1n;
-      if (next >= cursor) break; // no downward progress -- stop
-      cursor = next;
-    }
-
-    // Upward: each VirtualQuery jumps to the first address past the last region.
-    cursor = firstBase + firstSize;
-    while (cursor <= range.maxAddr) {
-      const info = await this.query(cursor);
-      const hit = await tryRegion(info);
-      if (hit !== null) return hit;
-      const base = BigInt(resolveAddress(info.BaseAddress));
-      const regionSize = BigInt(info.RegionSize) || 0x10000n;
-      const next = base + regionSize;
-      if (next <= cursor) break; // no upward progress -- stop
-      cursor = next;
-    }
-
-    throw new AllocNearRangeError(range.target, range.maxDistance);
-  }
-}
-
-/**
- * Indirect variant of CallRedirectorAccessor that redirects read-write memory allocations
- * to malloc on the process's CRT heap instead of VirtualAlloc.
- * It tracks these heap allocations locally and intercepts free, protect, and query operations
- * on them to optimize compatibility with external diagnostic and memory analysis tools.
- */
-export class IndirectCallRedirectorAccessor extends CallRedirectorAccessor {
-  private readonly mallocs = new Map<number, number>(); // Map<address, size>
-
-  private findMallocBlock(
-    address: number,
-  ): { base: number; size: number } | null {
-    for (const [base, size] of this.mallocs.entries()) {
-      if (address >= base && address < base + size) {
-        return { base, size };
-      }
-    }
-    return null;
-  }
-
-  override async alloc(
-    size: number,
-    address: AddressLike | null = null,
-    protection: number = MemoryProtection.READWRITE,
-    allocationType: number = MemoryState.COMMIT | MemoryState.RESERVE,
-  ): Promise<AddressLike> {
-    // If it's standard READWRITE memory without a specific requested address, use malloc for maximum redirection!
-    if (
-      protection === MemoryProtection.READWRITE &&
-      (address === null || address === undefined)
-    ) {
-      const result = await this.root.call(MsvcrtImpl.malloc, size);
-      if (!result || Number(result) === 0) {
-        throw new Error(`malloc failed in remote process for size ${size}`);
-      }
-      const allocatedAddr = Number(result);
-      this.mallocs.set(allocatedAddr, size);
-      return allocatedAddr;
-    }
-
-    // Otherwise, fall back to VirtualAlloc (e.g. for executable memory blocks)
-    return super.alloc(size, address, protection, allocationType);
-  }
-
-  override async free(
-    address: AddressLike,
-    size = 0,
-    freeType: number = MemoryFreeType.RELEASE,
-  ): Promise<boolean> {
-    const addrVal = Number(resolveAddress(address));
-    if (this.mallocs.has(addrVal)) {
-      await this.root.call(MsvcrtImpl.free, addrVal);
-      this.mallocs.delete(addrVal);
-      return true;
-    }
-    return super.free(address, size, freeType);
-  }
-
-  override async protect(
-    address: AddressLike,
-    size: number,
-    newProtect: number,
-  ): Promise<number> {
-    const addrVal = Number(resolveAddress(address));
-    const block = this.findMallocBlock(addrVal);
-    if (block) {
-      if (newProtect !== MemoryProtection.READWRITE) {
-        throw new Error(
-          `Cannot change protection of indirect heap block at 0x${addrVal.toString(16)} to ${newProtect}. Only READWRITE is allowed.`,
-        );
-      }
-      return MemoryProtection.READWRITE; // Already READWRITE
-    }
-    return super.protect(address, size, newProtect);
-  }
-
-  override async query(address: AddressLike): Promise<MemoryBasicInformation> {
-    const addrVal = Number(resolveAddress(address));
-    const block = this.findMallocBlock(addrVal);
-    if (block) {
-      const info = new MemoryBasicInformation();
-      info.assign({
-        BaseAddress: block.base,
-        AllocationBase: block.base,
-        AllocationProtect: MemoryProtection.READWRITE,
-        PartitionId: 0,
-        RegionSize: BigInt(block.size),
-        State: MemoryState.COMMIT,
-        Protect: MemoryProtection.READWRITE,
-        Type: 0x20000, // MEM_PRIVATE
-      } as any);
-      return info;
-    }
-    return super.query(address);
-  }
-}
-
-/**
- * Middleware Accessor that automatically intercepts call arguments,
- * marshals complex types (strings, buffers) to remotely allocated memory blocks,
- * executes the native call, and cleans up the temporary allocations.
- */
-export class MarshallingCallableAccessor extends MiddlewareAccessor {
-  override async call(func: CFunction, ...args: any[]): Promise<CCallResult> {
-    const originalArgs = [...args];
-    const modifiedArgs = [...args];
-    const tempAllocations: { address: number; size: number }[] = [];
-
-    try {
-      const signatureArgs = func.args || [];
-      for (let i = 0; i < signatureArgs.length; i++) {
-        const type = signatureArgs[i];
-        const val = originalArgs[i];
-        const normType = normalizeType(type);
-
-        if (normType === 'cstring' && typeof val === 'string') {
-          const buf = Buffer.from(val + '\0', 'utf8');
-          const remoteAddr = Number(await this.root.alloc(buf.length));
-          await this.root.write(remoteAddr, buf);
-          tempAllocations.push({ address: remoteAddr, size: buf.length });
-          modifiedArgs[i] = remoteAddr;
-        } else if (normType === 'cwstring' && typeof val === 'string') {
-          const buf = Buffer.from(val + '\0', 'utf16le');
-          const remoteAddr = Number(await this.root.alloc(buf.length));
-          await this.root.write(remoteAddr, buf);
-          tempAllocations.push({ address: remoteAddr, size: buf.length });
-          modifiedArgs[i] = remoteAddr;
-        } else if (val && typeof val === 'object' && Buffer.isBuffer(val)) {
-          const remoteAddr = Number(await this.root.alloc(val.length));
-          await this.root.write(remoteAddr, val);
-          tempAllocations.push({ address: remoteAddr, size: val.length });
-          modifiedArgs[i] = remoteAddr;
-        }
-      }
-
-      return await this.backend.call(func, ...modifiedArgs);
-    } finally {
-      for (const alloc of tempAllocations) {
-        try {
-          await this.root.free(alloc.address, alloc.size);
-        } catch {
-          // ignore cleanup errors
-        }
-      }
-    }
-  }
-}
-
-/**
- * Middleware Accessor that redirects write operations to run inside the target process's context
- * by executing msvcrt!memset calls. This is useful to optimize in-process memory initialization and avoid cross-process handle locks.
- * It optimizes writes by scanning the buffer for contiguous identical byte blocks
- * and writing them with a single memset call.
- */
-export class MemsetWriteAccessor extends MsvcrtDependentMiddlewareAccessor {
-  private _isExecuting = false;
-
-  override async writeAfterInit(
-    address: AddressLike,
-    data: Buffer | Uint8Array,
-    offset = 0,
-  ): Promise<number> {
-    if (this.isInitializing || this._isExecuting) {
-      return super.writeAfterInit(address, data, offset);
-    }
-    this._isExecuting = true;
-    try {
-      const baseAddress = resolveAddress(address) + offset;
-      const buffer = data instanceof Buffer ? data : Buffer.from(data);
-      const runs: { startOffset: number; value: number; count: number }[] = [];
-
-      let i = 0;
-      while (i < buffer.length) {
-        const val = buffer[i];
-        if (val === undefined) break;
-        let runLength = 1;
-        while (i + runLength < buffer.length && buffer[i + runLength] === val) {
-          runLength++;
-        }
-        runs.push({
-          startOffset: i,
-          value: val,
-          count: runLength,
-        });
-        i += runLength;
-      }
-      let totalWritten = 0;
-      for (const run of runs) {
-        const targetAddr = baseAddress + run.startOffset;
-        await this.root.call(
-          MsvcrtImpl.memset,
-          targetAddr,
-          run.value,
-          run.count,
-        );
-        totalWritten += run.count;
-      }
-      return totalWritten;
-    } finally {
-      this._isExecuting = false;
-    }
-  }
-}
-
-/**
- * Middleware Accessor that reads memory using remote memcmp binary search.
- * This completely avoids ReadProcessMemory, making it extremely low-overhead
- * and independent of any custom machineCode execution.
- */
-export class MemcmpReadAccessor extends MsvcrtDependentMiddlewareAccessor {
-  private _isExecuting = false;
-
-  override async readAfterInit(
-    address: AddressLike,
-    size: number,
-    offset = 0,
-  ): Promise<Buffer> {
-    if (this.isInitializing || this._isExecuting) {
-      return super.readAfterInit(address, size, offset);
-    }
-    this._isExecuting = true;
-    const baseAddress = resolveAddress(address) + offset;
-    const candidateAddr = Number(resolveAddress(await this.root.alloc(1)));
-    const candidateBuf = Buffer.alloc(1);
-
-    try {
-      const result = Buffer.alloc(size);
-
-      for (let i = 0; i < size; i++) {
-        let low = 0;
-        let high = 255;
-        let foundByte = 0;
-
-        while (low <= high) {
-          const mid = (low + high) >> 1;
-          candidateBuf[0] = mid;
-          await this.root.write(candidateAddr, candidateBuf);
-
-          const cmp = await this.root.call(
-            MsvcrtImpl.memcmp,
-            baseAddress + i,
-            candidateAddr,
-            1,
-          );
-
-          const cmpVal = Number(cmp);
-          if (cmpVal === 0) {
-            foundByte = mid;
-            break;
-          } else if (cmpVal < 0) {
-            high = mid - 1;
-          } else {
-            low = mid + 1;
-          }
-        }
-        result[i] = foundByte;
-      }
-      return result;
-    } finally {
-      this._isExecuting = false;
-      await this.root.free(candidateAddr).catch(() => {});
-    }
-  }
-}
-
-/**
- * Dead-end fallback accessor that throws an error for every single memory operation.
- * Used as a strict base definition or safety guard for middleware accessor pipelines
- * to ensure unsupported operations are explicitly caught rather than silently ignored.
- */
-export class ThrowingMemoryAccessor implements ICallableMemoryAccessor {
-  public readonly isLocal = false;
-  public readonly processId: number;
-
-  constructor(processId: number) {
-    this.processId = processId;
-  }
-
-  private throwError(method: string): never {
-    throw new Error(
-      `ThrowingMemoryAccessor: '${method}' is not implemented or permitted.`,
-    );
-  }
-
-  enableDebug(): void {}
-  disableDebug(): void {}
-
-  async read(
-    _address: AddressLike,
-    _size: number,
-    _offset = 0,
-  ): Promise<Buffer> {
-    this.throwError('read');
-  }
-
-  async write(
-    _address: AddressLike,
-    _data: Buffer | Uint8Array,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('write');
-  }
-
-  async alloc(
-    _size: number,
-    _address: AddressLike | null = null,
-    _protection?: any,
-    _allocationType?: any,
-  ): Promise<AddressLike> {
-    this.throwError('alloc');
-  }
-
-  async allocNear(
-    _target: AddressLike,
-    _size: number,
-    _options?: AllocNearOptions,
-  ): Promise<AddressLike> {
-    this.throwError('allocNear');
-  }
-
-  async free(
-    _address: AddressLike,
-    _size = 0,
-    _freeType?: any,
-  ): Promise<boolean> {
-    this.throwError('free');
-  }
-
-  async protect(
-    _address: AddressLike,
-    _size: number,
-    _newProtect: any,
-  ): Promise<number> {
-    this.throwError('protect');
-  }
-
-  async query(_address: AddressLike): Promise<any> {
-    this.throwError('query');
-  }
-
-  async call(_func: CFunction, ..._args: any[]): Promise<CCallResult> {
-    this.throwError('call');
-  }
-
-  // eslint-disable-next-line require-yield
-  async *scan(
-    _address: AddressLike,
-    _size: number,
-    _pattern: Pattern | string,
-  ): AsyncGenerator<NativeMemory> {
-    this.throwError('scan');
-  }
-
-  // eslint-disable-next-line require-yield
-  *scanSync(
-    _address: AddressLike,
-    _size: number,
-    _pattern: Pattern | string,
-  ): Generator<NativeMemory> {
-    this.throwError('scanSync');
-  }
-
-  async readInt8(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readInt8');
-  }
-  async readUInt8(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readUInt8');
-  }
-  async readInt16(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readInt16');
-  }
-  async readUInt16(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readUInt16');
-  }
-  async readInt32(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readInt32');
-  }
-  async readUInt32(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readUInt32');
-  }
-  async readInt64(_address: AddressLike, _offset = 0): Promise<bigint> {
-    this.throwError('readInt64');
-  }
-  async readUInt64(_address: AddressLike, _offset = 0): Promise<bigint> {
-    this.throwError('readUInt64');
-  }
-  async readFloat(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readFloat');
-  }
-  async readDouble(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readDouble');
-  }
-  async readPointer(_address: AddressLike, _offset = 0): Promise<number> {
-    this.throwError('readPointer');
-  }
-
-  async writeInt8(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeInt8');
-  }
-  async writeUInt8(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeUInt8');
-  }
-  async writeInt16(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeInt16');
-  }
-  async writeUInt16(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeUInt16');
-  }
-  async writeInt32(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeInt32');
-  }
-  async writeUInt32(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeUInt32');
-  }
-  async writeInt64(
-    _address: AddressLike,
-    _value: bigint | number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeInt64');
-  }
-  async writeUInt64(
-    _address: AddressLike,
-    _value: bigint | number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeUInt64');
-  }
-  async writeFloat(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeFloat');
-  }
-  async writeDouble(
-    _address: AddressLike,
-    _value: number,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writeDouble');
-  }
-  async writePointer(
-    _address: AddressLike,
-    _value: number | bigint,
-    _offset = 0,
-  ): Promise<number> {
-    this.throwError('writePointer');
-  }
-
-  async machineCode(_machineCode: CMachineCode): Promise<number> {
-    this.throwError('machineCode');
-  }
-
-  machineCodeSync(_machineCode: CMachineCode): number {
-    this.throwError('machineCodeSync');
-  }
-}
-
-/**
- * Middleware Accessor that redirects memory reads to transfer via a temporary file,
- * using standard C library calls (fopen, fwrite, fclose) in the target process.
- * This is useful to perform high-volume structured memory extraction through file I/O instead of raw memory streaming.
- */
-export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor {
-  // The temp file is opened ONCE (fopen "wb") and the FILE* reused for every
-  // transfer. Opening is lazy (first transfer) rather than in onInit: during
-  // the init cascade the upper chain isn't ready yet, so a remote fopen/free
-  // there triggers nested re-init and deadlocks the redirect thread. By first
-  // transfer the chain is fully up. The path/mode buffers are written, fed to
-  // fopen and freed immediately -- no per-transfer path re-spelling (the
-  // dominant redirection overhead) and no lingering remote buffers. Closed in onDeinit.
-  private hFile?: AddressLike;
-  private tempFilePath?: string;
-
-  protected override async onInit(): Promise<void> {
-    await super.onInit();
-    this.tempFilePath = path.join(
-      os.tmpdir(),
-      `exoproc-read-${randomUUID()}.tmp`,
-    );
-  }
-
-  private async ensureOpen(): Promise<void> {
-    if (this.hFile) return;
-    const pathBuf = Buffer.from(this.tempFilePath! + '\0', 'utf8');
-    const modeBuf = Buffer.from('wb\0', 'utf8');
-
-    const pathPtr = await this.root.alloc(pathBuf.length);
-    const modePtr = await this.root.alloc(modeBuf.length);
-    await this.root.write(pathPtr, pathBuf);
-    await this.root.write(modePtr, modeBuf);
-
-    this.hFile = await this.root.call(MsvcrtImpl.fopen, pathPtr, modePtr);
-    // fopen copied the path/mode strings, so the buffers can go right away.
-    await this.root.free(pathPtr).catch(() => {});
-    await this.root.free(modePtr).catch(() => {});
-
-    if (!this.hFile || Number(this.hFile) === 0) {
-      this.hFile = undefined;
-      throw new Error(
-        `fopen failed to open temp file in write mode: ${this.tempFilePath}`,
-      );
-    }
-  }
-
-  protected override async onDeinit(): Promise<void> {
-    // Close via `this.backend` (not `this.root`): during teardown the chain
-    // deinits top-down, so `this.root` is already deinitialized here and a
-    // root.call would re-init the whole redirect chain via call()'s init guard.
-    // `this.backend` is still initialized at onDeinit time (it deinits after us).
-    if (this.hFile) {
-      await this.backend.call(MsvcrtImpl.fclose, this.hFile).catch(() => {});
-      this.hFile = undefined;
-    }
-    if (this.tempFilePath) {
-      try {
-        fs.unlinkSync(this.tempFilePath);
-      } catch {
-        /* ignore cleanup errors */
-      }
-      this.tempFilePath = undefined;
-    }
-  }
-
-  override async readAfterInit(
-    address: AddressLike,
-    size: number,
-    offset = 0,
-  ): Promise<Buffer> {
-    if (
-      this.isInitializing ||
-      this.root.isExecutingFileTransfer ||
-      !this.tempFilePath
-    ) {
-      return super.readAfterInit(address, size, offset);
-    }
-    this.root.isExecutingFileTransfer = true;
-    try {
-      await this.ensureOpen();
-      const targetAddr = resolveAddress(address) + offset;
-
-      // Rewind so we overwrite from the start, dump target memory into the
-      // file, then flush so the local read below sees the fresh bytes.
-      await this.root.call(MsvcrtImpl.rewind, this.hFile);
-      const written = await this.root.call(
-        MsvcrtImpl.fwrite,
-        targetAddr,
-        1,
-        size,
-        this.hFile,
-      );
-      if (Number(written) !== size) {
-        throw new Error(
-          `fwrite failed to write entire memory block of size ${size} (wrote ${written})`,
-        );
-      }
-      await this.root.call(MsvcrtImpl.fflush, this.hFile);
-
-      // The file may still carry trailing bytes from a larger previous
-      // transfer, so take only the `size` bytes we just wrote.
-      return fs.readFileSync(this.tempFilePath!).subarray(0, size);
-    } finally {
-      this.root.isExecutingFileTransfer = false;
-    }
-  }
-}
-
-/**
- * Middleware Accessor that redirects memory writes to transfer via a temporary file,
- * using standard C library calls (fopen, fread, fclose) in the target process.
- * This is useful to perform structured memory staging via file systems to handle large block updates safely.
- */
-export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor {
-  // The temp file is opened ONCE in onInit (fopen "rb") and the FILE* reused for
-  // every transfer (see FileTransferReadAccessor). Each write drops the payload
-  // into the file locally, rewinds the shared handle, and freads it into target.
-  private hFile?: AddressLike;
-  private tempFilePath?: string;
-
-  protected override async onInit(): Promise<void> {
-    await super.onInit();
-    this.tempFilePath = path.join(
-      os.tmpdir(),
-      `exoproc-write-${randomUUID()}.tmp`,
-    );
-  }
-
-  // Lazy open on first transfer -- see FileTransferReadAccessor.ensureOpen for
-  // why this can't run in onInit. The temp file must already exist on disk (the
-  // caller writes the payload before calling this) so fopen("rb") succeeds.
-  private async ensureOpen(): Promise<void> {
-    if (this.hFile) return;
-    const pathBuf = Buffer.from(this.tempFilePath! + '\0', 'utf8');
-    const modeBuf = Buffer.from('rb\0', 'utf8');
-
-    const pathPtr = await this.root.alloc(pathBuf.length);
-    const modePtr = await this.root.alloc(modeBuf.length);
-    await this.root.write(pathPtr, pathBuf);
-    await this.root.write(modePtr, modeBuf);
-
-    this.hFile = await this.root.call(MsvcrtImpl.fopen, pathPtr, modePtr);
-    await this.root.free(pathPtr).catch(() => {});
-    await this.root.free(modePtr).catch(() => {});
-
-    if (!this.hFile || Number(this.hFile) === 0) {
-      this.hFile = undefined;
-      throw new Error(
-        `fopen failed to open temp file in read mode: ${this.tempFilePath}`,
-      );
-    }
-  }
-
-  protected override async onDeinit(): Promise<void> {
-    // Close via `this.backend` -- see FileTransferReadAccessor.onDeinit.
-    if (this.hFile) {
-      await this.backend.call(MsvcrtImpl.fclose, this.hFile).catch(() => {});
-      this.hFile = undefined;
-    }
-    if (this.tempFilePath) {
-      try {
-        fs.unlinkSync(this.tempFilePath);
-      } catch {
-        /* ignore cleanup errors */
-      }
-      this.tempFilePath = undefined;
-    }
-  }
-
-  override async writeAfterInit(
-    address: AddressLike,
-    data: Buffer | Uint8Array,
-    offset = 0,
-  ): Promise<number> {
-    if (
-      this.isInitializing ||
-      this.root.isExecutingFileTransfer ||
-      !this.tempFilePath
-    ) {
-      return super.writeAfterInit(address, data, offset);
-    }
-    this.root.isExecutingFileTransfer = true;
-    try {
-      const targetAddr = resolveAddress(address) + offset;
-      const buffer = data instanceof Buffer ? data : Buffer.from(data);
-
-      // Put the payload in the file (local, truncating write) BEFORE opening so
-      // fopen("rb") sees a valid file, then rewind the shared FILE* so fread
-      // re-reads the freshly written bytes from offset 0.
-      fs.writeFileSync(this.tempFilePath!, buffer);
-      await this.ensureOpen();
-      await this.root.call(MsvcrtImpl.rewind, this.hFile);
-
-      const readBytes = await this.root.call(
-        MsvcrtImpl.fread,
-        targetAddr,
-        1,
-        buffer.length,
-        this.hFile,
-      );
-      if (Number(readBytes) !== buffer.length) {
-        throw new Error(
-          `fread failed to read entire file block of size ${buffer.length} (read ${readBytes})`,
-        );
-      }
-      return Number(readBytes);
-    } finally {
-      this.root.isExecutingFileTransfer = false;
-    }
-  }
-}
-
-/**
- * Middleware Accessor that caches target process metadata (bitness, process name, core modules status)
- * on demand, and intercepts dynamic module queries to cache returned module handles.
- */
-export class ProcessCacheAccessor extends InittableMiddlewareAccessor {
-  private writeMemoryCache = new Map<number, Buffer>();
-  private moduleHandleCache = new Map<string, bigint>();
-  private cachedIs64Bit: boolean | null = null;
-  private cachedProcessName: string | null = null;
-  private cachedCoreModules: CoreModulesStatus | null = null;
-
-  protected async onInit(): Promise<void> {
-    // Empty JIT initialization since metadata is queried on demand
-  }
-
-  public async getIs64Bit(): Promise<boolean> {
-    await this.init();
-    if (this.cachedIs64Bit !== null) {
-      return this.cachedIs64Bit;
-    }
-
-    let handle: any = null;
-    let curr: any = this.backend;
-    while (curr) {
-      if (
-        curr.handle !== undefined &&
-        curr.handle !== null &&
-        Number(curr.handle) !== 0
-      ) {
-        handle = curr.handle;
-        break;
-      }
-      curr = curr.backend;
-    }
-
-    const hProcess =
-      handle ||
-      Kernel32Impl.OpenProcess(
-        ProcessAccess.QUERY_INFORMATION | ProcessAccess.VM_READ,
-        0,
-        this.processId,
-      );
-    const ownsHandle = !handle && hProcess && Number(hProcess) !== 0;
-
-    if (hProcess && Number(hProcess) !== 0) {
-      try {
-        const wow64Buf = Buffer.alloc(4);
-        const success = Kernel32Impl.IsWow64Process(hProcess, wow64Buf);
-        if (Number(success) !== 0) {
-          const is32Bit = wow64Buf.readUInt32LE(0) !== 0;
-          this.cachedIs64Bit = !is32Bit;
-        } else {
-          this.cachedIs64Bit = true; // Default to 64-bit on failure
-        }
-      } finally {
-        if (ownsHandle) {
-          Kernel32Impl.CloseHandle(hProcess);
-        }
-      }
-    } else {
-      this.cachedIs64Bit = true;
-    }
-
-    return this.cachedIs64Bit;
-  }
-
-  public async getProcessName(): Promise<string> {
-    await this.init();
-    if (this.cachedProcessName !== null) {
-      return this.cachedProcessName;
-    }
-
-    const hSnapshot = Kernel32Impl.CreateToolhelp32Snapshot(
-      ToolhelpSnapshotFlag.PROCESS,
-      0,
-    );
-    if (hSnapshot && Number(hSnapshot) !== 0 && Number(hSnapshot) !== -1) {
-      try {
-        const size = PROCESSENTRY32W_SIZE;
-        const buf = Buffer.alloc(size);
-        buf.writeUInt32LE(size, 0);
-
-        let ok = Kernel32Impl.Process32FirstW(hSnapshot, buf);
-        while (Number(ok) !== 0) {
-          const pid = buf.readUInt32LE(8);
-          if (pid === this.processId) {
-            const nameBuf = buf.subarray(44, 44 + 520);
-            let len = 0;
-            for (let i = 0; i < nameBuf.length; i += 2) {
-              if (nameBuf[i] === 0 && nameBuf[i + 1] === 0) {
-                len = i;
-                break;
-              }
-            }
-            this.cachedProcessName = nameBuf
-              .subarray(0, len)
-              .toString('utf16le');
-            break;
-          }
-          buf.writeUInt32LE(size, 0);
-          ok = Kernel32Impl.Process32NextW(hSnapshot, buf);
-        }
-      } finally {
-        Kernel32Impl.CloseHandle(hSnapshot);
-      }
-    }
-
-    return this.cachedProcessName ?? '';
-  }
-
-  public async getCoreModules(): Promise<CoreModulesStatus> {
-    await this.init();
-    if (this.cachedCoreModules !== null) {
-      return this.cachedCoreModules;
-    }
-
-    this.cachedCoreModules = await verifyCoreModules(this);
-    return this.cachedCoreModules;
-  }
-
-  protected override async writeAfterInit(
-    address: AddressLike,
-    data: Buffer | Uint8Array,
-    offset = 0,
-  ): Promise<number> {
-    const addrVal = resolveAddress(address) + offset;
-    const buf = data instanceof Buffer ? data : Buffer.from(data);
-    this.writeMemoryCache.set(addrVal, buf);
-    return super.writeAfterInit(address, data, offset);
-  }
-
-  protected override async callAfterInit(
-    func: CFunction,
-    args: any[],
-  ): Promise<CCallResult> {
-    const funcAddr = resolveAddress(func.ptr);
-    const getModuleHandleExAAddr = resolveAddress(
-      Kernel32Impl.GetModuleHandleExA.ptr,
-    );
-    const getModuleHandleAAddr = resolveAddress(
-      Kernel32Impl.GetModuleHandleA.ptr,
-    );
-    const getCurrentProcessAddr = resolveAddress(
-      Kernel32Impl.GetCurrentProcess.ptr,
-    );
-    const getCurrentProcessIdAddr = resolveAddress(
-      Kernel32Impl.GetCurrentProcessId.ptr,
-    );
-
-    if (funcAddr === getCurrentProcessAddr) {
-      return 0xffffffffffffffffn;
-    } else if (funcAddr === getCurrentProcessIdAddr) {
-      return this.processId;
-    }
-
-    if (funcAddr === getModuleHandleExAAddr && args.length >= 3) {
-      const flags = Number(args[0]);
-      const namePtr = resolveAddress(args[1]);
-      const outPtr = resolveAddress(args[2]);
-
-      const isFromAddress = (flags & 4) !== 0;
-      if (!isFromAddress && BigInt(namePtr) !== 0n) {
-        let moduleName = '';
-        const writtenBuf = this.writeMemoryCache.get(namePtr);
-        if (writtenBuf) {
-          let len = writtenBuf.indexOf(0);
-          if (len === -1) len = writtenBuf.length;
-          moduleName = writtenBuf
-            .subarray(0, len)
-            .toString('utf8')
-            .toLowerCase();
-        } else {
-          try {
-            const buf = await this.root.read(namePtr, 256);
-            let len = buf.indexOf(0);
-            if (len === -1) len = buf.length;
-            moduleName = buf.subarray(0, len).toString('utf8').toLowerCase();
-          } catch {
-            /* ignore read errors for module name */
-          }
-        }
-
-        const isTargetModule =
-          moduleName === 'msvcrt' ||
-          moduleName === 'msvcrt.dll' ||
-          moduleName === 'user32' ||
-          moduleName === 'user32.dll';
-
-        if (isTargetModule && this.moduleHandleCache.has(moduleName)) {
-          const cachedHModule = this.moduleHandleCache.get(moduleName)!;
-          const hModuleBuf = Buffer.alloc(8);
-          hModuleBuf.writeBigUInt64LE(cachedHModule, 0);
-          await this.root.write(outPtr, hModuleBuf);
-          return 1;
-        }
-
-        const result = await this.backend.call(func, args);
-        if (isTargetModule && Number(result) !== 0) {
-          const hModuleBuf = await this.root.read(outPtr, 8);
-          const hModule = hModuleBuf.readBigUInt64LE(0);
-          this.moduleHandleCache.set(moduleName, hModule);
-        }
-        return result;
-      }
-    } else if (funcAddr === getModuleHandleAAddr && args.length >= 1) {
-      const namePtr = resolveAddress(args[0]);
-      if (BigInt(namePtr) !== 0n) {
-        let moduleName = '';
-        const writtenBuf = this.writeMemoryCache.get(namePtr);
-        if (writtenBuf) {
-          let len = writtenBuf.indexOf(0);
-          if (len === -1) len = writtenBuf.length;
-          moduleName = writtenBuf
-            .subarray(0, len)
-            .toString('utf8')
-            .toLowerCase();
-        } else {
-          try {
-            const buf = await this.root.read(namePtr, 256);
-            let len = buf.indexOf(0);
-            if (len === -1) len = buf.length;
-            moduleName = buf.subarray(0, len).toString('utf8').toLowerCase();
-          } catch {
-            /* ignore read errors for module name */
-          }
-        }
-
-        const isTargetModule =
-          moduleName === 'msvcrt' ||
-          moduleName === 'msvcrt.dll' ||
-          moduleName === 'user32' ||
-          moduleName === 'user32.dll';
-
-        if (isTargetModule && this.moduleHandleCache.has(moduleName)) {
-          return this.moduleHandleCache.get(moduleName)!;
-        }
-
-        const result = await this.backend.call(func, args);
-        if (isTargetModule && result && Number(result) !== 0) {
-          this.moduleHandleCache.set(moduleName, BigInt(result));
-        }
-        return result;
-      }
-    }
-
-    return super.callAfterInit(func, args);
-  }
-
-  protected override async freeAfterInit(
-    address: AddressLike,
-    size?: number,
-    freeType?: number,
-  ): Promise<boolean> {
-    const addrVal = resolveAddress(address);
-    this.writeMemoryCache.delete(addrVal);
-    return super.freeAfterInit(address, size, freeType);
-  }
-}
-
-export class MachineCodePoolMiddleware extends MiddlewareAccessor {
-  private blocks: { address: number; size: number; used: number }[] = [];
-  private alignment = DEFAULT_MACHINECODE_ALIGNMENT;
-  private defaultBlockSize = 4096;
-
-  private async getOrAllocBlock(
-    needed: number,
-  ): Promise<{ address: number; offset: number; blockIdx: number }> {
-    for (let i = 0; i < this.blocks.length; i++) {
-      const block = this.blocks[i]!;
-      const alignedUsed = alignUp(block.used, this.alignment);
-      if (block.size - alignedUsed >= needed) {
-        return { address: block.address, offset: alignedUsed, blockIdx: i };
-      }
-    }
-    const blockSize = Math.max(this.defaultBlockSize, needed);
-    const blockAddr = await this.root.alloc(
-      blockSize,
-      null,
-      MemoryProtection.EXECUTE_READWRITE,
-    );
-    const address = Number(resolveAddress(blockAddr));
-    this.blocks.push({ address, size: blockSize, used: 0 });
-    return { address, offset: 0, blockIdx: this.blocks.length - 1 };
-  }
-
-  override async machineCode(machineCode: CMachineCode): Promise<number> {
-    const size = machineCode.size;
-    const bytes = Array.isArray(machineCode.bytes)
-      ? new Uint8Array(machineCode.bytes)
-      : machineCode.bytes;
-    const { address, offset, blockIdx } = await this.getOrAllocBlock(size);
-    const targetAddr = address + offset;
-    await this.root.write(targetAddr, bytes);
-    this.blocks[blockIdx]!.used = offset + size;
-    return targetAddr;
-  }
-}
-
-export class ScannerMiddleware extends MiddlewareAccessor {
-  override async *scan(
-    address: AddressLike,
-    size: number,
-    pattern: Pattern | string,
-  ): AsyncGenerator<NativeMemory> {
-    const pat = typeof pattern === 'string' ? new Pattern(pattern) : pattern;
-    const startAddr = BigInt(resolveAddress(address));
-    const end = startAddr + BigInt(size);
-    let current = startAddr;
-
-    while (current < end) {
-      const mbi = await this.root.query(current);
-      const regionBase = BigInt(resolveAddress(mbi.BaseAddress));
-      const regionSize = BigInt(mbi.RegionSize);
-      const regionEnd = regionBase + regionSize;
-      const isReadable =
-        mbi.State === MemoryState.COMMIT &&
-        !(mbi.Protect & MemoryProtection.GUARD) &&
-        !!(mbi.Protect & pat.protect);
-
-      if (isReadable) {
-        const scanStart = current > regionBase ? current : regionBase;
-        const scanEnd = end < regionEnd ? end : regionEnd;
-        const scanSize = Number(scanEnd - scanStart);
-        if (scanSize >= pat.length) {
-          const n = pat.length;
-          let memmemFnRemote: any;
-          let needleVal: any = 0;
-          let needleRemoteAddr: any = 0n;
-
-          const uploadMachineCode = async (sc: any) => {
-            const addr = await this.root.machineCode(sc);
-            return sc.cloneForAddress(addr);
-          };
-
-          if (n === 1) {
-            memmemFnRemote = await uploadMachineCode(memmem1);
-            needleVal = BigInt(pat.bytes.readUInt8(0));
-          } else if (n === 2) {
-            memmemFnRemote = await uploadMachineCode(memmem2);
-            needleVal = BigInt(pat.bytes.readUInt16LE(0));
-          } else if (n === 3 || n === 5 || n === 6 || n === 7) {
-            memmemFnRemote = await uploadMachineCode(memmemWithoutBuffer);
-            let val = 0n;
-            for (let i = 0; i < n; i++) {
-              val |= BigInt(pat.bytes[i]!) << BigInt(i * 8);
-            }
-            needleVal = val;
-          } else if (n === 4) {
-            memmemFnRemote = await uploadMachineCode(memmem4);
-            needleVal = BigInt(pat.bytes.readUInt32LE(0));
-          } else if (n === 8) {
-            memmemFnRemote = await uploadMachineCode(memmem8);
-            needleVal = pat.bytes.readBigUInt64LE(0);
-          } else {
-            memmemFnRemote = await uploadMachineCode(memmem);
-            needleRemoteAddr = await this.root.alloc(n);
-            await this.root.write(needleRemoteAddr, pat.bytes);
-          }
-
-          try {
-            const memmemFn = async (haystack: bigint, haystackLen: bigint) => {
-              const isWithoutBuffer = n >= 1 && n <= 8;
-              const callArgs: any[] = [
-                haystack,
-                haystackLen,
-                isWithoutBuffer ? needleVal : needleRemoteAddr,
-              ];
-              if (n !== 1 && n !== 2 && n !== 4 && n !== 8) {
-                callArgs.push(BigInt(n));
-              }
-              const res = await this.root.call(memmemFnRemote, ...callArgs);
-              return BigInt(resolveAddress(res));
-            };
-
-            yield* Scanner.scan(
-              new NativeMemory(scanStart, scanSize),
-              pat,
-              memmemFn,
-            );
-          } finally {
-            if (BigInt(resolveAddress(needleRemoteAddr)) !== 0n) {
-              await this.root.free(needleRemoteAddr, n);
-            }
-          }
-        }
-      }
-      if (regionEnd <= current) break;
-      current = regionEnd;
-    }
-  }
-}
-
 export class DebugMemoryAccessor extends MiddlewareAccessor {
-  constructor(backend: ICallableMemoryAccessor, root: HostAccessor) {
+  constructor(backend: ISyncCallableMemoryAccessor, root: IHostAccessor) {
     super(backend, root);
     if (backend) {
       let curr: any = backend;
@@ -1985,7 +748,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       offset,
-      () => (this.backend as any).readSync(address, size, offset),
+      () => this.backend.readSync(address, size, offset),
     );
   }
 
@@ -2013,7 +776,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       data,
       offset,
-      () => (this.backend as any).writeSync(address, data, offset),
+      () => this.backend.writeSync(address, data, offset),
     );
   }
 
@@ -2045,13 +808,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       protection,
       allocationType,
-      () =>
-        (this.backend as any).allocSync(
-          size,
-          address,
-          protection,
-          allocationType,
-        ),
+      () => this.backend.allocSync(size, address, protection, allocationType),
     );
   }
 
@@ -2075,7 +832,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       freeType,
-      () => (this.backend as any).freeSync(address, size, freeType),
+      () => this.backend.freeSync(address, size, freeType),
     );
   }
 
@@ -2087,7 +844,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
 
   override callSync(func: any, ...args: any[]): any {
     return debug.debugCallSync(this.backend.constructor.name, func, args, () =>
-      (this.backend as any).callSync(func, ...args),
+      this.backend.callSync(func, ...args),
     );
   }
 
@@ -2111,7 +868,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       newProtect,
-      () => (this.backend as any).protectSync(address, size, newProtect),
+      () => this.backend.protectSync(address, size, newProtect),
     );
   }
 
@@ -2123,7 +880,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
 
   override querySync(address: any): any {
     return debug.debugQuerySync(this.backend.constructor.name, address, () =>
-      (this.backend as any).querySync(address),
+      this.backend.querySync(address),
     );
   }
 
@@ -2139,7 +896,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
     return debug.debugMachineCodeSync(
       this.backend.constructor.name,
       machineCode.size,
-      () => (this.backend as any).machineCodeSync(machineCode),
+      () => this.backend.machineCodeSync(machineCode),
     );
   }
 
@@ -2167,7 +924,7 @@ export class DebugMemoryAccessor extends MiddlewareAccessor {
       address,
       size,
       pattern,
-      () => (this.backend as any).scanSync(address, size, pattern),
+      () => this.backend.scanSync(address, size, pattern),
     );
   }
 }

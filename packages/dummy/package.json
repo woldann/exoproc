@@ -1,18 +1,18 @@
 {
-  "name": "exoproc",
+  "name": "exoproc-dummy",
   "publishConfig": {
     "access": "public"
   },
   "version": "0.1.0",
-  "description": "Exoproc - Cross-process systems programming and runtime instrumentation framework for Bun x64 Windows environments.",
+  "description": "A single shared, long-lived dummy Windows process (default: ping.exe) other exoproc packages and tests spawn once and reuse as a lightweight cross-process target.",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
   },
+  "types": "./dist/index.d.ts",
   "type": "module",
   "engines": {
     "bun": ">=1.3.0"
@@ -23,17 +23,13 @@
   ],
   "license": "AGPL-3.0-or-later",
   "keywords": [
-    "bun",
-    "ffi",
+    "exoproc",
     "windows",
     "x64",
-    "systems-programming",
-    "instrumentation",
-    "hooking",
-    "thread-redirection",
-    "memory-manipulation",
-    "disassembly",
-    "jit"
+    "native",
+    "cross-process",
+    "systems-instrumentation",
+    "testing"
   ],
   "author": "Serkan",
   "homepage": "https://github.com/woldann/exoproc#readme",
@@ -45,14 +41,6 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-winapi": "workspace:*",
-    "bun-xffi": "workspace:*",
-    "exoproc-accessors": "workspace:*",
-    "bun-nthread": "workspace:*",
-    "bun-nhook": "workspace:*",
-    "bun-minhook": "workspace:*",
-    "bun-nshm": "workspace:*",
-    "bun-capstone": "workspace:*",
-    "exoproc-utils": "workspace:*"
+    "bun-xffi": "workspace:*"
   }
 }

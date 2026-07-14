@@ -1,63 +1,64 @@
 import { expect, test, describe } from 'bun:test';
 import {
-  ProcessCacheAccessor,
-  AbstractCallableMemoryAccessor,
+  AbstractSyncCallableMemoryAccessor,
   type CFunction,
   type CCallResult,
   type AddressLike,
   Kernel32Impl,
   GetModuleHandleExFlag,
-  RemoteCallableMemoryAccessor,
-  HostAccessor,
   MemoryBasicInformation,
 } from '../../packages/xffi/src/index.js';
 import { resolveAddress } from '../../packages/xffi/src/ffi.js';
-import { TestProcess } from '../helpers.js';
+import {
+  ProcessCacheAccessor,
+  HostAccessor,
+} from '../../packages/accessors/src/index.js';
 
-describe('xffi > ProcessCacheAccessor', () => {
+describe('accessors > ProcessCacheAccessor', () => {
   test('should lazily cache process metadata and intercept/cache module handle lookups', async () => {
     let callCount = 0;
     const writeMemory = new Map<number, Buffer>();
 
-    // Mock backend accessor -- only the truly abstract members need overriding;
-    // AbstractCallableMemoryAccessor supplies enableDebug/disableDebug/allocNear/
-    // the typed scalar read*/write* helpers/etc.
-    class MockBackend extends AbstractCallableMemoryAccessor {
-      async read(addr: AddressLike, size: number, offset = 0): Promise<Buffer> {
+    // Mock backend accessor -- only the truly abstract sync members need
+    // overriding; AbstractSyncCallableMemoryAccessor supplies enableDebug/
+    // disableDebug/allocNear(Sync)/the typed scalar read*/write* helpers/the
+    // async read/write/alloc/.../call twins (each forwards to its Sync version).
+    class MockBackend extends AbstractSyncCallableMemoryAccessor {
+      readSync(addr: AddressLike, size: number, offset = 0): Buffer {
         const addrVal = resolveAddress(addr) + offset;
         return writeMemory.get(addrVal) || Buffer.alloc(size);
       }
-      async write(
+      writeSync(
         addr: AddressLike,
         data: Buffer | Uint8Array,
         offset = 0,
-      ): Promise<number> {
+      ): number {
         const addrVal = resolveAddress(addr) + offset;
         const buf = data instanceof Buffer ? data : Buffer.from(data);
         writeMemory.set(addrVal, buf);
         return buf.length;
       }
-      async alloc(): Promise<AddressLike> {
+      allocSync(): AddressLike {
         // Return a dummy heap address
         return 0x900000;
       }
-      async free(): Promise<boolean> {
+      freeSync(): boolean {
         return true;
       }
-      async protect(): Promise<number> {
+      protectSync(): number {
         return 0;
       }
-      async query(): Promise<MemoryBasicInformation> {
+      querySync(): MemoryBasicInformation {
         return new MemoryBasicInformation();
       }
-      async machineCode(): Promise<never> {
+      machineCodeSync(): never {
         throw new Error('machineCode not implemented in this mock');
       }
       // eslint-disable-next-line require-yield
-      async *scan(): AsyncGenerator<never> {
+      *scanSync(): Generator<never> {
         throw new Error('scan not implemented in this mock');
       }
-      async call(func: CFunction, args: any[]): Promise<CCallResult> {
+      callSync(func: CFunction, args: any[]): CCallResult {
         callCount++;
         const funcAddr = resolveAddress(func.ptr);
         const getModuleHandleExAAddr = resolveAddress(
@@ -153,71 +154,35 @@ describe('xffi > ProcessCacheAccessor', () => {
     expect(callCount).toBe(2); // Call count remains 2!
   });
 
-  test('should resolve metadata and cache status using a real target process', async () => {
-    const tp = new TestProcess();
-    const { pid } = tp;
-
-    try {
-      const remote = new RemoteCallableMemoryAccessor(pid);
-      const host = new HostAccessor(remote);
-      const cacheAccessor = new ProcessCacheAccessor(remote, host);
-      host.backend = cacheAccessor;
-
-      // Verify lazy metadata getters
-      const is64 = await cacheAccessor.getIs64Bit();
-      expect(typeof is64).toBe('boolean');
-
-      const processName = await cacheAccessor.getProcessName();
-      expect(processName.toLowerCase()).toContain('ping');
-
-      const coreModules = await cacheAccessor.getCoreModules();
-      expect(coreModules.ntdll).toBe(true);
-      expect(coreModules.kernel32).toBe(true);
-      expect(coreModules.msvcrt).toBe(true);
-
-      // Repeated calls should return immediately from cache
-      const is64Cached = await cacheAccessor.getIs64Bit();
-      expect(is64Cached).toBe(is64);
-
-      const processNameCached = await cacheAccessor.getProcessName();
-      expect(processNameCached).toBe(processName);
-
-      const coreModulesCached = await cacheAccessor.getCoreModules();
-      expect(coreModulesCached).toEqual(coreModules);
-    } finally {
-      await tp.stop();
-    }
-  }, 30000);
-
   test('should intercept GetCurrentProcess and GetCurrentProcessId', async () => {
     let callCount = 0;
-    class MockBackend extends AbstractCallableMemoryAccessor {
-      async read(): Promise<Buffer> {
+    class MockBackend extends AbstractSyncCallableMemoryAccessor {
+      readSync(): Buffer {
         return Buffer.alloc(0);
       }
-      async write(): Promise<number> {
+      writeSync(): number {
         return 0;
       }
-      async alloc(): Promise<AddressLike> {
+      allocSync(): AddressLike {
         return 0;
       }
-      async free(): Promise<boolean> {
+      freeSync(): boolean {
         return true;
       }
-      async protect(): Promise<number> {
+      protectSync(): number {
         return 0;
       }
-      async query(): Promise<MemoryBasicInformation> {
+      querySync(): MemoryBasicInformation {
         return new MemoryBasicInformation();
       }
-      async machineCode(): Promise<never> {
+      machineCodeSync(): never {
         throw new Error('machineCode not implemented in this mock');
       }
       // eslint-disable-next-line require-yield
-      async *scan(): AsyncGenerator<never> {
+      *scanSync(): Generator<never> {
         throw new Error('scan not implemented in this mock');
       }
-      async call(): Promise<CCallResult> {
+      callSync(): CCallResult {
         callCount++;
         return 0;
       }

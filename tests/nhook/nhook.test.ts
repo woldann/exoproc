@@ -13,20 +13,20 @@ import {
   NHookInstance,
   type NHookPoolResult,
 } from 'exoproc';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // `simulateDisplacedInstructions` is private; these tests reach past that with
 // an `any` cast to exercise it directly against hand-encoded byte sequences,
 // rather than depending on some real DLL export happening to start with the
 // instruction under test.
 //
-// Driven cross-process (spawned ping.exe + IndirectNThreadHostAccessor,
+// Driven cross-process (the shared dummy process + IndirectNThreadHostAccessor,
 // exactly like minhook.test.ts) rather than a locally spawned thread --
 // spawnLoopThread()'s local VirtualAlloc fails under this CI environment
 // (see #5), which this sidesteps entirely since no local allocation is
 // needed: an existing thread in the spawned process is hijacked directly.
 describe('NHook instruction simulation', () => {
-  const proc = new TestProcess();
+  const proc = getGlobalDummyProcess();
   let memory: IndirectNThreadHostAccessor;
   let nhook: NHook;
   const capstone = new CapstoneX86();
@@ -50,7 +50,6 @@ describe('NHook instruction simulation', () => {
 
   afterAll(async () => {
     await memory.deinit();
-    await proc.stop();
   });
 
   function freshCtx(

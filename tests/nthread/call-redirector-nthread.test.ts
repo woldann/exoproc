@@ -2,7 +2,7 @@ import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { MemoryProtection } from 'bun-xffi';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { TestProcess } from '../helpers.js';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/call-redirector.test.ts -- CallRedirectorAccessor/
 // IndirectCallRedirectorAccessor redirect protect() through `this.root.call
@@ -18,7 +18,7 @@ import { TestProcess } from '../helpers.js';
 // file only adds what those don't touch: protect()'s branching behavior.
 describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThreadHostAccessor', () => {
   test('mocks protect() for malloc blocks (throw on non-READWRITE, no-op on READWRITE) and calls real VirtualProtect otherwise', async () => {
-    const tp = new TestProcess();
+    const tp = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -60,7 +60,6 @@ describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThrea
       await accessor.free(execAddr);
     } finally {
       await accessor.deinit();
-      await tp.stop();
     }
   }, 60000);
 });

@@ -4,12 +4,14 @@ import {
   SyncNativePointer,
   CType,
   localCallableMemoryAccessor,
-  MarshallingCallableAccessor,
-  HostAccessor,
 } from '../../packages/xffi/src/index.js';
 import { ptr as bunPtr } from 'bun:ffi';
+import {
+  MarshallingCallableAccessor,
+  HostAccessor,
+} from '../../packages/accessors/src/index.js';
 
-describe('xffi > String Reading & Marshalling', () => {
+describe('accessors > String Reading & Marshalling', () => {
   test('should read null-terminated UTF-8 (ANSI) strings from memory', () => {
     const text = 'Merhaba Dünya!';
     const buf = Buffer.from(text + '\0', 'utf8');

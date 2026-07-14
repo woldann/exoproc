@@ -107,6 +107,44 @@ export class SecurityAttributes extends struct({
 }
 
 /**
+ * Windows STARTUPINFOA structure.
+ */
+export class StartupInfoA extends struct({
+  cb: 'DWORD',
+  lpReserved: 'ptr',
+  lpDesktop: 'ptr',
+  lpTitle: 'ptr',
+  dwX: 'DWORD',
+  dwY: 'DWORD',
+  dwXSize: 'DWORD',
+  dwYSize: 'DWORD',
+  dwXCountChars: 'DWORD',
+  dwYCountChars: 'DWORD',
+  dwFillAttribute: 'DWORD',
+  dwFlags: 'DWORD',
+  wShowWindow: 'WORD',
+  cbReserved2: 'WORD',
+  lpReserved2: 'ptr',
+  hStdInput: 'HANDLE',
+  hStdOutput: 'HANDLE',
+  hStdError: 'HANDLE',
+} as const) {
+  static readonly structName = 'STARTUPINFOA';
+}
+
+/**
+ * Windows PROCESS_INFORMATION structure.
+ */
+export class ProcessInformation extends struct({
+  hProcess: 'HANDLE',
+  hThread: 'HANDLE',
+  dwProcessId: 'DWORD',
+  dwThreadId: 'DWORD',
+} as const) {
+  static readonly structName = 'PROCESS_INFORMATION';
+}
+
+/**
  * Windows GUITHREADINFO structure interface.
  */
 export interface GUIThreadInfo {

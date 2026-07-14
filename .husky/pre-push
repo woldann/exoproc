@@ -1,2 +1,12 @@
 bun run typecheck
-bun run test
+
+# This package targets Windows x64 and its tests need real Win32 calls
+# (kernel32 et al.), so on Linux "bun run test" (native bun test) can't even
+# compile the cimport'd symbols. Push from Linux runs the Wine-wrapped suite
+# instead; anywhere else (already-Windows/Wine) the native test script is
+# fine as-is.
+if [ "$(uname)" = "Linux" ]; then
+  ./bun-wine test
+else
+  bun run test
+fi
