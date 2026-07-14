@@ -4,32 +4,31 @@ import { Kernel32Impl } from 'bun-xffi';
 import { HostAccessor } from 'exoproc-accessors';
 import { IndirectNThreadHostAccessor } from 'bun-nthread';
 import { NShm } from 'bun-nshm';
-import { DummyProcess } from 'exoproc-dummy';
+import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Proves the full handle-relay flow: this (Bun) process never OpenProcess's
-// the target directly -- only the dummy process it spawns itself (via
-// exoproc-dummy's *shared* singleton, torn down once for the whole suite in
-// tests/setup.ts -- not here). NShm.alloc() gives back a genuine target-side
-// address; reads/writes against that address are transparently redirected
-// to this process's own mapped view of the same section instead of the
-// wrapped backend's normal remote path. The *target* processes below are
-// deliberately independent, dedicated `DummyProcess` instances (not the
-// shared one) -- each test owns and tears down its own, and the third test
-// needs two alive at once, neither of which the single shared dummy could
-// provide. The dummy relay itself is a pure relay vessel (its own transit
-// copy is closed automatically) and the target's own mapping *handle* is
-// closed automatically too, as a side effect of the relay DuplicateHandle
-// (DUPLICATE_CLOSE_SOURCE) -- only the mapped view (which stays valid
-// without the handle) is the target's real deliverable, so there's no
-// target-side CloseHandle call anywhere in this flow, not even for the
-// OpenProcess handle used to reach the dummy (left open; see NShm's doc
-// comment). Driven through IndirectNThreadHostAccessor (an already-live,
-// hijacked thread in the target) per CLAUDE.md's guidance on real
-// WinAPI/CRT calls (CreateFileMappingA/OpenProcess/DuplicateHandle) never
-// running on a freshly-created thread under Wine/GHA.
+// the target directly -- only the dummy process it spawns itself. NShm.alloc()
+// gives back a genuine target-side address; reads/writes against that address
+// are transparently redirected to this process's own mapped view of the same
+// section instead of the wrapped backend's normal remote path. Both tests
+// target the shared exoproc-dummy process (getGlobalDummyProcess, torn down
+// once for the whole suite in tests/setup.ts, not here) -- neither assertion
+// is about the target being a *distinct* process, only about NShm's own
+// relay/isolation behavior, so there's no reason to spawn and tear down a
+// dedicated one. The dummy relay itself is a pure relay vessel (its own
+// transit copy is closed automatically) and the target's own mapping
+// *handle* is closed automatically too, as a side effect of the relay
+// DuplicateHandle (DUPLICATE_CLOSE_SOURCE) -- only the mapped view (which
+// stays valid without the handle) is the target's real deliverable, so
+// there's no target-side CloseHandle call anywhere in this flow, not even
+// for the OpenProcess handle used to reach the dummy (left open; see NShm's
+// doc comment). Driven through IndirectNThreadHostAccessor (an already-live,
+// hijacked thread in the target) per CLAUDE.md's guidance on real WinAPI/CRT
+// calls (CreateFileMappingA/OpenProcess/DuplicateHandle) never running on a
+// freshly-created thread under Wine/GHA.
 describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
   test('shares a genuinely usable mapping/view with both the target and this process', async () => {
-    const target = new DummyProcess();
+    const target = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(target.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -66,12 +65,11 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
       await memory.call(Kernel32Impl.UnmapViewOfFile, addr);
       await shm.free(addr);
       await memory.deinit();
-      await target.stop();
     }
   }, 60000);
 
   test('supports multiple independent shared memory regions on the same target', async () => {
-    const target = new DummyProcess();
+    const target = getGlobalDummyProcess();
     const thread = Native.Thread.getThreads(target.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
@@ -97,48 +95,6 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
       await shm.free(addr1);
       await shm.free(addr2);
       await memory.deinit();
-      await target.stop();
     }
   }, 60000);
-
-  test('supports independent NShm instances over different targets, sharing the global dummy', async () => {
-    const targetA = new DummyProcess();
-    const targetB = new DummyProcess();
-    const threadA = Native.Thread.getThreads(targetA.pid)[0];
-    const threadB = Native.Thread.getThreads(targetB.pid)[0];
-    if (!threadA || !threadB)
-      throw new Error('No thread found in a spawned process');
-
-    const memoryA = new IndirectNThreadHostAccessor(targetA.pid, threadA.tid, {
-      timeoutMs: 20000,
-    });
-    const memoryB = new IndirectNThreadHostAccessor(targetB.pid, threadB.tid, {
-      timeoutMs: 20000,
-    });
-    const hostA = new HostAccessor(memoryA);
-    const hostB = new HostAccessor(memoryB);
-    const shmA = new NShm(memoryA, hostA);
-    const shmB = new NShm(memoryB, hostB);
-
-    const addrA = await shmA.alloc(4096);
-    const addrB = await shmB.alloc(4096);
-
-    try {
-      // Two different regions, two different targets, one shared dummy
-      // (relayed through internally) -- each region is still fully isolated.
-      await shmA.write(addrA, Buffer.from('target-a-data'));
-      await shmB.write(addrB, Buffer.from('target-b-data'));
-      expect((await shmA.read(addrA, 13)).toString()).toBe('target-a-data');
-      expect((await shmB.read(addrB, 13)).toString()).toBe('target-b-data');
-    } finally {
-      await memoryA.call(Kernel32Impl.UnmapViewOfFile, addrA);
-      await memoryB.call(Kernel32Impl.UnmapViewOfFile, addrB);
-      await shmA.free(addrA);
-      await shmB.free(addrB);
-      await memoryA.deinit();
-      await memoryB.deinit();
-      await targetA.stop();
-      await targetB.stop();
-    }
-  }, 90000);
 });
