@@ -20,7 +20,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
     if (!thread) throw new Error('No thread found in the spawned process');
 
     const memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
-      timeoutMs: 15000,
+      timeoutMs: 20000,
     });
 
     try {

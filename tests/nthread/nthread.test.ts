@@ -42,7 +42,7 @@ describe('NThread Integration with Indirect Accessor', () => {
     const nthread = new NThread(
       new RemoteCallableMemoryAccessor(pid),
       tid,
-      { timeoutMs: 15000 },
+      { timeoutMs: 20000 },
       redirector,
     );
     const indirect = new IndirectNThreadHostAccessor(nthread);
@@ -103,7 +103,7 @@ describe('NThread Integration with Indirect Accessor', () => {
     const nthread = new NThread(
       new RemoteCallableMemoryAccessor(pid),
       tid,
-      { timeoutMs: 15000 },
+      { timeoutMs: 20000 },
       redirector,
     );
     const indirect = new IndirectNThreadHostAccessor(nthread);

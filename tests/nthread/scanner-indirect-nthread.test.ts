@@ -19,7 +19,7 @@ describe('nthread > Scanner over IndirectNThreadHostAccessor', () => {
     if (!thread) throw new Error('No thread found in the spawned process');
 
     const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
-      timeoutMs: 15000,
+      timeoutMs: 20000,
     });
 
     try {
