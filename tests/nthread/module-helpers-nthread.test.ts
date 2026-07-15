@@ -5,7 +5,10 @@ import {
   verifyCoreModules,
   Kernel32Impl,
 } from 'bun-xffi';
-import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
+import {
+  createAccessor,
+  type IndirectNThreadHostAccessor,
+} from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/module-helpers.test.ts -- GetModuleHandleExA(FROM_ADDRESS)
@@ -20,9 +23,9 @@ describe('nthread > Module Loading Helpers', () => {
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
-      timeoutMs: 20000,
-    });
+    const accessor = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
 
     try {
       // kernel32.dll and ntdll.dll must always be loaded in a valid process!

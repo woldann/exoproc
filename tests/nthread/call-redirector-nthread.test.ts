@@ -1,7 +1,10 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { MemoryProtection } from 'bun-xffi';
-import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
+import {
+  createAccessor,
+  type IndirectNThreadHostAccessor,
+} from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/call-redirector.test.ts -- CallRedirectorAccessor/
@@ -22,9 +25,9 @@ describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThrea
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
-      timeoutMs: 20000,
-    });
+    const accessor = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
 
     try {
       // Malloc'd (default READWRITE) block: protect() is purely local bookkeeping.

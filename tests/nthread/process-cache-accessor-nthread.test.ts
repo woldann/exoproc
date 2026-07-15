@@ -3,7 +3,8 @@ import * as Native from 'bun-winapi';
 import {
   ProcessCacheAccessor,
   HostAccessor,
-  IndirectNThreadHostAccessor,
+  createAccessor,
+  type IndirectNThreadHostAccessor,
 } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -26,11 +27,9 @@ describe('nthread > ProcessCacheAccessor', () => {
     const thread = Native.Thread.getThreads(tp.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const nthreadAccessor = new IndirectNThreadHostAccessor(
-      tp.pid,
-      thread.tid,
-      { timeoutMs: 20000 },
-    );
+    const nthreadAccessor = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
 
     try {
       const host = new HostAccessor(nthreadAccessor);

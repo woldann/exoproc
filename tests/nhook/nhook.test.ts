@@ -8,7 +8,8 @@ import {
   resolveAddress,
   CapstoneX86,
   type Instruction,
-  IndirectNThreadHostAccessor,
+  createAccessor,
+  type IndirectNThreadHostAccessor,
   NHook,
   NHookInstance,
   type NHookPoolResult,
@@ -38,9 +39,9 @@ describe('NHook instruction simulation', () => {
     const thread = Native.Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
-      timeoutMs: 20000,
-    });
+    memory = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
 
     nhook = new NHook(proc.pid);
 

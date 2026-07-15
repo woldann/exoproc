@@ -1,8 +1,11 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { Kernel32Impl } from 'bun-xffi';
-import { HostAccessor, IndirectNThreadHostAccessor } from 'exoproc-accessors';
-import { NShm } from 'bun-nshm';
+import {
+  createAccessor,
+  createAccessorWithoutInit,
+  type IndirectNThreadHostAccessor,
+} from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Proves the full handle-relay flow: this (Bun) process never OpenProcess's
@@ -31,11 +34,13 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
     const thread = Native.Thread.getThreads(target.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(target.pid, thread.tid, {
-      timeoutMs: 20000,
+    const memory = createAccessorWithoutInit(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    }) as IndirectNThreadHostAccessor;
+    const shm = await createAccessor(thread.tid, {
+      backend: memory,
+      sharedMemory: true,
     });
-    const host = new HostAccessor(memory);
-    const shm = new NShm(memory, host);
 
     const addr = await shm.alloc(4096);
 
@@ -72,11 +77,13 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
     const thread = Native.Thread.getThreads(target.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(target.pid, thread.tid, {
-      timeoutMs: 20000,
+    const memory = createAccessorWithoutInit(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    }) as IndirectNThreadHostAccessor;
+    const shm = await createAccessor(thread.tid, {
+      backend: memory,
+      sharedMemory: true,
     });
-    const host = new HostAccessor(memory);
-    const shm = new NShm(memory, host);
 
     const addr1 = await shm.alloc(4096);
     const addr2 = await shm.alloc(4096);

@@ -6,7 +6,10 @@ import {
   MemoryState,
   resolveAddress,
 } from 'bun-xffi';
-import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
+import {
+  createAccessor,
+  type IndirectNThreadHostAccessor,
+} from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Pre-wired form of the manual chain in nthread.test.ts: a full indirect host
@@ -19,9 +22,9 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
     const thread = Native.Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
-      timeoutMs: 20000,
-    });
+    const memory = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
 
     try {
       // A call executes *on the hijacked thread itself*: GetCurrentThreadId
@@ -53,9 +56,9 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
     const thread = Native.Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
-      timeoutMs: 20000,
-    });
+    const memory = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
 
     try {
       const anchor = await memory.alloc(

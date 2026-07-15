@@ -3,7 +3,8 @@ import * as Native from 'exoproc';
 import {
   cmachinecode,
   createCFunction,
-  IndirectNThreadHostAccessor,
+  createAccessor,
+  type IndirectNThreadHostAccessor,
   MinHook,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
@@ -23,9 +24,9 @@ describe('MinHook end-to-end lifecycle (real compiled target + real compiled det
     const thread = Native.Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
-      timeoutMs: 20000,
-    });
+    const memory = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
     const minhook = new MinHook(proc.pid);
 
     try {

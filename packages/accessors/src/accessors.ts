@@ -1,5 +1,9 @@
 import { Thread } from 'bun-winapi';
-import { type IHostAccessor, type ISyncCallableMemoryAccessor } from 'bun-xffi';
+import {
+  type IHostAccessor,
+  type ISyncCallableMemoryAccessor,
+  isInittableAccessor,
+} from 'bun-xffi';
 import { type NThreadOptions } from 'bun-nthread';
 import { NShm, type NShmOptions } from 'bun-nshm';
 import { HostAccessor } from './middleware-accessor.js';
@@ -94,10 +98,14 @@ function resolveBaseAccessor(
 }
 
 /**
- * Produces a ready-to-use {@link IHostAccessor} for `id` with a single call.
- * Defaults to {@link IndirectNThreadHostAccessor} (thread redirection --
- * no `CreateRemoteThread` and no remote allocation for the call mechanism
- * itself); pass `options.backend` to use a different strategy instead.
+ * Builds the same {@link IHostAccessor} {@link createAccessor} does, without
+ * initializing it -- the returned accessor still lazily initializes on its
+ * first real operation (every {@link InittableMiddlewareAccessor} op is
+ * guarded by `!isInitializing -> await this.init()`), it's just not
+ * pre-initialized up front. Defaults to {@link IndirectNThreadHostAccessor}
+ * (thread redirection -- no `CreateRemoteThread` and no remote allocation
+ * for the call mechanism itself); pass `options.backend` to use a different
+ * strategy instead.
  *
  * `id` is a thread id by default -- pass `options.idType = 'process'` to
  * hand in a pid and auto-pick a thread instead. See {@link AccessorOptions.idType}.
@@ -105,7 +113,7 @@ function resolveBaseAccessor(
  * Pass `options.sharedMemory = true` to wrap the result in a shared-memory
  * middleware ({@link NShm} by default) -- see {@link AccessorOptions.sharedMemory}.
  */
-export function createAccessor(
+export function createAccessorWithoutInit(
   id: number,
   options: AccessorOptions = {},
 ): IHostAccessor {
@@ -117,6 +125,23 @@ export function createAccessor(
   const Provider = options.sharedMemoryProvider ?? NShm;
   const root = new HostAccessor(base);
   return new Provider(base, root, options.sharedMemoryOptions);
+}
+
+/**
+ * {@link createAccessorWithoutInit}, followed by `await`ing the result's
+ * `init()` (when it has one -- see {@link isInittableAccessor}) so the
+ * accessor is already initialized by the time this resolves, instead of
+ * initializing lazily on its first real operation.
+ */
+export async function createAccessor(
+  id: number,
+  options: AccessorOptions = {},
+): Promise<IHostAccessor> {
+  const accessor = createAccessorWithoutInit(id, options);
+  if (isInittableAccessor(accessor)) {
+    await accessor.init();
+  }
+  return accessor;
 }
 
 /**

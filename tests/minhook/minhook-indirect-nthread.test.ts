@@ -5,7 +5,8 @@ import {
   createCFunction,
   RemoteCallableMemoryAccessor,
   Kernel32Impl,
-  IndirectNThreadHostAccessor,
+  createAccessor,
+  type IndirectNThreadHostAccessor,
   MinHook,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
@@ -28,9 +29,9 @@ describe('MinHook over IndirectNThreadHostAccessor (cross-process, thread-hijack
     const thread = Native.Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
-      timeoutMs: 20000,
-    });
+    const memory = (await createAccessor(thread.tid, {
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
     const minhook = new MinHook(proc.pid);
     // Independent view: raw ReadProcessMemory, nothing in common with the
     // indirect chain -- confirms the JMP really lands in the target's memory.
