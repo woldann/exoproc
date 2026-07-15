@@ -1,9 +1,5 @@
 import { Thread } from 'bun-winapi';
-import {
-  type IHostAccessor,
-  type ISyncCallableMemoryAccessor,
-  isInittableAccessor,
-} from 'bun-xffi';
+import { type ISyncCallableMemoryAccessor } from 'bun-xffi';
 import { NThread, type NThreadOptions } from 'bun-nthread';
 import { NShm, type NShmOptions } from 'bun-nshm';
 import { HostAccessor, RedirectorHostAccessor } from './middleware-accessor.js';
@@ -58,12 +54,13 @@ export interface AccessorOptions {
   nthreadOptions?: NThreadOptions;
   /**
    * Use this accessor instead of building the default
-   * {@link IndirectNThreadHostAccessor} chain -- e.g. an already-wired
-   * `HostAccessor`, or a plain custom `IHostAccessor`. When supplied, `id`/
-   * `idType` are never resolved at all. Still eligible for `sharedMemory`
-   * wrapping, same as the default chain.
+   * {@link IndirectNThreadHostAccessor} chain -- any `HostAccessor` (or
+   * subclass) works, e.g. an already-wired one of your own, or a plain
+   * custom backend wrapped in `new HostAccessor(myAccessor)`. When supplied,
+   * `id`/`idType` are never resolved at all. Still eligible for
+   * `sharedMemory` wrapping, same as the default chain.
    */
-  backend?: IHostAccessor;
+  backend?: HostAccessor;
   /**
    * Wrap the resolved accessor (the default chain, or `backend` if
    * supplied) with a shared-memory middleware: plain `READWRITE`
@@ -74,13 +71,14 @@ export interface AccessorOptions {
   sharedMemory?: boolean;
   /**
    * Shared-memory middleware class used when `sharedMemory` is `true`.
-   * Default: {@link NShm}.
+   * Default: {@link NShm}. Must be a `HostAccessor` (NShm is) -- see
+   * {@link createAccessor}'s return type note.
    */
   sharedMemoryProvider?: new (
     backend: ISyncCallableMemoryAccessor,
     root: HostAccessor,
     options?: NShmOptions,
-  ) => IHostAccessor;
+  ) => HostAccessor;
   /** Forwarded to `sharedMemoryProvider`. Ignored when `sharedMemory` is `false`. */
   sharedMemoryOptions?: NShmOptions;
 }
@@ -109,7 +107,7 @@ function resolveFromProcessId(id: number): { pid: number; threadId: number } {
 function resolveBaseAccessor(
   id: number,
   options: AccessorOptions,
-): IHostAccessor {
+): HostAccessor {
   if (options.backend) {
     return options.backend;
   }
@@ -234,13 +232,9 @@ async function raceProcessThreads(
  * -- no `CreateRemoteThread` and no remote allocation for the call mechanism
  * itself); pass `options.backend` to use a different strategy instead.
  *
- * Return type: without `options.sharedMemory: true`, the result is always a
- * real {@link HostAccessor} (whatever the concrete strategy, its `init`/
- * `deinit`/etc. are directly callable -- no {@link isInittableAccessor}
- * check needed). With `sharedMemory: true` the result is the shared-memory
- * wrapper instead ({@link NShm} by default), which is a plain
- * `ISyncCallableMemoryAccessor`, *not* inittable -- hence the looser
- * {@link IHostAccessor} return type for that overload.
+ * Always returns a real {@link HostAccessor} -- `init`/`deinit`/etc. are
+ * directly callable on the result, `sharedMemory: true` included: the
+ * default shared-memory wrapper ({@link NShm}) is itself a `HostAccessor`.
  *
  * `options.idType` defaults to `'processAllThreadIds'` (see
  * {@link AccessorOptions.idType}), which this function can't support -- it
@@ -249,16 +243,8 @@ async function raceProcessThreads(
  */
 export function createAccessorWithoutInit(
   id: number,
-  options?: AccessorOptions & { sharedMemory?: false },
-): HostAccessor;
-export function createAccessorWithoutInit(
-  id: number,
-  options: AccessorOptions,
-): IHostAccessor;
-export function createAccessorWithoutInit(
-  id: number,
   options: AccessorOptions = {},
-): IHostAccessor {
+): HostAccessor {
   const base = resolveBaseAccessor(id, options);
   if (!options.sharedMemory) {
     return base;
@@ -271,10 +257,9 @@ export function createAccessorWithoutInit(
 
 /**
  * {@link createAccessorWithoutInit}, followed by `await`ing the result's
- * `init()` (when it has one -- see {@link isInittableAccessor}) so the
- * accessor is already initialized by the time this resolves, instead of
- * initializing lazily on its first real operation. Same overloaded return
- * type as {@link createAccessorWithoutInit} -- see its doc comment.
+ * `init()` so the accessor is already initialized by the time this resolves,
+ * instead of initializing lazily on its first real operation. Same
+ * always-`HostAccessor` return type as {@link createAccessorWithoutInit}.
  *
  * Also the only entry point for `options.idType === 'processAllThreadIds'`
  * (see {@link AccessorOptions.idType}) -- that mode races every thread in
@@ -286,16 +271,8 @@ export function createAccessorWithoutInit(
  */
 export async function createAccessor(
   id: number,
-  options?: AccessorOptions & { sharedMemory?: false },
-): Promise<HostAccessor>;
-export async function createAccessor(
-  id: number,
-  options: AccessorOptions,
-): Promise<IHostAccessor>;
-export async function createAccessor(
-  id: number,
   options: AccessorOptions = {},
-): Promise<IHostAccessor> {
+): Promise<HostAccessor> {
   const idType = options.idType ?? DEFAULT_ID_TYPE;
   const resolvedOptions =
     !options.backend && idType === 'processAllThreadIds'
@@ -303,9 +280,7 @@ export async function createAccessor(
       : options;
 
   const accessor = createAccessorWithoutInit(id, resolvedOptions);
-  if (isInittableAccessor(accessor)) {
-    await accessor.init();
-  }
+  await accessor.init();
   return accessor;
 }
 

@@ -43,9 +43,11 @@ import {
   isModuleLoadedInProcessSync,
   MiddlewareAccessor,
   InittableMiddlewareAccessor,
-  isMiddlewareAccessor,
+  HostAccessor,
   type IHostAccessor,
 } from 'bun-xffi';
+
+export { HostAccessor };
 
 export abstract class MsvcrtDependentMiddlewareAccessor extends InittableMiddlewareAccessor {
   protected async onInit(): Promise<void> {
@@ -65,43 +67,6 @@ export abstract class MsvcrtDependentMiddlewareAccessor extends InittableMiddlew
       throw new Error('Target process does not have msvcrt.dll loaded.');
     }
   }
-}
-
-/**
- * HostAccessor is a base class that automatically initializes all nested InittableMiddlewareAccessors
- * in the backend decorator chain.
- */
-export class HostAccessor extends InittableMiddlewareAccessor {
-  override get processId(): number {
-    return this._processId;
-  }
-
-  constructor(backend: ISyncCallableMemoryAccessor, root?: IHostAccessor) {
-    super(backend, root ?? (null as any));
-    if (!root) {
-      (this as any).root = this;
-    }
-    let b: ISyncCallableMemoryAccessor = backend;
-    while (isMiddlewareAccessor(b)) {
-      b = b.backend;
-    }
-    if (b) {
-      this._processId = b.processId;
-    }
-  }
-
-  protected override async onInit(): Promise<void> {
-    // No-op. Chain initialization is automatically propagated by init().
-  }
-
-  protected override onInitSync(): void {
-    // No-op. Chain initialization is automatically propagated by initSync().
-  }
-
-  // deinit()/deinitSync() are inherited as-is from InittableMiddlewareAccessor:
-  // deinitNext()/deinitNextSync() already walk the whole `backend` chain and
-  // deinit every InittableMiddlewareAccessor on it, so there's nothing left
-  // for HostAccessor to reconcile separately.
 }
 
 /**

@@ -8,8 +8,7 @@ import {
   createAccessor,
   createAccessorWithoutInit,
   createAccessorOptions,
-  isInittableAccessor,
-  type HostAccessor,
+  HostAccessor,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -175,17 +174,14 @@ describe('createAccessor', () => {
     const thread = Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    // Build the base accessor ourselves (via `backend`) so this test keeps a
-    // handle on it for proper unmap/deinit -- createAccessor's own return
-    // value is the NShm wrapper, which has no deinit() of its own. idType:
-    // 'thread' explicit since createAccessorWithoutInit can't use the default.
-    const base = createAccessorWithoutInit(thread.tid, { idType: 'thread' });
-    // `backend` is supplied, so createAccessor skips id/idType resolution
-    // entirely (including the processAllThreadIds default) and just wraps it.
+    // NShm (the default sharedMemory provider) is itself a HostAccessor, so
+    // memory.deinit() below cascades to deinit its backend too -- no need to
+    // separately build/track the base accessor just to clean it up.
     const memory = await createAccessor(thread.tid, {
-      backend: base,
+      idType: 'thread',
       sharedMemory: true,
     });
+    expect(memory).toBeInstanceOf(HostAccessor);
 
     const addr = await memory.alloc(4096);
     // Independent raw ReadProcessMemory check (not another NThread hijack of
@@ -200,9 +196,9 @@ describe('createAccessor', () => {
       expect(seenInTarget.toString()).toBe(marker.toString());
     } finally {
       raw.close();
-      await base.call(Kernel32Impl.UnmapViewOfFile, addr);
+      await memory.call(Kernel32Impl.UnmapViewOfFile, addr);
       await memory.free(addr);
-      await base.deinit();
+      await memory.deinit();
     }
   }, 30000);
 });
@@ -239,7 +235,7 @@ describe('createAccessorOptions', () => {
         true,
       );
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 30000);
 });

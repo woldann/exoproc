@@ -696,6 +696,43 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
 }
 
 /**
+ * HostAccessor is a base class that automatically initializes all nested InittableMiddlewareAccessors
+ * in the backend decorator chain.
+ */
+export class HostAccessor extends InittableMiddlewareAccessor {
+  override get processId(): number {
+    return this._processId;
+  }
+
+  constructor(backend: ISyncCallableMemoryAccessor, root?: IHostAccessor) {
+    super(backend, root ?? (null as any));
+    if (!root) {
+      (this as any).root = this;
+    }
+    let b: ISyncCallableMemoryAccessor = backend;
+    while (isMiddlewareAccessor(b)) {
+      b = b.backend;
+    }
+    if (b) {
+      this._processId = b.processId;
+    }
+  }
+
+  protected override async onInit(): Promise<void> {
+    // No-op. Chain initialization is automatically propagated by init().
+  }
+
+  protected override onInitSync(): void {
+    // No-op. Chain initialization is automatically propagated by initSync().
+  }
+
+  // deinit()/deinitSync() are inherited as-is from InittableMiddlewareAccessor:
+  // deinitNext()/deinitNextSync() already walk the whole `backend` chain and
+  // deinit every InittableMiddlewareAccessor on it, so there's nothing left
+  // for HostAccessor to reconcile separately.
+}
+
+/**
  * Base middleware accessor for components that require msvcrt.dll in the target process.
  */
 export class DebugMemoryAccessor extends MiddlewareAccessor {
