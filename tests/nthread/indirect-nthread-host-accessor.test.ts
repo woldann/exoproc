@@ -5,11 +5,9 @@ import {
   MemoryProtection,
   MemoryState,
   resolveAddress,
+  isInittableAccessor,
 } from 'bun-xffi';
-import {
-  createAccessor,
-  type IndirectNThreadHostAccessor,
-} from 'exoproc-accessors';
+import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Pre-wired form of the manual chain in nthread.test.ts: a full indirect host
@@ -20,9 +18,9 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
   test('runs remote calls on the hijacked thread and does indirect alloc/write/read', async () => {
     const proc = getGlobalDummyProcess();
 
-    const memory = (await createAccessor(proc.pid, {
+    const memory = await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
 
     try {
       // A call executes *on the hijacked thread itself*: GetCurrentThreadId
@@ -43,7 +41,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
       expect(back.toString()).toBe(data.toString());
       await memory.free(addr);
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 30000);
 
@@ -55,9 +53,9 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
   test('allocNear finds executable space near an anchor entirely via the hijacked thread', async () => {
     const proc = getGlobalDummyProcess();
 
-    const memory = (await createAccessor(proc.pid, {
+    const memory = await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
 
     try {
       const anchor = await memory.alloc(
@@ -81,7 +79,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
       await memory.free(near);
       await memory.free(anchor);
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 120000);
 });

@@ -1,9 +1,9 @@
 import { expect, test, describe } from 'bun:test';
+import { isInittableAccessor } from 'bun-xffi';
 import {
   ProcessCacheAccessor,
   HostAccessor,
   createAccessor,
-  type IndirectNThreadHostAccessor,
 } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -24,9 +24,9 @@ describe('nthread > ProcessCacheAccessor', () => {
   test('should resolve metadata and cache status using a real target process', async () => {
     const tp = getGlobalDummyProcess();
 
-    const nthreadAccessor = (await createAccessor(tp.pid, {
+    const nthreadAccessor = await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
 
     try {
       const host = new HostAccessor(nthreadAccessor);
@@ -55,7 +55,7 @@ describe('nthread > ProcessCacheAccessor', () => {
       const coreModulesCached = await cacheAccessor.getCoreModules();
       expect(coreModulesCached).toEqual(coreModules);
     } finally {
-      await nthreadAccessor.deinit();
+      if (isInittableAccessor(nthreadAccessor)) await nthreadAccessor.deinit();
     }
   }, 60000);
 });

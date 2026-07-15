@@ -1,9 +1,11 @@
 import { expect, test, describe } from 'bun:test';
-import { cmachinecode, CType, createCFunction } from 'bun-xffi';
 import {
-  createAccessor,
-  type IndirectNThreadHostAccessor,
-} from 'exoproc-accessors';
+  cmachinecode,
+  CType,
+  createCFunction,
+  isInittableAccessor,
+} from 'bun-xffi';
+import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/cmachinecode.test.ts -- the injected shell itself calls
@@ -80,9 +82,9 @@ describe('nthread > cmachinecode remote execution', () => {
 
     const tp = getGlobalDummyProcess();
 
-    const accessor = (await createAccessor(tp.pid, {
+    const accessor = await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
 
     try {
       const remoteAddr = await accessor.machineCode(shell);
@@ -94,7 +96,7 @@ describe('nthread > cmachinecode remote execution', () => {
       // The length of "Virtual MachineCode Direct Address Patching Works!" is 48
       expect(result).toBe(48n);
     } finally {
-      await accessor.deinit();
+      if (isInittableAccessor(accessor)) await accessor.deinit();
     }
   }, 60000);
 });

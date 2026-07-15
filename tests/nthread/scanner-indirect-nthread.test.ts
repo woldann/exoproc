@@ -1,9 +1,6 @@
 import { expect, test, describe } from 'bun:test';
-import { resolveAddress } from 'bun-xffi';
-import {
-  createAccessor,
-  type IndirectNThreadHostAccessor,
-} from 'exoproc-accessors';
+import { resolveAddress, isInittableAccessor } from 'bun-xffi';
+import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/scanner.test.ts ("should support remote process JIT
@@ -18,9 +15,9 @@ describe('nthread > Scanner over IndirectNThreadHostAccessor', () => {
 
     const tp = getGlobalDummyProcess();
 
-    const accessor = (await createAccessor(tp.pid, {
+    const accessor = await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
 
     try {
       const size = 100;
@@ -62,7 +59,7 @@ describe('nthread > Scanner over IndirectNThreadHostAccessor', () => {
 
       await accessor.free(addr);
     } finally {
-      await accessor.deinit();
+      if (isInittableAccessor(accessor)) await accessor.deinit();
     }
   }, 60000);
 });

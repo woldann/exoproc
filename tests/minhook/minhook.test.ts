@@ -3,7 +3,7 @@ import {
   cmachinecode,
   createCFunction,
   createAccessor,
-  type IndirectNThreadHostAccessor,
+  isInittableAccessor,
   MinHook,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
@@ -20,9 +20,9 @@ describe('MinHook end-to-end lifecycle (real compiled target + real compiled det
   const proc = getGlobalDummyProcess();
 
   test('create() builds a trampoline without touching the target; enable() installs the JMP and the detour actually runs', async () => {
-    const memory = (await createAccessor(proc.pid, {
+    const memory = await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
     const minhook = new MinHook(proc.pid);
 
     try {
@@ -109,7 +109,7 @@ describe('MinHook end-to-end lifecycle (real compiled target + real compiled det
       // destroy() disables too -- unhooked again, and the trampoline is freed.
       expect(Number(await memory.call(target, 10))).toBe(21);
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 120000);
 });

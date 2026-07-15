@@ -1,9 +1,6 @@
 import { expect, test, describe } from 'bun:test';
-import { MemoryProtection } from 'bun-xffi';
-import {
-  createAccessor,
-  type IndirectNThreadHostAccessor,
-} from 'exoproc-accessors';
+import { MemoryProtection, isInittableAccessor } from 'bun-xffi';
+import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/call-redirector.test.ts -- CallRedirectorAccessor/
@@ -22,9 +19,9 @@ describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThrea
   test('mocks protect() for malloc blocks (throw on non-READWRITE, no-op on READWRITE) and calls real VirtualProtect otherwise', async () => {
     const tp = getGlobalDummyProcess();
 
-    const accessor = (await createAccessor(tp.pid, {
+    const accessor = await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
 
     try {
       // Malloc'd (default READWRITE) block: protect() is purely local bookkeeping.
@@ -59,7 +56,7 @@ describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThrea
       expect(oldProtect).toBe(MemoryProtection.EXECUTE_READWRITE);
       await accessor.free(execAddr);
     } finally {
-      await accessor.deinit();
+      if (isInittableAccessor(accessor)) await accessor.deinit();
     }
   }, 60000);
 });

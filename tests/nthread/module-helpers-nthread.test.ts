@@ -2,12 +2,10 @@ import { expect, test, describe } from 'bun:test';
 import {
   isModuleLoadedInProcess,
   verifyCoreModules,
+  isInittableAccessor,
   Kernel32Impl,
 } from 'bun-xffi';
-import {
-  createAccessor,
-  type IndirectNThreadHostAccessor,
-} from 'exoproc-accessors';
+import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/module-helpers.test.ts -- GetModuleHandleExA(FROM_ADDRESS)
@@ -20,9 +18,9 @@ describe('nthread > Module Loading Helpers', () => {
   test('should check loaded modules in the current process', async () => {
     const tp = getGlobalDummyProcess();
 
-    const accessor = (await createAccessor(tp.pid, {
+    const accessor = await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
 
     try {
       // kernel32.dll and ntdll.dll must always be loaded in a valid process!
@@ -54,7 +52,7 @@ describe('nthread > Module Loading Helpers', () => {
       expect(coreStatus.kernelbase).toBe(true);
       expect(coreStatus.msvcrt).toBe(true);
     } finally {
-      await accessor.deinit();
+      if (isInittableAccessor(accessor)) await accessor.deinit();
     }
   }, 60000);
 });

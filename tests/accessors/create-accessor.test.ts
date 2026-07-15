@@ -8,6 +8,8 @@ import {
   createAccessor,
   createAccessorWithoutInit,
   createAccessorOptions,
+  isInittableAccessor,
+  type IHostAccessor,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -47,17 +49,15 @@ describe('createAccessor', () => {
 
     const result = createAccessor(proc.pid);
     expect(result).toBeInstanceOf(Promise);
-    return result.then((memory) =>
-      (memory as IndirectNThreadHostAccessor).deinit(),
-    );
+    return result.then(async (memory) => {
+      if (isInittableAccessor(memory)) await memory.deinit();
+    });
   }, 30000);
 
   test('defaults to a process id and races all its threads', async () => {
     const proc = getGlobalDummyProcess();
 
-    const memory = (await createAccessor(
-      proc.pid,
-    )) as IndirectNThreadHostAccessor;
+    const memory = await createAccessor(proc.pid);
     expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
 
     try {
@@ -75,7 +75,7 @@ describe('createAccessor', () => {
       expect(back.toString()).toBe(data.toString());
       await memory.free(addr);
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 30000);
 
@@ -84,38 +84,34 @@ describe('createAccessor', () => {
     const thread = Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = (await createAccessor(thread.tid, {
-      idType: 'thread',
-    })) as IndirectNThreadHostAccessor;
+    const memory = await createAccessor(thread.tid, { idType: 'thread' });
     try {
       const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
       expect(Number(remoteTid)).toBe(thread.tid);
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 30000);
 
   test('idType: "process" auto-picks the process\'s first thread', async () => {
     const proc = getGlobalDummyProcess();
-    const memory = (await createAccessor(proc.pid, {
-      idType: 'process',
-    })) as IndirectNThreadHostAccessor;
+    const memory = await createAccessor(proc.pid, { idType: 'process' });
     try {
       const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
       expect(Thread.getThreads(proc.pid).some((t) => t.tid === remoteTid)).toBe(
         true,
       );
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 30000);
 
   test('idType: "processAllThreadIds" races every thread and returns whichever one initializes', async () => {
     const proc = getGlobalDummyProcess();
-    const memory = (await createAccessor(proc.pid, {
+    const memory = await createAccessor(proc.pid, {
       idType: 'processAllThreadIds',
       nthreadOptions: { timeoutMs: 20000 },
-    })) as IndirectNThreadHostAccessor;
+    });
     try {
       // The winner is a real, already-initialized accessor on one of the
       // process's own threads -- same observable contract as idType: 'process'.
@@ -132,7 +128,7 @@ describe('createAccessor', () => {
       );
       await memory.free(addr);
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 30000);
 
@@ -144,7 +140,7 @@ describe('createAccessor', () => {
   });
 
   test('options.backend is returned directly, without touching id/idType', () => {
-    const sentinel = {} as unknown as IndirectNThreadHostAccessor;
+    const sentinel = {} as unknown as IHostAccessor;
 
     // A bogus id would normally throw during resolution (see the two error
     // tests below) -- passing `backend` must skip that resolution entirely.
@@ -183,14 +179,9 @@ describe('createAccessor', () => {
 
     // Build the base accessor ourselves (via `backend`) so this test keeps a
     // handle on it for proper unmap/deinit -- createAccessor's own return
-    // value is the NShm wrapper, which has no deinit() of its own. Built via
-    // createAccessorWithoutInit (not `new IndirectNThreadHostAccessor`) --
-    // createAccessor below initializes it as part of initializing the NShm
-    // wrapper, so there's no separate init step to do here. idType: 'thread'
-    // explicit since createAccessorWithoutInit can't use the default.
-    const base = createAccessorWithoutInit(thread.tid, {
-      idType: 'thread',
-    }) as IndirectNThreadHostAccessor;
+    // value is the NShm wrapper, which has no deinit() of its own. idType:
+    // 'thread' explicit since createAccessorWithoutInit can't use the default.
+    const base = createAccessorWithoutInit(thread.tid, { idType: 'thread' });
     // `backend` is supplied, so createAccessor skips id/idType resolution
     // entirely (including the processAllThreadIds default) and just wraps it.
     const memory = await createAccessor(thread.tid, {
@@ -213,7 +204,7 @@ describe('createAccessor', () => {
       raw.close();
       await base.call(Kernel32Impl.UnmapViewOfFile, addr);
       await memory.free(addr);
-      await base.deinit();
+      if (isInittableAccessor(base)) await base.deinit();
     }
   }, 30000);
 });
@@ -243,17 +234,14 @@ describe('createAccessorOptions', () => {
     const options = createAccessorOptions(1);
     options.idType = 'process';
 
-    const memory = (await createAccessor(
-      proc.pid,
-      options,
-    )) as IndirectNThreadHostAccessor;
+    const memory = await createAccessor(proc.pid, options);
     try {
       const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
       expect(Thread.getThreads(proc.pid).some((t) => t.tid === remoteTid)).toBe(
         true,
       );
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 30000);
 });
