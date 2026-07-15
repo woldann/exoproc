@@ -10,7 +10,7 @@ import { HostAccessor } from './middleware-accessor.js';
 import { IndirectNThreadHostAccessor } from './indirect-nthread-host-accessor.js';
 
 /** What {@link createAccessor}'s `id` parameter identifies. */
-export type AccessorIdType = 'thread' | 'process';
+export type AccessorIdType = 'thread' | 'process' | 'processAllThreadIds';
 
 /**
  * Options for {@link createAccessor}.
@@ -27,7 +27,23 @@ export interface AccessorOptions {
    * Either way, the resolved thread must periodically return to user mode
    * on its own (e.g. a timer wait) -- see CLAUDE.md's `ping.exe`/
    * `DummyProcess` notes for why a thread parked in an indefinite kernel
-   * wait never lands the redirect.
+   * wait never lands the redirect. When you don't know upfront which of a
+   * process's threads (if any) does that, pass `'processAllThreadIds'`
+   * instead -- see its own note below.
+   *
+   * `'processAllThreadIds'`: `id` is a pid; this builds an accessor for
+   * *every* thread the process currently has and starts initializing all of
+   * them in parallel, since there's no way to tell in advance which
+   * thread(s) will ever return to user mode. Whichever one's `init()`
+   * resolves first wins and becomes the returned accessor; every other
+   * candidate is deinitialized in the background as soon as its own
+   * `init()` settles (deinit is a no-op for one that never finished, or
+   * that already failed). Only usable with {@link createAccessor} --
+   * {@link createAccessorWithoutInit} can't decide which thread "worked"
+   * without actually attempting init on each one, so it throws for this
+   * `idType`. Heavier than `'thread'`/`'process'` (one hijack attempt per
+   * thread, run concurrently) -- see CLAUDE.md's throughput-vs-stability
+   * notes on stressing a target harder.
    */
   idType?: AccessorIdType;
   /** Forwarded to the default {@link IndirectNThreadHostAccessor}'s `NThread`. Ignored when `backend` is supplied. */
@@ -91,10 +107,67 @@ function resolveBaseAccessor(
   }
 
   const idType = options.idType ?? 'thread';
+  if (idType === 'processAllThreadIds') {
+    throw new Error(
+      "createAccessor: idType 'processAllThreadIds' races every thread's " +
+        "init() to find one that actually works, so it can't be resolved " +
+        'synchronously -- use createAccessor(), not createAccessorWithoutInit(), for this idType.',
+    );
+  }
   const { pid, threadId } =
     idType === 'thread' ? resolveFromThreadId(id) : resolveFromProcessId(id);
 
   return new IndirectNThreadHostAccessor(pid, threadId, options.nthreadOptions);
+}
+
+/**
+ * `idType: 'processAllThreadIds'` support -- builds an
+ * {@link IndirectNThreadHostAccessor} for every thread `pid` currently has
+ * and starts initializing all of them in parallel. The first one whose
+ * `init()` resolves wins and is returned; every other candidate is
+ * deinitialized in the background once its own `init()` settles (a no-op if
+ * it never finished, or already failed). See {@link AccessorOptions.idType}.
+ */
+async function raceProcessThreads(
+  pid: number,
+  options: AccessorOptions,
+): Promise<IndirectNThreadHostAccessor> {
+  const threads = Thread.getThreads(pid);
+  if (threads.length === 0) {
+    throw new Error(
+      `createAccessor: process ${pid} has no threads to redirect`,
+    );
+  }
+
+  const candidates = threads.map((t) => {
+    const accessor = new IndirectNThreadHostAccessor(
+      pid,
+      t.tid,
+      options.nthreadOptions,
+    );
+    return { accessor, init: accessor.init() };
+  });
+
+  let winner: (typeof candidates)[number];
+  try {
+    winner = await Promise.any(candidates.map((c) => c.init.then(() => c)));
+  } catch (err) {
+    throw new Error(
+      `createAccessor: none of process ${pid}'s ${candidates.length} thread(s) could be initialized`,
+      { cause: err },
+    );
+  }
+
+  for (const c of candidates) {
+    if (c === winner) continue;
+    c.init
+      .finally(() => {
+        c.accessor.deinit().catch(() => {});
+      })
+      .catch(() => {});
+  }
+
+  return winner.accessor;
 }
 
 /**
@@ -132,12 +205,26 @@ export function createAccessorWithoutInit(
  * `init()` (when it has one -- see {@link isInittableAccessor}) so the
  * accessor is already initialized by the time this resolves, instead of
  * initializing lazily on its first real operation.
+ *
+ * Also the only entry point for `options.idType === 'processAllThreadIds'`
+ * (see {@link AccessorOptions.idType}) -- that mode races every thread in
+ * the process, so it needs actual `init()` attempts to pick a winner and
+ * can't be resolved synchronously the way `createAccessorWithoutInit` resolves
+ * `'thread'`/`'process'`. The race's winning accessor is then handed to
+ * `createAccessorWithoutInit` as `options.backend`, so `sharedMemory`
+ * wrapping still applies exactly as it does for the other `idType`s.
  */
 export async function createAccessor(
   id: number,
   options: AccessorOptions = {},
 ): Promise<IHostAccessor> {
-  const accessor = createAccessorWithoutInit(id, options);
+  const idType = options.idType ?? 'thread';
+  const resolvedOptions =
+    !options.backend && idType === 'processAllThreadIds'
+      ? { ...options, backend: await raceProcessThreads(id, options) }
+      : options;
+
+  const accessor = createAccessorWithoutInit(id, resolvedOptions);
   if (isInittableAccessor(accessor)) {
     await accessor.init();
   }

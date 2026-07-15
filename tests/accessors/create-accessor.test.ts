@@ -79,6 +79,45 @@ describe('createAccessor', () => {
     }
   }, 30000);
 
+  test('idType: "processAllThreadIds" races every thread and returns whichever one initializes', async () => {
+    const proc = getGlobalDummyProcess();
+    const memory = (await createAccessor(proc.pid, {
+      idType: 'processAllThreadIds',
+      nthreadOptions: { timeoutMs: 20000 },
+    })) as IndirectNThreadHostAccessor;
+    try {
+      // The winner is a real, already-initialized accessor on one of the
+      // process's own threads -- same observable contract as idType: 'process'.
+      const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
+      expect(Thread.getThreads(proc.pid).some((t) => t.tid === remoteTid)).toBe(
+        true,
+      );
+
+      const addr = await memory.alloc(64);
+      const data = Buffer.from('processAllThreadIds race winner!');
+      await memory.write(addr, data);
+      expect((await memory.read(addr, data.byteLength)).toString()).toBe(
+        data.toString(),
+      );
+      await memory.free(addr);
+    } finally {
+      await memory.deinit();
+    }
+  }, 30000);
+
+  test('idType: "processAllThreadIds" throws when the process has no threads', async () => {
+    const bogusPid = 999999;
+    await expect(
+      createAccessor(bogusPid, { idType: 'processAllThreadIds' }),
+    ).rejects.toThrow(/no threads to redirect/);
+  });
+
+  test('createAccessorWithoutInit rejects idType: "processAllThreadIds"', () => {
+    expect(() =>
+      createAccessorWithoutInit(0, { idType: 'processAllThreadIds' }),
+    ).toThrow(/can't be resolved synchronously/);
+  });
+
   test('options.backend is returned directly, without touching id/idType', () => {
     const sentinel = {} as unknown as IndirectNThreadHostAccessor;
 
