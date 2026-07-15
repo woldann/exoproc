@@ -13,37 +13,45 @@ import { IndirectNThreadHostAccessor } from './indirect-nthread-host-accessor.js
 export type AccessorIdType = 'thread' | 'process' | 'processAllThreadIds';
 
 /**
+ * Default for {@link AccessorOptions.idType} when omitted -- `id` is treated
+ * as a pid and every one of its threads races for the hijack (see
+ * {@link raceProcessThreads}), so callers don't have to pick a thread
+ * themselves. Shared by {@link resolveBaseAccessor} and {@link createAccessor}
+ * so the two stay consistent: {@link createAccessorWithoutInit} (which can't
+ * support this idType -- see {@link resolveBaseAccessor}) throws by default
+ * unless the caller explicitly opts into `'thread'`/`'process'`.
+ */
+const DEFAULT_ID_TYPE: AccessorIdType = 'processAllThreadIds';
+
+/**
  * Options for {@link createAccessor}.
  */
 export interface AccessorOptions {
   /**
-   * Whether `id` is a thread id or a process id. Default: `'thread'` -- the
-   * whole default accessor chain is built around redirecting one specific,
-   * already-live thread ({@link IndirectNThreadHostAccessor}), so naming
-   * that thread directly is the precise, unambiguous form. Pass `'process'`
-   * to hand in a pid instead and let this pick the process's first
-   * enumerable thread ({@link Thread.getThreads}) for you.
-   *
-   * Either way, the resolved thread must periodically return to user mode
-   * on its own (e.g. a timer wait) -- see CLAUDE.md's `ping.exe`/
-   * `DummyProcess` notes for why a thread parked in an indefinite kernel
-   * wait never lands the redirect. When you don't know upfront which of a
-   * process's threads (if any) does that, pass `'processAllThreadIds'`
-   * instead -- see its own note below.
-   *
-   * `'processAllThreadIds'`: `id` is a pid; this builds an accessor for
-   * *every* thread the process currently has and starts initializing all of
-   * them in parallel, since there's no way to tell in advance which
-   * thread(s) will ever return to user mode. Whichever one's `init()`
+   * Whether `id` is a thread id or a process id. Default:
+   * `'processAllThreadIds'` -- `id` is a pid, and this builds an accessor
+   * for *every* thread the process currently has, starting all of them
+   * initializing in parallel, since there's no way to tell in advance which
+   * thread(s) (if any) will ever return to user mode (see CLAUDE.md's
+   * `ping.exe`/`DummyProcess` notes on why a thread parked in an indefinite
+   * kernel wait never lands the redirect). Whichever one's `init()`
    * resolves first wins and becomes the returned accessor; every other
    * candidate is deinitialized in the background as soon as its own
    * `init()` settles (deinit is a no-op for one that never finished, or
    * that already failed). Only usable with {@link createAccessor} --
    * {@link createAccessorWithoutInit} can't decide which thread "worked"
-   * without actually attempting init on each one, so it throws for this
-   * `idType`. Heavier than `'thread'`/`'process'` (one hijack attempt per
-   * thread, run concurrently) -- see CLAUDE.md's throughput-vs-stability
-   * notes on stressing a target harder.
+   * without actually attempting init on each one, so it throws by default
+   * unless you explicitly pass `'thread'`/`'process'`. Heavier than
+   * `'thread'`/`'process'` (one hijack attempt per thread, run
+   * concurrently) -- see CLAUDE.md's throughput-vs-stability notes on
+   * stressing a target harder.
+   *
+   * Pass `'thread'` to name one specific, already-live thread directly
+   * ({@link IndirectNThreadHostAccessor}) instead of racing -- the precise,
+   * unambiguous form when you already know which thread will work. Pass
+   * `'process'` to hand in a pid and let this pick the process's first
+   * enumerable thread ({@link Thread.getThreads}) for you, without racing
+   * the rest.
    */
   idType?: AccessorIdType;
   /** Forwarded to the default {@link IndirectNThreadHostAccessor}'s `NThread`. Ignored when `backend` is supplied. */
@@ -106,7 +114,7 @@ function resolveBaseAccessor(
     return options.backend;
   }
 
-  const idType = options.idType ?? 'thread';
+  const idType = options.idType ?? DEFAULT_ID_TYPE;
   if (idType === 'processAllThreadIds') {
     throw new Error(
       "createAccessor: idType 'processAllThreadIds' races every thread's " +
@@ -199,8 +207,10 @@ async function raceProcessThreads(
  * for the call mechanism itself); pass `options.backend` to use a different
  * strategy instead.
  *
- * `id` is a thread id by default -- pass `options.idType = 'process'` to
- * hand in a pid and auto-pick a thread instead. See {@link AccessorOptions.idType}.
+ * `options.idType` defaults to `'processAllThreadIds'` (see
+ * {@link AccessorOptions.idType}), which this function can't support -- it
+ * throws unless you explicitly pass `'thread'` (name one specific thread
+ * directly) or `'process'` (hand in a pid and auto-pick its first thread).
  *
  * Pass `options.sharedMemory = true` to wrap the result in a shared-memory
  * middleware ({@link NShm} by default) -- see {@link AccessorOptions.sharedMemory}.
@@ -237,7 +247,7 @@ export async function createAccessor(
   id: number,
   options: AccessorOptions = {},
 ): Promise<IHostAccessor> {
-  const idType = options.idType ?? 'thread';
+  const idType = options.idType ?? DEFAULT_ID_TYPE;
   const resolvedOptions =
     !options.backend && idType === 'processAllThreadIds'
       ? { ...options, backend: await raceProcessThreads(id, options) }
@@ -285,7 +295,7 @@ const AGGRESSIVENESS_PRESETS: Record<
  * {@link createAccessor}, or spread/extend it (e.g. to also set `idType`).
  */
 export function createAccessorOptions(
-  aggressiveness: AccessorAggressiveness = 2,
+  aggressiveness: AccessorAggressiveness = 1,
 ): AccessorOptions {
   const preset = AGGRESSIVENESS_PRESETS[aggressiveness];
   return {

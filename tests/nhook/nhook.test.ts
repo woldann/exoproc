@@ -36,10 +36,7 @@ describe('NHook instruction simulation', () => {
   let scratchMid: bigint;
 
   beforeAll(async () => {
-    const thread = Native.Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
-
-    memory = (await createAccessor(thread.tid, {
+    memory = (await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
 

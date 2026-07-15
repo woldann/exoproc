@@ -1,5 +1,4 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
 import { Kernel32Impl } from 'bun-xffi';
 import {
   createAccessor,
@@ -31,13 +30,12 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
   test('shares a genuinely usable mapping/view with both the target and this process', async () => {
     const target = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(target.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = createAccessorWithoutInit(thread.tid, {
+    const memory = createAccessorWithoutInit(target.pid, {
+      idType: 'process',
       nthreadOptions: { timeoutMs: 20000 },
     }) as IndirectNThreadHostAccessor;
-    const shm = await createAccessor(thread.tid, {
+    const shm = await createAccessor(target.pid, {
       backend: memory,
       sharedMemory: true,
     });
@@ -74,13 +72,12 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
 
   test('supports multiple independent shared memory regions on the same target', async () => {
     const target = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(target.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = createAccessorWithoutInit(thread.tid, {
+    const memory = createAccessorWithoutInit(target.pid, {
+      idType: 'process',
       nthreadOptions: { timeoutMs: 20000 },
     }) as IndirectNThreadHostAccessor;
-    const shm = await createAccessor(thread.tid, {
+    const shm = await createAccessor(target.pid, {
       backend: memory,
       sharedMemory: true,
     });

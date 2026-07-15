@@ -1,5 +1,4 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
 import {
   ProcessCacheAccessor,
   HostAccessor,
@@ -24,10 +23,8 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 describe('nthread > ProcessCacheAccessor', () => {
   test('should resolve metadata and cache status using a real target process', async () => {
     const tp = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(tp.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const nthreadAccessor = (await createAccessor(thread.tid, {
+    const nthreadAccessor = (await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
 

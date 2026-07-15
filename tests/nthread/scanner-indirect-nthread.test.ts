@@ -1,5 +1,4 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
 import { resolveAddress } from 'bun-xffi';
 import {
   createAccessor,
@@ -18,10 +17,8 @@ describe('nthread > Scanner over IndirectNThreadHostAccessor', () => {
     if (process.platform !== 'win32') return;
 
     const tp = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(tp.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const accessor = (await createAccessor(thread.tid, {
+    const accessor = (await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
 

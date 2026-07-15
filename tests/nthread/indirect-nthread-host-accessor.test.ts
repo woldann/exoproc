@@ -19,18 +19,19 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', () => {
   test('runs remote calls on the hijacked thread and does indirect alloc/write/read', async () => {
     const proc = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = (await createAccessor(thread.tid, {
+    const memory = (await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
 
     try {
       // A call executes *on the hijacked thread itself*: GetCurrentThreadId
-      // returns exactly the thread we parked at the jmp$ stub.
+      // returns exactly the (winning) thread createAccessor parked at the
+      // jmp$ stub.
       const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
-      expect(Number(remoteTid)).toBe(thread.tid);
+      expect(
+        Native.Thread.getThreads(proc.pid).some((t) => t.tid === remoteTid),
+      ).toBe(true);
 
       // Indirect alloc/write/read round-trip inside the target process.
       const addr = await memory.alloc(64);
@@ -53,10 +54,8 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
   // space, so proving it works here is what makes minhook-over-indirect viable.
   test('allocNear finds executable space near an anchor entirely via the hijacked thread', async () => {
     const proc = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = (await createAccessor(thread.tid, {
+    const memory = (await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
 

@@ -26,10 +26,7 @@ describe('MinHook over IndirectNThreadHostAccessor (cross-process, thread-hijack
   const proc = getGlobalDummyProcess();
 
   test('hooks a function in another process and its detours run when invoked via the hijacked thread', async () => {
-    const thread = Native.Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
-
-    const memory = (await createAccessor(thread.tid, {
+    const memory = (await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
     const minhook = new MinHook(proc.pid);
@@ -109,7 +106,10 @@ describe('MinHook over IndirectNThreadHostAccessor (cross-process, thread-hijack
       // thread and returns its tid. (Proves HookDetour accepts a plain
       // CFunction, resolved by address with no CMachineCode handling.)
       await hook.enable(Kernel32Impl.GetCurrentThreadId);
-      expect(Number(await memory.call(target, 10))).toBe(thread.tid);
+      const detourTid = Number(await memory.call(target, 10));
+      expect(
+        Native.Thread.getThreads(proc.pid).some((t) => t.tid === detourTid),
+      ).toBe(true);
 
       // disable() restores the original prologue -> unhooked behaviour returns.
       await hook.disable();

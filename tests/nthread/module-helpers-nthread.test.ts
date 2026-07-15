@@ -1,5 +1,4 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
 import {
   isModuleLoadedInProcess,
   verifyCoreModules,
@@ -20,10 +19,8 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 describe('nthread > Module Loading Helpers', () => {
   test('should check loaded modules in the current process', async () => {
     const tp = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(tp.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const accessor = (await createAccessor(thread.tid, {
+    const accessor = (await createAccessor(tp.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
 

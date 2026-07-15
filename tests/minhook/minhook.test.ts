@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import * as Native from 'exoproc';
 import {
   cmachinecode,
   createCFunction,
@@ -21,10 +20,7 @@ describe('MinHook end-to-end lifecycle (real compiled target + real compiled det
   const proc = getGlobalDummyProcess();
 
   test('create() builds a trampoline without touching the target; enable() installs the JMP and the detour actually runs', async () => {
-    const thread = Native.Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
-
-    const memory = (await createAccessor(thread.tid, {
+    const memory = (await createAccessor(proc.pid, {
       nthreadOptions: { timeoutMs: 20000 },
     })) as IndirectNThreadHostAccessor;
     const minhook = new MinHook(proc.pid);

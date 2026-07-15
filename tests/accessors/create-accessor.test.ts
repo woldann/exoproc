@@ -17,39 +17,54 @@ describe('createAccessorWithoutInit', () => {
     const thread = Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = createAccessorWithoutInit(thread.tid);
+    // idType: 'thread' explicitly -- the default (idType: 'processAllThreadIds')
+    // can't be resolved synchronously, see below.
+    const memory = createAccessorWithoutInit(thread.tid, {
+      idType: 'thread',
+    });
     expect(memory).not.toBeInstanceOf(Promise);
     expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
     memory.close();
+  });
+
+  test('throws by default, since idType now defaults to "processAllThreadIds"', () => {
+    const proc = getGlobalDummyProcess();
+    expect(() => createAccessorWithoutInit(proc.pid)).toThrow(
+      /can't be resolved synchronously/,
+    );
+  });
+
+  test('rejects idType: "processAllThreadIds" explicitly too', () => {
+    expect(() =>
+      createAccessorWithoutInit(0, { idType: 'processAllThreadIds' }),
+    ).toThrow(/can't be resolved synchronously/);
   });
 });
 
 describe('createAccessor', () => {
   test('is async and awaits init before resolving', () => {
     const proc = getGlobalDummyProcess();
-    const thread = Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const result = createAccessor(thread.tid);
+    const result = createAccessor(proc.pid);
     expect(result).toBeInstanceOf(Promise);
     return result.then((memory) =>
       (memory as IndirectNThreadHostAccessor).deinit(),
     );
   }, 30000);
 
-  test('defaults to a thread id and resolves its owning process', async () => {
+  test('defaults to a process id and races all its threads', async () => {
     const proc = getGlobalDummyProcess();
-    const thread = Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
     const memory = (await createAccessor(
-      thread.tid,
+      proc.pid,
     )) as IndirectNThreadHostAccessor;
     expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
 
     try {
       const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
-      expect(Number(remoteTid)).toBe(thread.tid);
+      expect(Thread.getThreads(proc.pid).some((t) => t.tid === remoteTid)).toBe(
+        true,
+      );
 
       const addr = await memory.alloc(64);
       expect(Number(resolveAddress(addr))).toBeGreaterThan(0);
@@ -59,6 +74,22 @@ describe('createAccessor', () => {
       const back = await memory.read(addr, data.byteLength);
       expect(back.toString()).toBe(data.toString());
       await memory.free(addr);
+    } finally {
+      await memory.deinit();
+    }
+  }, 30000);
+
+  test('idType: "thread" names one specific thread directly', async () => {
+    const proc = getGlobalDummyProcess();
+    const thread = Thread.getThreads(proc.pid)[0];
+    if (!thread) throw new Error('No thread found in the spawned process');
+
+    const memory = (await createAccessor(thread.tid, {
+      idType: 'thread',
+    })) as IndirectNThreadHostAccessor;
+    try {
+      const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
+      expect(Number(remoteTid)).toBe(thread.tid);
     } finally {
       await memory.deinit();
     }
@@ -112,12 +143,6 @@ describe('createAccessor', () => {
     ).rejects.toThrow(/no threads to redirect/);
   });
 
-  test('createAccessorWithoutInit rejects idType: "processAllThreadIds"', () => {
-    expect(() =>
-      createAccessorWithoutInit(0, { idType: 'processAllThreadIds' }),
-    ).toThrow(/can't be resolved synchronously/);
-  });
-
   test('options.backend is returned directly, without touching id/idType', () => {
     const sentinel = {} as unknown as IndirectNThreadHostAccessor;
 
@@ -133,10 +158,12 @@ describe('createAccessor', () => {
   test('throws when no thread has the given id', () => {
     const bogusThreadId = 999999999;
     // createAccessorWithoutInit -- pure id-resolution failure, thrown
-    // synchronously before any accessor is built.
-    expect(() => createAccessorWithoutInit(bogusThreadId)).toThrow(
-      /no thread with id/,
-    );
+    // synchronously before any accessor is built. idType: 'thread' explicit
+    // -- the default (idType: 'processAllThreadIds') would throw for an
+    // entirely different reason (can't be resolved synchronously at all).
+    expect(() =>
+      createAccessorWithoutInit(bogusThreadId, { idType: 'thread' }),
+    ).toThrow(/no thread with id/);
   });
 
   test('throws when the given process has no threads to redirect', () => {
@@ -159,10 +186,13 @@ describe('createAccessor', () => {
     // value is the NShm wrapper, which has no deinit() of its own. Built via
     // createAccessorWithoutInit (not `new IndirectNThreadHostAccessor`) --
     // createAccessor below initializes it as part of initializing the NShm
-    // wrapper, so there's no separate init step to do here.
-    const base = createAccessorWithoutInit(
-      thread.tid,
-    ) as IndirectNThreadHostAccessor;
+    // wrapper, so there's no separate init step to do here. idType: 'thread'
+    // explicit since createAccessorWithoutInit can't use the default.
+    const base = createAccessorWithoutInit(thread.tid, {
+      idType: 'thread',
+    }) as IndirectNThreadHostAccessor;
+    // `backend` is supplied, so createAccessor skips id/idType resolution
+    // entirely (including the processAllThreadIds default) and just wraps it.
     const memory = await createAccessor(thread.tid, {
       backend: base,
       sharedMemory: true,
@@ -189,20 +219,20 @@ describe('createAccessor', () => {
 });
 
 describe('createAccessorOptions', () => {
-  test('defaults to the balanced (level 2) preset, with shared memory on', () => {
-    expect(createAccessorOptions()).toEqual(createAccessorOptions(2));
-    expect(createAccessorOptions(2)).toEqual({
-      nthreadOptions: { timeoutMs: 5000, pollIntervalMs: 50 },
-      sharedMemory: true,
+  test('defaults to the gentle (level 1) preset, with shared memory off', () => {
+    expect(createAccessorOptions()).toEqual(createAccessorOptions(1));
+    expect(createAccessorOptions(1)).toEqual({
+      nthreadOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
+      sharedMemory: false,
     });
   });
 
-  test('level 1 is gentler (longer timeout) and has shared memory off', () => {
+  test('level 2 is more aggressive (shorter timeout) and turns shared memory on', () => {
     const gentle = createAccessorOptions(1);
     const balanced = createAccessorOptions(2);
 
-    expect(gentle.nthreadOptions!.timeoutMs!).toBeGreaterThan(
-      balanced.nthreadOptions!.timeoutMs!,
+    expect(balanced.nthreadOptions!.timeoutMs!).toBeLessThan(
+      gentle.nthreadOptions!.timeoutMs!,
     );
     expect(gentle.sharedMemory).toBe(false);
     expect(balanced.sharedMemory).toBe(true);
