@@ -6,7 +6,10 @@ import {
   CrtImpl,
   cmachinecode,
 } from 'bun-xffi';
-import { RedirectorHostAccessor, IndirectNThreadHostAccessor } from 'exoproc-accessors';
+import {
+  RedirectorHostAccessor,
+  IndirectNThreadHostAccessor,
+} from 'exoproc-accessors';
 
 // Compiled once at module load; reused across tests.
 const sum8f = cmachinecode({

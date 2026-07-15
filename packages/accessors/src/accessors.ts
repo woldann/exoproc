@@ -78,7 +78,10 @@ function resolveFromProcessId(id: number): { pid: number; threadId: number } {
 }
 
 /** The default chain or `options.backend`, before any `sharedMemory` wrapping. */
-function resolveBaseAccessor(id: number, options: AccessorOptions): IHostAccessor {
+function resolveBaseAccessor(
+  id: number,
+  options: AccessorOptions,
+): IHostAccessor {
   if (options.backend) {
     return options.backend;
   }
@@ -135,8 +138,14 @@ const AGGRESSIVENESS_PRESETS: Record<
   AccessorAggressiveness,
   { nthreadOptions: NThreadOptions; sharedMemory: boolean }
 > = {
-  1: { nthreadOptions: { timeoutMs: 20000, pollIntervalMs: 100 }, sharedMemory: false },
-  2: { nthreadOptions: { timeoutMs: 5000, pollIntervalMs: 50 }, sharedMemory: true },
+  1: {
+    nthreadOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
+    sharedMemory: false,
+  },
+  2: {
+    nthreadOptions: { timeoutMs: 5000, pollIntervalMs: 50 },
+    sharedMemory: true,
+  },
 };
 
 /**

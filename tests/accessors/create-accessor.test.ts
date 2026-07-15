@@ -71,9 +71,9 @@ describe('createAccessor', () => {
     // Thread.getThreads filters a Toolhelp32 snapshot by pid, so an unmatched
     // pid yields an empty array rather than an error.
     const bogusPid = 999999;
-    expect(() =>
-      createAccessor(bogusPid, { idType: 'process' }),
-    ).toThrow(/no threads to redirect/);
+    expect(() => createAccessor(bogusPid, { idType: 'process' })).toThrow(
+      /no threads to redirect/,
+    );
   });
 
   test('sharedMemory: true backs plain allocations with NShm', async () => {
@@ -135,7 +135,10 @@ describe('createAccessorOptions', () => {
     const options = createAccessorOptions(1);
     options.idType = 'process';
 
-    const memory = createAccessor(proc.pid, options) as IndirectNThreadHostAccessor;
+    const memory = createAccessor(
+      proc.pid,
+      options,
+    ) as IndirectNThreadHostAccessor;
     try {
       const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
       expect(Thread.getThreads(proc.pid).some((t) => t.tid === remoteTid)).toBe(
