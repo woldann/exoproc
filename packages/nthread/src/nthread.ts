@@ -12,8 +12,8 @@ import {
   WaitReturn,
   resolveAddress,
   stackAlign16,
+  type IHostAccessor,
 } from 'bun-xffi';
-import { HostAccessor } from 'exoproc-accessors';
 import {
   getRandomSpinStub,
   getRandomPushretStub,
@@ -106,7 +106,7 @@ export class NThread extends InittableMiddlewareAccessor {
     backend: ISyncCallableMemoryAccessor | number,
     public readonly threadId: number,
     public readonly options: NThreadOptions = {},
-    root: HostAccessor,
+    root: IHostAccessor,
   ) {
     const actualBackend =
       typeof backend === 'number'

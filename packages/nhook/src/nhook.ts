@@ -20,7 +20,8 @@ import {
   type X86Operand,
   X86_REG_TO_CONTEXT_NAME,
 } from 'bun-capstone';
-import { IndirectNThreadHostAccessor, getRandomSpinStub } from 'bun-nthread';
+import { getRandomSpinStub } from 'bun-nthread';
+import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
 import { log } from './logger.js';
 import { ProcessExitedError } from './errors.js';
 

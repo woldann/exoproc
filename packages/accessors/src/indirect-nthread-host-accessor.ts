@@ -2,6 +2,7 @@ import {
   isMiddlewareAccessor,
   type ISyncCallableMemoryAccessor,
 } from 'bun-xffi';
+import { NThread, type NThreadOptions } from 'bun-nthread';
 import {
   HostAccessor,
   ThrowingMemoryAccessor,
@@ -15,8 +16,7 @@ import {
   FileTransferReadAccessor,
   ScannerMiddleware,
   MarshallingCallableAccessor,
-} from 'exoproc-accessors';
-import { NThread, type NThreadOptions } from './nthread.js';
+} from './middleware-accessor.js';
 
 /**
  * A {@link HostAccessor} whose base "call" mechanism is {@link NThread} (x64
@@ -70,11 +70,18 @@ export class IndirectNThreadHostAccessor extends HostAccessor {
   ) {
     let nthread: NThread;
     let nthreadRoot: RedirectorHostAccessor | undefined;
-    if (backendOrPid instanceof NThread) {
-      nthread = backendOrPid;
-    } else {
+    // `typeof ... === 'number'` rather than `instanceof NThread`: NThread now
+    // lives in a different package than this class, so a caller's own
+    // cross-package-resolved `NThread` copy can fail an `instanceof` check
+    // here even though it's structurally identical (same root cause as
+    // `isMiddlewareAccessor` elsewhere in this codebase -- see its doc
+    // comment on why `instanceof` against a concrete class is unreliable
+    // across a package boundary under Wine).
+    if (typeof backendOrPid === 'number') {
       nthreadRoot = new RedirectorHostAccessor(backendOrPid);
       nthread = new NThread(backendOrPid, threadId!, options, nthreadRoot);
+    } else {
+      nthread = backendOrPid;
     }
 
     const pid = nthread.processId;

@@ -5,7 +5,7 @@ import {
   verifyCoreModules,
   Kernel32Impl,
 } from 'bun-xffi';
-import { IndirectNThreadHostAccessor } from 'bun-nthread';
+import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/module-helpers.test.ts -- GetModuleHandleExA(FROM_ADDRESS)

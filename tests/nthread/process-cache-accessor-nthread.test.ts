@@ -1,7 +1,10 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
-import { ProcessCacheAccessor, HostAccessor } from 'exoproc-accessors';
-import { IndirectNThreadHostAccessor } from 'bun-nthread';
+import {
+  ProcessCacheAccessor,
+  HostAccessor,
+  IndirectNThreadHostAccessor,
+} from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/process-cache-accessor.test.ts -- ProcessCacheAccessor.

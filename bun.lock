@@ -52,6 +52,9 @@
       "name": "exoproc-accessors",
       "version": "0.1.0",
       "dependencies": {
+        "bun-nshm": "workspace:*",
+        "bun-nthread": "workspace:*",
+        "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
@@ -106,6 +109,7 @@
         "bun-nthread": "workspace:*",
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
+        "exoproc-accessors": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -114,7 +118,6 @@
       "version": "0.1.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
-        "exoproc-accessors": "workspace:*",
         "exoproc-dummy": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
@@ -125,7 +128,6 @@
       "dependencies": {
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
-        "exoproc-accessors": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },

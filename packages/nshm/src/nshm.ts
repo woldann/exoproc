@@ -11,8 +11,8 @@ import {
   type AddressLike,
   type ICallableMemoryAccessor,
   type ISyncCallableMemoryAccessor,
+  type IHostAccessor,
 } from 'bun-xffi';
-import { type HostAccessor } from 'exoproc-accessors';
 import {
   type DummyProcess,
   getGlobalDummyProcess as getSharedDummyProcess,
@@ -211,7 +211,7 @@ export class NShm extends MiddlewareAccessor {
 
   constructor(
     backend: ISyncCallableMemoryAccessor,
-    root: HostAccessor,
+    root: IHostAccessor,
     private readonly options: NShmOptions = {},
   ) {
     super(backend, root);

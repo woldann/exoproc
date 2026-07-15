@@ -1,8 +1,7 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { Kernel32Impl } from 'bun-xffi';
-import { HostAccessor } from 'exoproc-accessors';
-import { IndirectNThreadHostAccessor } from 'bun-nthread';
+import { HostAccessor, IndirectNThreadHostAccessor } from 'exoproc-accessors';
 import { NShm } from 'bun-nshm';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 

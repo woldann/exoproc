@@ -6,7 +6,7 @@ import {
   MemoryState,
   resolveAddress,
 } from 'bun-xffi';
-import { IndirectNThreadHostAccessor } from 'bun-nthread';
+import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Pre-wired form of the manual chain in nthread.test.ts: a full indirect host

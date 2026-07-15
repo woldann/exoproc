@@ -1,7 +1,7 @@
 import { expect, test, describe } from 'bun:test';
 import * as Native from 'bun-winapi';
 import { cmachinecode, CType, createCFunction } from 'bun-xffi';
-import { IndirectNThreadHostAccessor } from 'bun-nthread';
+import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/cmachinecode.test.ts -- the injected shell itself calls

@@ -45,7 +45,6 @@
   "dependencies": {
     "bun-winapi": "workspace:*",
     "bun-xffi": "workspace:*",
-    "exoproc-accessors": "workspace:*",
     "exoproc-utils": "workspace:*"
   }
 }
