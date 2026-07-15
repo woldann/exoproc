@@ -138,6 +138,19 @@ function resolveBaseAccessor(
  * that only needs to happen once, for whichever thread actually wins, not
  * once per candidate.
  *
+ * Each candidate gets its own `AbortController`, threaded into `NThread` via
+ * `NThreadOptions.signal` -- `NThread.onInit()`'s landing-wait already honors
+ * it (`waitForLanding(timeoutMs, this.options.signal)`), throwing
+ * `WaitAbortedError` promptly, which `onInit()`'s own `catch` turns into an
+ * immediate `closeThread()` (releases + resumes the thread, same as a normal
+ * failure). As soon as a winner is found, every other candidate is aborted
+ * right away -- they stop hammering `SuspendThread`/`SetThreadContext`/
+ * `ResumeThread` on the target process within (roughly) one poll interval,
+ * instead of continuing for up to their own `timeoutMs` in the background.
+ * Racing multiple threads of the *same* process concurrently without this
+ * turned out to destabilize it badly enough to fail unrelated, later tests
+ * against the same shared target -- this is why cancellation isn't optional.
+ *
  * Each candidate gets an `NThread` wired to a {@link RedirectorHostAccessor}
  * whose `target` initially loops back to the `NThread` itself, so
  * `NThread.onInit()`'s `this.root.call(...)` bootstrap calls land on
@@ -161,22 +174,36 @@ async function raceProcessThreads(
     );
   }
 
+  const callerSignal = options.nthreadOptions?.signal;
   const candidates = threads.map((t) => {
+    const controller = new AbortController();
+    // Compose with a caller-supplied signal (if any) -- either one aborts this candidate.
+    if (callerSignal) {
+      if (callerSignal.aborted) controller.abort(callerSignal.reason);
+      else
+        callerSignal.addEventListener(
+          'abort',
+          () => controller.abort(callerSignal.reason),
+          { once: true },
+        );
+    }
+
     const redirector = new RedirectorHostAccessor(pid);
     const nthread = new NThread(
       pid,
       t.tid,
-      options.nthreadOptions ?? {},
+      { ...options.nthreadOptions, signal: controller.signal },
       redirector,
     );
     redirector.target = nthread;
-    return { redirector, nthread, init: nthread.init() };
+    return { controller, redirector, nthread, init: nthread.init() };
   });
 
   let winner: (typeof candidates)[number];
   try {
     winner = await Promise.any(candidates.map((c) => c.init.then(() => c)));
   } catch (err) {
+    for (const c of candidates) c.controller.abort();
     throw new Error(
       `createAccessor: none of process ${pid}'s ${candidates.length} thread(s) could be initialized`,
       { cause: err },
@@ -185,6 +212,7 @@ async function raceProcessThreads(
 
   for (const c of candidates) {
     if (c === winner) continue;
+    c.controller.abort();
     c.init
       .finally(() => {
         c.nthread.deinit().catch(() => {});
