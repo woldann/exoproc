@@ -4,9 +4,9 @@ import {
   type ISyncCallableMemoryAccessor,
   isInittableAccessor,
 } from 'bun-xffi';
-import { type NThreadOptions } from 'bun-nthread';
+import { NThread, type NThreadOptions } from 'bun-nthread';
 import { NShm, type NShmOptions } from 'bun-nshm';
-import { HostAccessor } from './middleware-accessor.js';
+import { HostAccessor, RedirectorHostAccessor } from './middleware-accessor.js';
 import { IndirectNThreadHostAccessor } from './indirect-nthread-host-accessor.js';
 
 /** What {@link createAccessor}'s `id` parameter identifies. */
@@ -121,12 +121,26 @@ function resolveBaseAccessor(
 }
 
 /**
- * `idType: 'processAllThreadIds'` support -- builds an
- * {@link IndirectNThreadHostAccessor} for every thread `pid` currently has
- * and starts initializing all of them in parallel. The first one whose
- * `init()` resolves wins and is returned; every other candidate is
- * deinitialized in the background once its own `init()` settles (a no-op if
- * it never finished, or already failed). See {@link AccessorOptions.idType}.
+ * `idType: 'processAllThreadIds'` support -- races every thread `pid`
+ * currently has, but only initializes the *raw* {@link NThread} hijack per
+ * candidate, not a full {@link IndirectNThreadHostAccessor} chain. The full
+ * chain's own `onInit()` does real extra work beyond landing the hijack
+ * (`IndirectCallRedirectorAccessor`, `MachineCodePoolMiddleware`, an msvcrt
+ * check, opening a remote temp file for `FileTransferWriteAccessor`, ...) --
+ * that only needs to happen once, for whichever thread actually wins, not
+ * once per candidate.
+ *
+ * Each candidate gets an `NThread` wired to a {@link RedirectorHostAccessor}
+ * whose `target` initially loops back to the `NThread` itself, so
+ * `NThread.onInit()`'s `this.root.call(...)` bootstrap calls land on
+ * `NThread.call()` directly -- exactly the primitive register-context calls
+ * the hijack itself needs, none of the heavier chain. Once a winner is
+ * found, a real `IndirectNThreadHostAccessor` is built from its (already
+ * initialized) `NThread` and the redirector's `target` is rewired to it --
+ * see that class's own doc comment for why the caller does this rewiring for
+ * the `backend: NThread` constructor form. The returned accessor is *not*
+ * initialized yet -- `createAccessor` initializes it (and only it) the same
+ * way it does for `'thread'`/`'process'`.
  */
 async function raceProcessThreads(
   pid: number,
@@ -140,12 +154,15 @@ async function raceProcessThreads(
   }
 
   const candidates = threads.map((t) => {
-    const accessor = new IndirectNThreadHostAccessor(
+    const redirector = new RedirectorHostAccessor(pid);
+    const nthread = new NThread(
       pid,
       t.tid,
-      options.nthreadOptions,
+      options.nthreadOptions ?? {},
+      redirector,
     );
-    return { accessor, init: accessor.init() };
+    redirector.target = nthread;
+    return { redirector, nthread, init: nthread.init() };
   });
 
   let winner: (typeof candidates)[number];
@@ -162,12 +179,14 @@ async function raceProcessThreads(
     if (c === winner) continue;
     c.init
       .finally(() => {
-        c.accessor.deinit().catch(() => {});
+        c.nthread.deinit().catch(() => {});
       })
       .catch(() => {});
   }
 
-  return winner.accessor;
+  const indirect = new IndirectNThreadHostAccessor(winner.nthread);
+  winner.redirector.target = indirect;
+  return indirect;
 }
 
 /**
