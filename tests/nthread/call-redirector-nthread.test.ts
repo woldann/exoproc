@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { MemoryProtection, isInittableAccessor } from 'bun-xffi';
+import { MemoryProtection } from 'bun-xffi';
 import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -56,7 +56,7 @@ describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThrea
       expect(oldProtect).toBe(MemoryProtection.EXECUTE_READWRITE);
       await accessor.free(execAddr);
     } finally {
-      if (isInittableAccessor(accessor)) await accessor.deinit();
+      await accessor.deinit();
     }
   }, 60000);
 });

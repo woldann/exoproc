@@ -5,7 +5,6 @@ import {
   MemoryProtection,
   MemoryState,
   resolveAddress,
-  isInittableAccessor,
 } from 'bun-xffi';
 import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
@@ -41,7 +40,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
       expect(back.toString()).toBe(data.toString());
       await memory.free(addr);
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 30000);
 
@@ -79,7 +78,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
       await memory.free(near);
       await memory.free(anchor);
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 120000);
 });

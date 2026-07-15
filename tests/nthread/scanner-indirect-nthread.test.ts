@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { resolveAddress, isInittableAccessor } from 'bun-xffi';
+import { resolveAddress } from 'bun-xffi';
 import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -59,7 +59,7 @@ describe('nthread > Scanner over IndirectNThreadHostAccessor', () => {
 
       await accessor.free(addr);
     } finally {
-      if (isInittableAccessor(accessor)) await accessor.deinit();
+      await accessor.deinit();
     }
   }, 60000);
 });

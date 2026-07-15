@@ -1,10 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import {
-  cmachinecode,
-  CType,
-  createCFunction,
-  isInittableAccessor,
-} from 'bun-xffi';
+import { cmachinecode, CType, createCFunction } from 'bun-xffi';
 import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -96,7 +91,7 @@ describe('nthread > cmachinecode remote execution', () => {
       // The length of "Virtual MachineCode Direct Address Patching Works!" is 48
       expect(result).toBe(48n);
     } finally {
-      if (isInittableAccessor(accessor)) await accessor.deinit();
+      await accessor.deinit();
     }
   }, 60000);
 });

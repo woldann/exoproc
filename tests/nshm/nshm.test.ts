@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { Kernel32Impl, isInittableAccessor } from 'bun-xffi';
+import { Kernel32Impl } from 'bun-xffi';
 import { createAccessor, createAccessorWithoutInit } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -62,7 +62,7 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
       // close -- alloc() already closed the target's mapping handle itself).
       await memory.call(Kernel32Impl.UnmapViewOfFile, addr);
       await shm.free(addr);
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 60000);
 
@@ -93,7 +93,7 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
       await memory.call(Kernel32Impl.UnmapViewOfFile, addr2);
       await shm.free(addr1);
       await shm.free(addr2);
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 60000);
 });

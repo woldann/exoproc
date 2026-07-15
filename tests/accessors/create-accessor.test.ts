@@ -9,7 +9,7 @@ import {
   createAccessorWithoutInit,
   createAccessorOptions,
   isInittableAccessor,
-  type IHostAccessor,
+  type HostAccessor,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -49,9 +49,7 @@ describe('createAccessor', () => {
 
     const result = createAccessor(proc.pid);
     expect(result).toBeInstanceOf(Promise);
-    return result.then(async (memory) => {
-      if (isInittableAccessor(memory)) await memory.deinit();
-    });
+    return result.then((memory) => memory.deinit());
   }, 30000);
 
   test('defaults to a process id and races all its threads', async () => {
@@ -75,7 +73,7 @@ describe('createAccessor', () => {
       expect(back.toString()).toBe(data.toString());
       await memory.free(addr);
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 30000);
 
@@ -89,7 +87,7 @@ describe('createAccessor', () => {
       const remoteTid = await memory.call(Kernel32Impl.GetCurrentThreadId);
       expect(Number(remoteTid)).toBe(thread.tid);
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 30000);
 
@@ -102,7 +100,7 @@ describe('createAccessor', () => {
         true,
       );
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 30000);
 
@@ -128,7 +126,7 @@ describe('createAccessor', () => {
       );
       await memory.free(addr);
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
     }
   }, 30000);
 
@@ -140,7 +138,7 @@ describe('createAccessor', () => {
   });
 
   test('options.backend is returned directly, without touching id/idType', () => {
-    const sentinel = {} as unknown as IHostAccessor;
+    const sentinel = {} as unknown as HostAccessor;
 
     // A bogus id would normally throw during resolution (see the two error
     // tests below) -- passing `backend` must skip that resolution entirely.
@@ -204,7 +202,7 @@ describe('createAccessor', () => {
       raw.close();
       await base.call(Kernel32Impl.UnmapViewOfFile, addr);
       await memory.free(addr);
-      if (isInittableAccessor(base)) await base.deinit();
+      await base.deinit();
     }
   }, 30000);
 });

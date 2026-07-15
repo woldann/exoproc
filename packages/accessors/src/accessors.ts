@@ -226,23 +226,35 @@ async function raceProcessThreads(
 }
 
 /**
- * Builds the same {@link IHostAccessor} {@link createAccessor} does, without
- * initializing it -- the returned accessor still lazily initializes on its
- * first real operation (every {@link InittableMiddlewareAccessor} op is
- * guarded by `!isInitializing -> await this.init()`), it's just not
- * pre-initialized up front. Defaults to {@link IndirectNThreadHostAccessor}
- * (thread redirection -- no `CreateRemoteThread` and no remote allocation
- * for the call mechanism itself); pass `options.backend` to use a different
- * strategy instead.
+ * Builds the same accessor {@link createAccessor} does, without initializing
+ * it -- the result still lazily initializes on its first real operation
+ * (every {@link InittableMiddlewareAccessor} op is guarded by
+ * `!isInitializing -> await this.init()`), it's just not pre-initialized up
+ * front. Defaults to {@link IndirectNThreadHostAccessor} (thread redirection
+ * -- no `CreateRemoteThread` and no remote allocation for the call mechanism
+ * itself); pass `options.backend` to use a different strategy instead.
+ *
+ * Return type: without `options.sharedMemory: true`, the result is always a
+ * real {@link HostAccessor} (whatever the concrete strategy, its `init`/
+ * `deinit`/etc. are directly callable -- no {@link isInittableAccessor}
+ * check needed). With `sharedMemory: true` the result is the shared-memory
+ * wrapper instead ({@link NShm} by default), which is a plain
+ * `ISyncCallableMemoryAccessor`, *not* inittable -- hence the looser
+ * {@link IHostAccessor} return type for that overload.
  *
  * `options.idType` defaults to `'processAllThreadIds'` (see
  * {@link AccessorOptions.idType}), which this function can't support -- it
  * throws unless you explicitly pass `'thread'` (name one specific thread
  * directly) or `'process'` (hand in a pid and auto-pick its first thread).
- *
- * Pass `options.sharedMemory = true` to wrap the result in a shared-memory
- * middleware ({@link NShm} by default) -- see {@link AccessorOptions.sharedMemory}.
  */
+export function createAccessorWithoutInit(
+  id: number,
+  options?: AccessorOptions & { sharedMemory?: false },
+): HostAccessor;
+export function createAccessorWithoutInit(
+  id: number,
+  options: AccessorOptions,
+): IHostAccessor;
 export function createAccessorWithoutInit(
   id: number,
   options: AccessorOptions = {},
@@ -261,7 +273,8 @@ export function createAccessorWithoutInit(
  * {@link createAccessorWithoutInit}, followed by `await`ing the result's
  * `init()` (when it has one -- see {@link isInittableAccessor}) so the
  * accessor is already initialized by the time this resolves, instead of
- * initializing lazily on its first real operation.
+ * initializing lazily on its first real operation. Same overloaded return
+ * type as {@link createAccessorWithoutInit} -- see its doc comment.
  *
  * Also the only entry point for `options.idType === 'processAllThreadIds'`
  * (see {@link AccessorOptions.idType}) -- that mode races every thread in
@@ -271,6 +284,14 @@ export function createAccessorWithoutInit(
  * `createAccessorWithoutInit` as `options.backend`, so `sharedMemory`
  * wrapping still applies exactly as it does for the other `idType`s.
  */
+export async function createAccessor(
+  id: number,
+  options?: AccessorOptions & { sharedMemory?: false },
+): Promise<HostAccessor>;
+export async function createAccessor(
+  id: number,
+  options: AccessorOptions,
+): Promise<IHostAccessor>;
 export async function createAccessor(
   id: number,
   options: AccessorOptions = {},

@@ -2,7 +2,6 @@ import { expect, test, describe } from 'bun:test';
 import {
   isModuleLoadedInProcess,
   verifyCoreModules,
-  isInittableAccessor,
   Kernel32Impl,
 } from 'bun-xffi';
 import { createAccessor } from 'exoproc-accessors';
@@ -52,7 +51,7 @@ describe('nthread > Module Loading Helpers', () => {
       expect(coreStatus.kernelbase).toBe(true);
       expect(coreStatus.msvcrt).toBe(true);
     } finally {
-      if (isInittableAccessor(accessor)) await accessor.deinit();
+      await accessor.deinit();
     }
   }, 60000);
 });

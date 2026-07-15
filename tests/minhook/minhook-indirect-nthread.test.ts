@@ -6,7 +6,6 @@ import {
   RemoteCallableMemoryAccessor,
   Kernel32Impl,
   createAccessor,
-  isInittableAccessor,
   MinHook,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
@@ -121,7 +120,7 @@ describe('MinHook over IndirectNThreadHostAccessor (cross-process, thread-hijack
       await hook.destroy();
       expect(minhook.has(target)).toBe(false);
     } finally {
-      if (isInittableAccessor(memory)) await memory.deinit();
+      await memory.deinit();
       verifier.close();
     }
   }, 120000);

@@ -1,5 +1,4 @@
 import { expect, test, describe } from 'bun:test';
-import { isInittableAccessor } from 'bun-xffi';
 import {
   ProcessCacheAccessor,
   HostAccessor,
@@ -55,7 +54,7 @@ describe('nthread > ProcessCacheAccessor', () => {
       const coreModulesCached = await cacheAccessor.getCoreModules();
       expect(coreModulesCached).toEqual(coreModules);
     } finally {
-      if (isInittableAccessor(nthreadAccessor)) await nthreadAccessor.deinit();
+      await nthreadAccessor.deinit();
     }
   }, 60000);
 });
