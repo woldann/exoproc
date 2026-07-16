@@ -43,8 +43,11 @@ import {
   isModuleLoadedInProcessSync,
   MiddlewareAccessor,
   InittableMiddlewareAccessor,
+  isInittableAccessor,
   HostAccessor,
   type IHostAccessor,
+  type IInittableAccessor,
+  type IMiddlewareAccessor,
 } from 'bun-xffi';
 
 export { HostAccessor };
@@ -319,6 +322,96 @@ export class RedirectorHostAccessor extends HostAccessor {
 
   protected override onInitSync(): void {
     // No-op. The target is initialized separately.
+  }
+}
+
+/**
+ * A `HostAccessor` that races the `init()` of a set of candidate accessors
+ * ("racers") and becomes whichever one finishes first -- `backend`
+ * (inherited from `MiddlewareAccessor`, an ordinary mutable field) is
+ * reassigned to the winner once `onInit()` resolves, so every op this class
+ * inherits (`read`, `write`, `alloc`, `call`, ...) already forwards to it
+ * with no per-op overrides needed, unlike {@link RedirectorHostAccessor}.
+ * Meant to be used as *another* accessor's `backend` (e.g.
+ * `NThreadRaceAccessor`, which stands in for a not-yet-known `NThread`
+ * inside an `IndirectNThreadHostAccessor`'s own chain -- see its doc
+ * comment) rather than exposed directly, since nothing splices middleware
+ * into an internal implementation detail like this one.
+ *
+ * Deliberately knows nothing about *why* a caller is racing candidates -- no
+ * `NThread`, no `AbortController`, no timeout; a caller that needs to cancel
+ * the losers does so itself, by extending this class (see
+ * `NThreadRaceHelperAccessor`) and overriding `releaseLoser`.
+ *
+ * Candidates are never added explicitly -- every `MiddlewareAccessor`'s
+ * constructor calls `root.registerChild(this)` (a no-op on every other
+ * `IHostAccessor`; see its doc comment), so simply constructing a candidate
+ * with this instance (or a subclass) as its `root` is enough to enter it
+ * into the race:
+ *
+ *   const race = new RaceHostAccessor(pid);
+ *   new SomeCandidate(backendA, race); // auto-registers
+ *   new SomeCandidate(backendB, race); // auto-registers
+ *   await race.init();
+ *   const winner = race.backend; // whichever candidate initialized first
+ */
+export class RaceHostAccessor extends HostAccessor {
+  protected readonly racers: IInittableAccessor[] = [];
+
+  constructor(processId: number, root?: IHostAccessor) {
+    super(new ThrowingMemoryAccessor(processId), root);
+  }
+
+  override registerChild(child: IMiddlewareAccessor): void {
+    if (isInittableAccessor(child)) {
+      this.racers.push(child);
+    }
+  }
+
+  protected override async onInit(): Promise<void> {
+    if (this.racers.length === 0) {
+      throw new Error('RaceHostAccessor: no racers registered to race');
+    }
+    const attempts = this.racers.map((racer) => ({
+      racer,
+      settled: racer.init(),
+    }));
+    let winner: IInittableAccessor;
+    try {
+      winner = await Promise.any(
+        attempts.map((a) => a.settled.then(() => a.racer)),
+      );
+    } catch (err) {
+      throw new Error(
+        `RaceHostAccessor: none of ${attempts.length} racer(s) could be initialized`,
+        { cause: err },
+      );
+    }
+    this.backend = winner;
+    for (const a of attempts) {
+      if (a.racer === winner) continue;
+      this.releaseLoser(a.racer, a.settled);
+    }
+  }
+
+  /**
+   * Called once per losing racer, right after a winner is picked. Default:
+   * deinit it once (if) its own `init()` eventually settles -- `deinit()` is
+   * a no-op for one that never finished or that already failed. Subclasses
+   * (e.g. `NThreadRaceHelperAccessor`) can override this to *also* cancel an
+   * in-flight racer immediately, instead of only cleaning up after the fact.
+   */
+  protected releaseLoser(
+    racer: IInittableAccessor,
+    settled: Promise<void>,
+  ): void {
+    settled.then(() => racer.deinit().catch(() => {})).catch(() => {});
+  }
+
+  protected override onInitSync(): never {
+    // Promise.any has no synchronous equivalent -- racing N async init()
+    // calls can't be expressed without actually yielding to the event loop.
+    throw new Error('RaceHostAccessor does not support initSync()');
   }
 }
 

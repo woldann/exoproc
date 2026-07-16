@@ -7,7 +7,7 @@ import {
   DuplicateHandleOptions,
   INVALID_HANDLE_VALUE,
   resolveAddress,
-  HostAccessor,
+  MiddlewareAccessor,
   type AddressLike,
   type ICallableMemoryAccessor,
   type ISyncCallableMemoryAccessor,
@@ -152,7 +152,7 @@ function openDummyHandleInTargetSync(
 export const closeGlobalDummyProcess = closeSharedDummyProcess;
 
 /**
- * A `HostAccessor` wrapping `backend` (an already hijacked/attached
+ * A `MiddlewareAccessor` wrapping `backend` (an already hijacked/attached
  * target process accessor, e.g. `IndirectNThreadHostAccessor`) whose plain
  * `READWRITE` allocations (no specific address requested) are backed by
  * cross-process shared memory instead of the backend's normal remote
@@ -206,7 +206,7 @@ export const closeGlobalDummyProcess = closeSharedDummyProcess;
  *     uses the memory itself, so it has no reason to keep a handle around),
  *     then `MapViewOfFile`s it locally.
  */
-export class NShm extends HostAccessor {
+export class NShm extends MiddlewareAccessor {
   private readonly regions = new Map<number, NShmRegion>();
 
   constructor(

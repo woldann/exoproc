@@ -24,7 +24,7 @@ describe('nthread > ProcessCacheAccessor', () => {
     const tp = getGlobalDummyProcess();
 
     const nthreadAccessor = await createAccessor(tp.pid, {
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
 
     try {

@@ -8,7 +8,9 @@ import {
   createAccessor,
   createAccessorWithoutInit,
   createAccessorOptions,
-  HostAccessor,
+  isInittableAccessor,
+  type HostAccessor,
+  type NThreadOptions,
 } from 'exoproc';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
@@ -18,8 +20,8 @@ describe('createAccessorWithoutInit', () => {
     const thread = Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    // idType: 'thread' explicitly -- the default (idType: 'processAllThreadIds')
-    // can't be resolved synchronously, see below.
+    // idType: 'thread' explicitly -- see below for the default
+    // (idType: 'processAllThreadIds').
     const memory = createAccessorWithoutInit(thread.tid, {
       idType: 'thread',
     });
@@ -28,17 +30,33 @@ describe('createAccessorWithoutInit', () => {
     memory.close();
   });
 
-  test('throws by default, since idType now defaults to "processAllThreadIds"', () => {
+  test('idType: "processAllThreadIds" (the default) also returns synchronously, without racing yet', () => {
     const proc = getGlobalDummyProcess();
-    expect(() => createAccessorWithoutInit(proc.pid)).toThrow(
-      /can't be resolved synchronously/,
-    );
+    // A genuine IndirectNThreadHostAccessor, same as every other idType --
+    // NThreadRaceAccessor (its internal `NThread` stand-in) never surfaces
+    // to callers, see its doc comment. Its own constructor builds every
+    // candidate NThread synchronously; racing them is what init() defers.
+    const memory = createAccessorWithoutInit(proc.pid);
+    expect(memory).not.toBeInstanceOf(Promise);
+    expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
+    memory.close();
   });
 
-  test('rejects idType: "processAllThreadIds" explicitly too', () => {
-    expect(() =>
-      createAccessorWithoutInit(0, { idType: 'processAllThreadIds' }),
-    ).toThrow(/can't be resolved synchronously/);
+  test('idType: "processAllThreadIds" explicitly behaves the same as the default', () => {
+    const proc = getGlobalDummyProcess();
+    const memory = createAccessorWithoutInit(proc.pid, {
+      idType: 'processAllThreadIds',
+    });
+    expect(memory).not.toBeInstanceOf(Promise);
+    expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
+    memory.close();
+  });
+
+  test('idType: "processAllThreadIds" throws synchronously when the process has no threads', () => {
+    const bogusPid = 999999;
+    expect(() => createAccessorWithoutInit(bogusPid)).toThrow(
+      /no threads to redirect/,
+    );
   });
 });
 
@@ -107,7 +125,7 @@ describe('createAccessor', () => {
     const proc = getGlobalDummyProcess();
     const memory = await createAccessor(proc.pid, {
       idType: 'processAllThreadIds',
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
     try {
       // The winner is a real, already-initialized accessor on one of the
@@ -152,8 +170,7 @@ describe('createAccessor', () => {
     const bogusThreadId = 999999999;
     // createAccessorWithoutInit -- pure id-resolution failure, thrown
     // synchronously before any accessor is built. idType: 'thread' explicit
-    // -- the default (idType: 'processAllThreadIds') would throw for an
-    // entirely different reason (can't be resolved synchronously at all).
+    // so the id is looked up as a thread id, not a pid.
     expect(() =>
       createAccessorWithoutInit(bogusThreadId, { idType: 'thread' }),
     ).toThrow(/no thread with id/);
@@ -174,14 +191,17 @@ describe('createAccessor', () => {
     const thread = Thread.getThreads(proc.pid)[0];
     if (!thread) throw new Error('No thread found in the spawned process');
 
-    // NShm (the default sharedMemory provider) is itself a HostAccessor, so
-    // memory.deinit() below cascades to deinit its backend too -- no need to
-    // separately build/track the base accessor just to clean it up.
+    // sharedMemory: true splices NShm into the resolved accessor's own
+    // backend chain and returns that same accessor (see
+    // createAccessorWithoutInit's doc comment) -- `memory` here really is
+    // the IndirectNThreadHostAccessor idType: 'thread' would have returned
+    // on its own, so its own deinit()/call() work directly, no separate
+    // handle needed just for cleanup.
     const memory = await createAccessor(thread.tid, {
       idType: 'thread',
       sharedMemory: true,
     });
-    expect(memory).toBeInstanceOf(HostAccessor);
+    expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
 
     const addr = await memory.alloc(4096);
     // Independent raw ReadProcessMemory check (not another NThread hijack of
@@ -201,13 +221,42 @@ describe('createAccessor', () => {
       await memory.deinit();
     }
   }, 30000);
+
+  test('sharedMemory: true also works with the default idType (processAllThreadIds)', async () => {
+    const proc = getGlobalDummyProcess();
+
+    // No idType -- resolveBaseAccessor still returns a genuine
+    // IndirectNThreadHostAccessor synchronously (NThreadRaceAccessor is
+    // nested inside it, standing in for `.nthread` until init() resolves the
+    // race -- see its doc comment), so the sharedMemory splice in
+    // createAccessorWithoutInit lands on the *same* object whether racing is
+    // involved or not, and nothing about init()/onInit() ever reassigns
+    // `IndirectNThreadHostAccessor`'s own `backend` afterward to disturb it.
+    const memory = await createAccessor(proc.pid, { sharedMemory: true });
+    expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
+
+    const addr = await memory.alloc(4096);
+    const raw = new RemoteMemoryAccessor(proc.pid);
+    try {
+      const marker = Buffer.from('processAllThreadIds shared memory!\0');
+      await memory.write(addr, marker);
+
+      const seenInTarget = raw.readSync(addr, marker.byteLength);
+      expect(seenInTarget.toString()).toBe(marker.toString());
+    } finally {
+      raw.close();
+      await memory.call(Kernel32Impl.UnmapViewOfFile, addr);
+      await memory.free(addr);
+      await memory.deinit();
+    }
+  }, 30000);
 });
 
 describe('createAccessorOptions', () => {
   test('defaults to the gentle (level 1) preset, with shared memory off', () => {
     expect(createAccessorOptions()).toEqual(createAccessorOptions(1));
     expect(createAccessorOptions(1)).toEqual({
-      nthreadOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
+      hostOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
       sharedMemory: false,
     });
   });
@@ -216,8 +265,13 @@ describe('createAccessorOptions', () => {
     const gentle = createAccessorOptions(1);
     const balanced = createAccessorOptions(2);
 
-    expect(balanced.nthreadOptions!.timeoutMs!).toBeLessThan(
-      gentle.nthreadOptions!.timeoutMs!,
+    // hostOptions is untyped (Record<string, unknown>) since it's forwarded
+    // to whatever `host` class is in play -- cast back to the default
+    // host's NThreadOptions shape to inspect it here.
+    const balancedHostOptions = balanced.hostOptions as NThreadOptions;
+    const gentleHostOptions = gentle.hostOptions as NThreadOptions;
+    expect(balancedHostOptions.timeoutMs!).toBeLessThan(
+      gentleHostOptions.timeoutMs!,
     );
     expect(gentle.sharedMemory).toBe(false);
     expect(balanced.sharedMemory).toBe(true);
@@ -235,7 +289,7 @@ describe('createAccessorOptions', () => {
         true,
       );
     } finally {
-      await memory.deinit();
+      if (isInittableAccessor(memory)) await memory.deinit();
     }
   }, 30000);
 });

@@ -116,6 +116,11 @@ export class NThread extends InittableMiddlewareAccessor {
     this.autoSuspend = options.autoSuspend ?? false;
   }
 
+  // No-op -- see IHostAccessor.registerChild's doc comment. NThread is only
+  // ever used as an IHostAccessor (e.g. a RedirectorHostAccessor's `target`),
+  // never as a racing host itself, so it has nothing to do with a child.
+  registerChild(): void {}
+
   /** The OS thread ID of the redirected thread. Only valid once initialized. */
   get tid(): number {
     return this.nativeThread!.tid;

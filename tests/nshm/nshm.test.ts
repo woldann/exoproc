@@ -29,7 +29,7 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
 
     const memory = createAccessorWithoutInit(target.pid, {
       idType: 'process',
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
     const shm = await createAccessor(target.pid, {
       backend: memory,
@@ -71,7 +71,7 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
 
     const memory = createAccessorWithoutInit(target.pid, {
       idType: 'process',
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
     const shm = await createAccessor(target.pid, {
       backend: memory,

@@ -9,17 +9,26 @@ import { type Pattern } from './win/scanner.js';
 
 /**
  * Minimal surface `MiddlewareAccessor`/`InittableMiddlewareAccessor` (and
- * `DebugMemoryAccessor`) need from a `root` accessor. The concrete
- * `HostAccessor` class (and its whole family -- `RedirectorHostAccessor`,
- * `BootstrapHostAccessor`, etc.) lives in `exoproc-accessors`, a package that
- * depends on `bun-xffi`; typing `root` as the concrete class here would make
- * `bun-xffi` depend back on `exoproc-accessors`, a cycle. `HostAccessor`
- * structurally satisfies this interface already (it extends
- * `InittableMiddlewareAccessor`, which provides every `ISyncCallableMemoryAccessor`
- * method), so nothing downstream needs to change to conform to it.
+ * `DebugMemoryAccessor`) need from a `root` accessor. `HostAccessor` itself
+ * lives here too (below); the rest of its family that's specific to the
+ * default indirect-call chain (`RedirectorHostAccessor`,
+ * `BootstrapHostAccessor`, `RaceHostAccessor`, etc.) lives in
+ * `exoproc-accessors` instead, extending `HostAccessor` across the package
+ * boundary. This interface still exists as the structural contract `root`
+ * is typed against everywhere in this file, independent of which concrete
+ * subclass is actually passed in.
  */
 export interface IHostAccessor extends ISyncCallableMemoryAccessor {
   close(): void;
+  /**
+   * Called by every `MiddlewareAccessor`'s constructor with itself as `this`
+   * host is its `root` -- a no-op for ordinary hosts, but lets a host that
+   * cares (e.g. a class that races several candidates for whichever
+   * initializes first) discover its whole subtree automatically, just by
+   * being passed as `root` when those candidates are built, instead of every
+   * caller having to separately register each one by hand.
+   */
+  registerChild(child: IMiddlewareAccessor): void;
 }
 
 /**
@@ -112,6 +121,7 @@ export class MiddlewareAccessor extends AbstractSyncMemoryAccessor {
     super(pid);
     this.backend = backend;
     this.root = root;
+    if (root) root.registerChild(this);
   }
 
   override enableDebug(): void {
@@ -725,6 +735,11 @@ export class HostAccessor extends InittableMiddlewareAccessor {
   protected override onInitSync(): void {
     // No-op. Chain initialization is automatically propagated by initSync().
   }
+
+  // No-op by default -- see IHostAccessor.registerChild's doc comment.
+  // RaceHostAccessor (exoproc-accessors) is the only override that does
+  // anything with it.
+  registerChild(_child: IMiddlewareAccessor): void {}
 
   // deinit()/deinitSync() are inherited as-is from InittableMiddlewareAccessor:
   // deinitNext()/deinitNextSync() already walk the whole `backend` chain and

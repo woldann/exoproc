@@ -20,7 +20,7 @@ describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThrea
     const tp = getGlobalDummyProcess();
 
     const accessor = await createAccessor(tp.pid, {
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
 
     try {

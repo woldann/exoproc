@@ -1,9 +1,12 @@
 import { Thread } from 'bun-winapi';
 import { type ISyncCallableMemoryAccessor } from 'bun-xffi';
-import { NThread, type NThreadOptions } from 'bun-nthread';
-import { NShm, type NShmOptions } from 'bun-nshm';
-import { HostAccessor, RedirectorHostAccessor } from './middleware-accessor.js';
-import { IndirectNThreadHostAccessor } from './indirect-nthread-host-accessor.js';
+import { type NThreadOptions } from 'bun-nthread';
+import { NShm } from 'bun-nshm';
+import { HostAccessor } from './middleware-accessor.js';
+import {
+  IndirectNThreadHostAccessor,
+  NThreadRaceAccessor,
+} from './indirect-nthread-host-accessor.js';
 
 /** What {@link createAccessor}'s `id` parameter identifies. */
 export type AccessorIdType = 'thread' | 'process' | 'processAllThreadIds';
@@ -11,11 +14,8 @@ export type AccessorIdType = 'thread' | 'process' | 'processAllThreadIds';
 /**
  * Default for {@link AccessorOptions.idType} when omitted -- `id` is treated
  * as a pid and every one of its threads races for the hijack (see
- * {@link raceProcessThreads}), so callers don't have to pick a thread
- * themselves. Shared by {@link resolveBaseAccessor} and {@link createAccessor}
- * so the two stay consistent: {@link createAccessorWithoutInit} (which can't
- * support this idType -- see {@link resolveBaseAccessor}) throws by default
- * unless the caller explicitly opts into `'thread'`/`'process'`.
+ * {@link NThreadRaceAccessor}), so callers don't have to pick a thread
+ * themselves.
  */
 const DEFAULT_ID_TYPE: AccessorIdType = 'processAllThreadIds';
 
@@ -25,22 +25,23 @@ const DEFAULT_ID_TYPE: AccessorIdType = 'processAllThreadIds';
 export interface AccessorOptions {
   /**
    * Whether `id` is a thread id or a process id. Default:
-   * `'processAllThreadIds'` -- `id` is a pid, and this builds an accessor
-   * for *every* thread the process currently has, starting all of them
-   * initializing in parallel, since there's no way to tell in advance which
-   * thread(s) (if any) will ever return to user mode (see CLAUDE.md's
-   * `ping.exe`/`DummyProcess` notes on why a thread parked in an indefinite
-   * kernel wait never lands the redirect). Whichever one's `init()`
-   * resolves first wins and becomes the returned accessor; every other
-   * candidate is deinitialized in the background as soon as its own
-   * `init()` settles (deinit is a no-op for one that never finished, or
-   * that already failed). Only usable with {@link createAccessor} --
-   * {@link createAccessorWithoutInit} can't decide which thread "worked"
-   * without actually attempting init on each one, so it throws by default
-   * unless you explicitly pass `'thread'`/`'process'`. Heavier than
-   * `'thread'`/`'process'` (one hijack attempt per thread, run
-   * concurrently) -- see CLAUDE.md's throughput-vs-stability notes on
-   * stressing a target harder.
+   * `'processAllThreadIds'` -- `id` is a pid, and this builds a genuine
+   * {@link IndirectNThreadHostAccessor} (via a {@link NThreadRaceAccessor}
+   * standing in for its `NThread`, internally -- see that class's doc
+   * comment) that, once initialized, races an `NThread` hijack attempt
+   * against *every* thread the process currently has, since there's no way
+   * to tell in advance which thread(s) (if any) will ever return to user
+   * mode (see CLAUDE.md's `ping.exe`/`DummyProcess` notes on why a thread
+   * parked in an indefinite kernel wait never lands the redirect).
+   * Whichever one's hijack lands first wins; every other candidate is
+   * aborted and deinitialized right away. Resolving *which* thread only
+   * happens inside `init()` (no `initSync()` support -- racing is
+   * inherently async) -- both {@link createAccessor} and
+   * {@link createAccessorWithoutInit} support this idType now, the latter
+   * just returns the accessor before racing anything (same as any other
+   * idType). Heavier than `'thread'`/`'process'` (one hijack attempt per
+   * thread, run concurrently) -- see CLAUDE.md's throughput-vs-stability
+   * notes on stressing a target harder.
    *
    * Pass `'thread'` to name one specific, already-live thread directly
    * ({@link IndirectNThreadHostAccessor}) instead of racing -- the precise,
@@ -50,8 +51,26 @@ export interface AccessorOptions {
    * the rest.
    */
   idType?: AccessorIdType;
-  /** Forwarded to the default {@link IndirectNThreadHostAccessor}'s `NThread`. Ignored when `backend` is supplied. */
-  nthreadOptions?: NThreadOptions;
+  /**
+   * The `HostAccessor` class to build for the default chain. Default:
+   * {@link IndirectNThreadHostAccessor}. Ignored when `backend` is supplied.
+   *
+   * When `host` is left at the default, `idType: 'processAllThreadIds'`
+   * behaves exactly as documented there (races every thread via
+   * `NThreadRaceAccessor`) and `hostOptions` is forwarded as `NThreadOptions`
+   * to the `NThread`(s) it builds -- the same thing `nthreadOptions` used to
+   * do, just renamed now that this isn't `NThread`-specific. A custom `host`
+   * is built directly as `new host(pid, threadId, hostOptions)`; there's no
+   * generic way to race across an arbitrary host class's threads, so
+   * `idType: 'processAllThreadIds'` isn't supported for one (throws).
+   */
+  host?: new (
+    pid: number,
+    threadId: number,
+    options?: Record<string, unknown>,
+  ) => HostAccessor;
+  /** Forwarded to `host`'s constructor. Ignored when `backend` is supplied. */
+  hostOptions?: Record<string, unknown>;
   /**
    * Use this accessor instead of building the default
    * {@link IndirectNThreadHostAccessor} chain -- any `HostAccessor` (or
@@ -66,21 +85,31 @@ export interface AccessorOptions {
    * supplied) with a shared-memory middleware: plain `READWRITE`
    * allocations get backed by cross-process shared memory, so reads/writes
    * against them skip the remote round-trip entirely after the initial
-   * `alloc()`. Default: `false`.
+   * `alloc()`. The middleware itself (e.g. {@link NShm}) is a plain,
+   * non-inittable `MiddlewareAccessor` -- {@link createAccessor}/
+   * {@link createAccessorWithoutInit} wrap it in an outer `HostAccessor` so
+   * the returned value is always a real `HostAccessor` regardless of this
+   * flag. Default: `false`.
    */
   sharedMemory?: boolean;
   /**
    * Shared-memory middleware class used when `sharedMemory` is `true`.
-   * Default: {@link NShm}. Must be a `HostAccessor` (NShm is) -- see
-   * {@link createAccessor}'s return type note.
+   * Default: {@link NShm}. `options` is untyped ({@link Record}) rather than
+   * {@link NShmOptions} on purpose -- a custom middleware isn't required to
+   * share NShm's options shape at all.
    */
-  sharedMemoryProvider?: new (
+  sharedMemoryMiddleware?: new (
     backend: ISyncCallableMemoryAccessor,
     root: HostAccessor,
-    options?: NShmOptions,
-  ) => HostAccessor;
-  /** Forwarded to `sharedMemoryProvider`. Ignored when `sharedMemory` is `false`. */
-  sharedMemoryOptions?: NShmOptions;
+    options?: Record<string, unknown>,
+  ) => ISyncCallableMemoryAccessor;
+  /**
+   * Forwarded to `sharedMemoryMiddleware`. Ignored when `sharedMemory` is
+   * `false`. Usually left empty -- {@link NShm}'s constructor (the default
+   * `sharedMemoryMiddleware`) treats a missing/empty options object as "use
+   * the defaults".
+   */
+  sharedMemoryOptions?: Record<string, unknown>;
 }
 
 /** Resolves `id` (a raw thread id) to its owning `{ pid, threadId }` pair. */
@@ -112,115 +141,29 @@ function resolveBaseAccessor(
     return options.backend;
   }
 
+  const Host = options.host ?? IndirectNThreadHostAccessor;
   const idType = options.idType ?? DEFAULT_ID_TYPE;
+
   if (idType === 'processAllThreadIds') {
-    throw new Error(
-      "createAccessor: idType 'processAllThreadIds' races every thread's " +
-        "init() to find one that actually works, so it can't be resolved " +
-        'synchronously -- use createAccessor(), not createAccessorWithoutInit(), for this idType.',
+    if (Host !== IndirectNThreadHostAccessor) {
+      throw new Error(
+        'createAccessor: idType "processAllThreadIds" is only supported ' +
+          "with the default host (IndirectNThreadHostAccessor) -- there's " +
+          "no generic way to race across an arbitrary host class's threads.",
+      );
+    }
+    return new IndirectNThreadHostAccessor(
+      new NThreadRaceAccessor(
+        id,
+        options.hostOptions as NThreadOptions | undefined,
+      ),
     );
   }
+
   const { pid, threadId } =
     idType === 'thread' ? resolveFromThreadId(id) : resolveFromProcessId(id);
 
-  return new IndirectNThreadHostAccessor(pid, threadId, options.nthreadOptions);
-}
-
-/**
- * `idType: 'processAllThreadIds'` support -- races every thread `pid`
- * currently has, but only initializes the *raw* {@link NThread} hijack per
- * candidate, not a full {@link IndirectNThreadHostAccessor} chain. The full
- * chain's own `onInit()` does real extra work beyond landing the hijack
- * (`IndirectCallRedirectorAccessor`, `MachineCodePoolMiddleware`, an msvcrt
- * check, opening a remote temp file for `FileTransferWriteAccessor`, ...) --
- * that only needs to happen once, for whichever thread actually wins, not
- * once per candidate.
- *
- * Each candidate gets its own `AbortController`, threaded into `NThread` via
- * `NThreadOptions.signal` -- `NThread.onInit()`'s landing-wait already honors
- * it (`waitForLanding(timeoutMs, this.options.signal)`), throwing
- * `WaitAbortedError` promptly, which `onInit()`'s own `catch` turns into an
- * immediate `closeThread()` (releases + resumes the thread, same as a normal
- * failure). As soon as a winner is found, every other candidate is aborted
- * right away -- they stop hammering `SuspendThread`/`SetThreadContext`/
- * `ResumeThread` on the target process within (roughly) one poll interval,
- * instead of continuing for up to their own `timeoutMs` in the background.
- * Racing multiple threads of the *same* process concurrently without this
- * turned out to destabilize it badly enough to fail unrelated, later tests
- * against the same shared target -- this is why cancellation isn't optional.
- *
- * Each candidate gets an `NThread` wired to a {@link RedirectorHostAccessor}
- * whose `target` initially loops back to the `NThread` itself, so
- * `NThread.onInit()`'s `this.root.call(...)` bootstrap calls land on
- * `NThread.call()` directly -- exactly the primitive register-context calls
- * the hijack itself needs, none of the heavier chain. Once a winner is
- * found, a real `IndirectNThreadHostAccessor` is built from its (already
- * initialized) `NThread` and the redirector's `target` is rewired to it --
- * see that class's own doc comment for why the caller does this rewiring for
- * the `backend: NThread` constructor form. The returned accessor is *not*
- * initialized yet -- `createAccessor` initializes it (and only it) the same
- * way it does for `'thread'`/`'process'`.
- */
-async function raceProcessThreads(
-  pid: number,
-  options: AccessorOptions,
-): Promise<IndirectNThreadHostAccessor> {
-  const threads = Thread.getThreads(pid);
-  if (threads.length === 0) {
-    throw new Error(
-      `createAccessor: process ${pid} has no threads to redirect`,
-    );
-  }
-
-  const callerSignal = options.nthreadOptions?.signal;
-  const candidates = threads.map((t) => {
-    const controller = new AbortController();
-    // Compose with a caller-supplied signal (if any) -- either one aborts this candidate.
-    if (callerSignal) {
-      if (callerSignal.aborted) controller.abort(callerSignal.reason);
-      else
-        callerSignal.addEventListener(
-          'abort',
-          () => controller.abort(callerSignal.reason),
-          { once: true },
-        );
-    }
-
-    const redirector = new RedirectorHostAccessor(pid);
-    const nthread = new NThread(
-      pid,
-      t.tid,
-      { ...options.nthreadOptions, signal: controller.signal },
-      redirector,
-    );
-    redirector.target = nthread;
-    return { controller, redirector, nthread, init: nthread.init() };
-  });
-
-  let winner: (typeof candidates)[number];
-  try {
-    winner = await Promise.any(candidates.map((c) => c.init.then(() => c)));
-  } catch (err) {
-    for (const c of candidates) c.controller.abort();
-    throw new Error(
-      `createAccessor: none of process ${pid}'s ${candidates.length} thread(s) could be initialized`,
-      { cause: err },
-    );
-  }
-
-  for (const c of candidates) {
-    if (c === winner) continue;
-    c.controller.abort();
-    c.init
-      .finally(() => {
-        c.nthread.deinit().catch(() => {});
-      })
-      .catch(() => {});
-  }
-
-  const indirect = new IndirectNThreadHostAccessor(winner.nthread);
-  winner.redirector.target = indirect;
-  return indirect;
+  return new Host(pid, threadId, options.hostOptions);
 }
 
 /**
@@ -233,13 +176,28 @@ async function raceProcessThreads(
  * itself); pass `options.backend` to use a different strategy instead.
  *
  * Always returns a real {@link HostAccessor} -- `init`/`deinit`/etc. are
- * directly callable on the result, `sharedMemory: true` included: the
- * default shared-memory wrapper ({@link NShm}) is itself a `HostAccessor`.
+ * directly callable on the result, `sharedMemory: true` included. Rather
+ * than wrapping the resolved base accessor in a new outer `HostAccessor`,
+ * `sharedMemory: true` splices the shared-memory middleware ({@link NShm} by
+ * default, a plain non-inittable `MiddlewareAccessor`) directly into the
+ * base accessor's own `backend` chain (`base.backend` becomes the
+ * middleware, whose own `backend` becomes whatever `base.backend` used to
+ * be) and returns `base` itself -- so the result is still the concrete
+ * class `resolveBaseAccessor` produced (e.g. `IndirectNThreadHostAccessor`,
+ * `.nthread` and all), just with allocations transparently intercepted.
+ * `HostAccessor.init()`/`.deinit()` skip over non-inittable middleware
+ * layers when walking the chain (see `InittableMiddlewareAccessor.initNext()`
+ * in bun-xffi), so this still reaches down and initializes/deinitializes
+ * the spliced-in middleware's own backend correctly.
  *
- * `options.idType` defaults to `'processAllThreadIds'` (see
- * {@link AccessorOptions.idType}), which this function can't support -- it
- * throws unless you explicitly pass `'thread'` (name one specific thread
- * directly) or `'process'` (hand in a pid and auto-pick its first thread).
+ * `options.idType` defaults to `'processAllThreadIds'`, which races every
+ * thread of the process via a {@link NThreadRaceAccessor} nested inside the
+ * built `IndirectNThreadHostAccessor` -- see {@link AccessorOptions.idType}.
+ * Building it still doesn't touch the target process (beyond a local
+ * `Thread.getThreads` snapshot to discover candidates) -- the actual hijack
+ * attempts, and picking a winner among them, only happen once `init()` runs,
+ * whether that's this function's caller doing it lazily on first real use,
+ * or {@link createAccessor} doing it eagerly.
  */
 export function createAccessorWithoutInit(
   id: number,
@@ -250,9 +208,19 @@ export function createAccessorWithoutInit(
     return base;
   }
 
-  const Provider = options.sharedMemoryProvider ?? NShm;
-  const root = new HostAccessor(base);
-  return new Provider(base, root, options.sharedMemoryOptions);
+  // Splice the shared-memory middleware into `base`'s own backend chain
+  // (base.backend -> middleware -> base's original backend) and return
+  // `base` itself, rather than allocating a new outer HostAccessor to wrap
+  // it -- this keeps `base`'s concrete class/identity intact (e.g. an
+  // IndirectNThreadHostAccessor's `.nthread` stays reachable) while every op
+  // still gets intercepted by the middleware, since `base`'s own ops already
+  // forward to `base.backend`.
+  base.backend = new (options.sharedMemoryMiddleware ?? NShm)(
+    base.backend,
+    base,
+    options.sharedMemoryOptions,
+  );
+  return base;
 }
 
 /**
@@ -261,25 +229,21 @@ export function createAccessorWithoutInit(
  * instead of initializing lazily on its first real operation. Same
  * always-`HostAccessor` return type as {@link createAccessorWithoutInit}.
  *
- * Also the only entry point for `options.idType === 'processAllThreadIds'`
- * (see {@link AccessorOptions.idType}) -- that mode races every thread in
- * the process, so it needs actual `init()` attempts to pick a winner and
- * can't be resolved synchronously the way `createAccessorWithoutInit` resolves
- * `'thread'`/`'process'`. The race's winning accessor is then handed to
- * `createAccessorWithoutInit` as `options.backend`, so `sharedMemory`
- * wrapping still applies exactly as it does for the other `idType`s.
+ * For `options.idType === 'processAllThreadIds'` (see
+ * {@link AccessorOptions.idType}), this `init()` call is what actually runs
+ * the race ({@link NThreadRaceAccessor.onInit}, nested inside the resolved
+ * {@link IndirectNThreadHostAccessor}'s own chain) -- picking a winner,
+ * aborting the rest, and (when `sharedMemory: true`) initializing the
+ * shared-memory middleware on top, all as part of this one `await`. The
+ * result is always a genuine `IndirectNThreadHostAccessor` for every
+ * `idType`, `processAllThreadIds` included -- `NThreadRaceAccessor` never
+ * surfaces to callers; see its own doc comment.
  */
 export async function createAccessor(
   id: number,
   options: AccessorOptions = {},
 ): Promise<HostAccessor> {
-  const idType = options.idType ?? DEFAULT_ID_TYPE;
-  const resolvedOptions =
-    !options.backend && idType === 'processAllThreadIds'
-      ? { ...options, backend: await raceProcessThreads(id, options) }
-      : options;
-
-  const accessor = createAccessorWithoutInit(id, resolvedOptions);
+  const accessor = createAccessorWithoutInit(id, options);
   await accessor.init();
   return accessor;
 }
@@ -301,14 +265,14 @@ export type AccessorAggressiveness = 1 | 2;
 
 const AGGRESSIVENESS_PRESETS: Record<
   AccessorAggressiveness,
-  { nthreadOptions: NThreadOptions; sharedMemory: boolean }
+  { hostOptions: NThreadOptions; sharedMemory: boolean }
 > = {
   1: {
-    nthreadOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
+    hostOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
     sharedMemory: false,
   },
   2: {
-    nthreadOptions: { timeoutMs: 5000, pollIntervalMs: 50 },
+    hostOptions: { timeoutMs: 5000, pollIntervalMs: 50 },
     sharedMemory: true,
   },
 };
@@ -323,7 +287,7 @@ export function createAccessorOptions(
 ): AccessorOptions {
   const preset = AGGRESSIVENESS_PRESETS[aggressiveness];
   return {
-    nthreadOptions: { ...preset.nthreadOptions },
+    hostOptions: { ...preset.hostOptions },
     sharedMemory: preset.sharedMemory,
   };
 }

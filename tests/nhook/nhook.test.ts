@@ -37,7 +37,7 @@ describe('NHook instruction simulation', () => {
 
   beforeAll(async () => {
     memory = await createAccessor(proc.pid, {
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
 
     nhook = new NHook(proc.pid);

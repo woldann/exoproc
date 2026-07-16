@@ -20,7 +20,7 @@ describe('MinHook end-to-end lifecycle (real compiled target + real compiled det
 
   test('create() builds a trampoline without touching the target; enable() installs the JMP and the detour actually runs', async () => {
     const memory = await createAccessor(proc.pid, {
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
     const minhook = new MinHook(proc.pid);
 

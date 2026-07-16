@@ -26,7 +26,7 @@ describe('MinHook over IndirectNThreadHostAccessor (cross-process, thread-hijack
 
   test('hooks a function in another process and its detours run when invoked via the hijacked thread', async () => {
     const memory = await createAccessor(proc.pid, {
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
     const minhook = new MinHook(proc.pid);
     // Independent view: raw ReadProcessMemory, nothing in common with the

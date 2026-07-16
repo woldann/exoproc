@@ -18,7 +18,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
     const proc = getGlobalDummyProcess();
 
     const memory = await createAccessor(proc.pid, {
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
 
     try {
@@ -53,7 +53,7 @@ describe('IndirectNThreadHostAccessor (indirect chain over NThread hijacking)', 
     const proc = getGlobalDummyProcess();
 
     const memory = await createAccessor(proc.pid, {
-      nthreadOptions: { timeoutMs: 20000 },
+      hostOptions: { timeoutMs: 20000 },
     });
 
     try {
