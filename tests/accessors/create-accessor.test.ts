@@ -9,6 +9,7 @@ import {
   createAccessorWithoutInit,
   createAccessorOptions,
   isInittableAccessor,
+  struct,
   type HostAccessor,
   type NThreadOptions,
 } from 'exoproc';
@@ -290,6 +291,53 @@ describe('createAccessorOptions', () => {
       );
     } finally {
       if (isInittableAccessor(memory)) await memory.deinit();
+    }
+  }, 30000);
+});
+
+describe('createAccessor + SyncStruct (level 2 / sharedMemory: true)', () => {
+  test('struct field reads/writes are synchronous (no await) and land cross-process', async () => {
+    const proc = getGlobalDummyProcess();
+
+    // createAccessor() itself is still async (it awaits init()/the thread
+    // race up front) -- idType defaults to 'processAllThreadIds', which
+    // races every thread of proc.pid and lands the hijack on whichever one
+    // wins, no manual thread picked here. Everything after this point --
+    // allocating the struct and reading/writing its fields -- is plain
+    // synchronous code, no await anywhere below. sharedMemory: true (level
+    // 2's preset) means Player.allocSync() below is backed by NShm: the
+    // struct's backing memory is mapped into this process too, so every
+    // field access after the initial allocation skips the remote round trip
+    // entirely.
+    const memory = await createAccessor(proc.pid, createAccessorOptions(2));
+    expect(memory).toBeInstanceOf(IndirectNThreadHostAccessor);
+
+    const Player = struct({ health: 'i32', mana: 'i32' });
+    const player = Player.allocSync(memory);
+
+    try {
+      player.health = 100;
+      player.mana = 50;
+      expect(player.health).toBe(100);
+      expect(player.mana).toBe(50);
+
+      player.health -= 35;
+      expect(player.health).toBe(65);
+
+      // Independent raw ReadProcessMemory check (not another NThread hijack
+      // of the same thread) -- proves the synchronous writes above really
+      // landed in the target process's memory, not just a local mirror.
+      const raw = new RemoteMemoryAccessor(proc.pid);
+      try {
+        expect(raw.readSync(player.address, 4).readInt32LE(0)).toBe(65);
+        expect(raw.readSync(player.address, 4, 4).readInt32LE(0)).toBe(50);
+      } finally {
+        raw.close();
+      }
+    } finally {
+      await memory.call(Kernel32Impl.UnmapViewOfFile, player.address);
+      await memory.free(player.address);
+      await memory.deinit();
     }
   }, 30000);
 });
