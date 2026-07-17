@@ -1,8 +1,11 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   isMiddlewareAccessor,
   type ISyncCallableMemoryAccessor,
   type IHostAccessor,
   type IInittableAccessor,
+  type CFunction,
+  type CCallResult,
 } from 'bun-xffi';
 import { Thread } from 'bun-winapi';
 import { NThread, type NThreadOptions } from 'bun-nthread';
@@ -11,7 +14,7 @@ import {
   ThrowingMemoryAccessor,
   RedirectorHostAccessor,
   BootstrapHostAccessor,
-  RaceHostAccessor,
+  RacingHostAccessor,
   IndirectCallRedirectorAccessor,
   MachineCodePoolMiddleware,
   MemsetWriteAccessor,
@@ -75,15 +78,16 @@ export class IndirectNThreadHostAccessor extends HostAccessor {
   /**
    * The real `NThread` this accessor's chain ultimately runs on. When built
    * from a {@link NThreadRaceAccessor} (the `idType: 'processAllThreadIds'`
-   * case), that accessor's own `backend` is the winning `NThread` by the
-   * time `init()` resolves (see its doc comment), so this drills through to
-   * it rather than exposing the race stand-in itself -- callers that reach
-   * past the generic `HostAccessor` surface into `NThread`-specific members
-   * (e.g. `.savedContext`, `.setContext()`) need the genuine instance.
+   * case), that accessor's own `target` (inherited from
+   * `RedirectorHostAccessor`) is the winning `NThread` by the time `init()`
+   * resolves (see its doc comment), so this drills through to it rather
+   * than exposing the race stand-in itself -- callers that reach past the
+   * generic `HostAccessor` surface into `NThread`-specific members (e.g.
+   * `.savedContext`, `.setContext()`) need the genuine instance.
    */
   get nthread(): NThread {
     return this.nthreadRef instanceof NThreadRaceAccessor
-      ? (this.nthreadRef.backend as NThread)
+      ? (this.nthreadRef.target as NThread)
       : this.nthreadRef;
   }
 
@@ -161,42 +165,15 @@ export class IndirectNThreadHostAccessor extends HostAccessor {
 }
 
 /**
- * {@link RaceHostAccessor} subclass that also knows how to cancel a losing
- * `NThread` candidate immediately, instead of only cleaning it up once its
- * own `init()` eventually settles. `NThreadRaceAccessor` (below) records each
- * candidate's `AbortController` here via {@link trackAbort} right after
- * building it; `releaseLoser` fires that abort as soon as a winner is picked
- * -- `NThread.onInit()`'s landing-wait honors it (`waitForLanding(timeoutMs,
- * this.options.signal)`), throwing `WaitAbortedError` promptly, so a losing
- * candidate stops hammering `SuspendThread`/`SetThreadContext`/`ResumeThread`
- * on the target process within (roughly) one poll interval instead of
- * continuing for up to its own `timeoutMs` in the background. Racing
- * multiple threads of the *same* process concurrently without this turned
- * out to destabilize it badly enough to fail unrelated, later tests against
- * the same shared target -- this is why cancellation isn't optional.
+ * Module-scoped and shared across every `NThreadRaceAccessor` instance --
+ * `AsyncLocalStorage` isolates by *async execution context*, not by which
+ * object holds the reference, so sharing one instance across unrelated,
+ * concurrently-racing `NThreadRaceAccessor`s (e.g. two independent
+ * `createAccessor()` calls against two different processes at once) is safe
+ * and idiomatic, the same way e.g. Express shares one ALS instance across
+ * all concurrent request handlers.
  */
-export class NThreadRaceHelperAccessor extends RaceHostAccessor {
-  // Keyed by reference only (a plain Map lookup), so the concrete accessor
-  // classes involved (e.g. HostAccessor) don't need to structurally satisfy
-  // IInittableAccessor themselves at this call site -- their `isInitializing`
-  // is `protected`, not `public`, so a direct `object is IInittableAccessor`
-  // assignment wouldn't type-check even though `isInittableAccessor()`'s
-  // runtime check (used by the base class to populate `racers`) passes fine.
-  private readonly aborts = new Map<object, () => void>();
-
-  /** `abort` is invoked immediately if `racer` turns out to lose the race. */
-  trackAbort(racer: object, abort: () => void): void {
-    this.aborts.set(racer, abort);
-  }
-
-  protected override releaseLoser(
-    racer: IInittableAccessor,
-    settled: Promise<void>,
-  ): void {
-    this.aborts.get(racer)?.();
-    super.releaseLoser(racer, settled);
-  }
-}
+const currentCandidate = new AsyncLocalStorage<NThread>();
 
 /**
  * Stands in for a not-yet-known `NThread` inside an
@@ -207,13 +184,12 @@ export class NThreadRaceHelperAccessor extends RaceHostAccessor {
  * `idType`; only the actual thread hijack is deferred to `init()`, same as
  * the rest of this class's own machinery.
  *
- * Races one `NThread` candidate per thread of the process for the hijack
- * (via `backend`, a {@link NThreadRaceHelperAccessor}), then replaces that
- * backend with the winning `NThread` directly -- "puts the `NThread` where
- * the race helper used to be" -- so every op this class forwards (inherited
- * from `HostAccessor`/`MiddlewareAccessor`) transparently reaches the winner
- * from then on, with nothing above it (in `IndirectNThreadHostAccessor`'s own
- * chain) ever needing to change.
+ * Extends {@link RacingHostAccessor} and overrides its `onInit()` to
+ * actually race (`this.race()`), then sets its own `target` to the winning
+ * `NThread` directly -- so every op this class forwards (inherited from
+ * `RedirectorHostAccessor`) transparently reaches the winner from then on,
+ * with nothing above it (in `IndirectNThreadHostAccessor`'s own chain) ever
+ * needing to change.
  *
  * Only initializes the *raw* `NThread` hijack per candidate, not a full
  * `IndirectNThreadHostAccessor` chain -- that chain is built exactly once,
@@ -221,27 +197,45 @@ export class NThreadRaceHelperAccessor extends RaceHostAccessor {
  * real extra work beyond landing the hijack (`IndirectCallRedirectorAccessor`,
  * `MachineCodePoolMiddleware`, an msvcrt check, opening a remote temp file for
  * `FileTransferWriteAccessor`, ...) naturally only ever happens once, no
- * matter which candidate wins. Each candidate is entered into the race as a
- * thin, cheap `HostAccessor(nthread, backend)` wrapper (auto-registers via
- * `registerChild`, inherited by `backend` from `RaceHostAccessor`; its
- * `init()` cascades straight through to `nthread.init()` and nothing more --
- * `HostAccessor.onInit()` is a no-op, `initNext()` just walks `backend` and
- * inits whatever `InittableMiddlewareAccessor` it finds there). Each
- * candidate's own root is a *separate* self-looping `RedirectorHostAccessor`
- * (`target` initially points back at the `NThread` itself), so
- * `NThread.onInit()`'s bootstrap `this.root.call(...)` calls land on that
- * exact candidate's own `call()` -- exactly the primitive register-context
- * calls the hijack itself needs, unrelated to (and unable to use) the racing
- * machinery, whose own effective backend isn't real until the race is over.
+ * matter which candidate wins.
+ *
+ * Every candidate `NThread` is built with `this` (the single, shared
+ * `NThreadRaceAccessor`) as its root directly -- no per-candidate proxy
+ * object. That's normally unsafe: `NThread.onInit()`'s bootstrap
+ * (`this.root.call(stubs.jumpStub)`, landing the hijack) needs `root.call()`
+ * to resolve back to *that exact candidate's* own `call()`, and with N
+ * candidates racing concurrently through one shared root, a single mutable
+ * `backend`/`target` field can't hold N different answers at once (tried
+ * this with a plain shared root first -- every candidate's bootstrap call
+ * collided on the same placeholder and threw). The fix is `currentCandidate`
+ * above: `startRacer` (below) wraps each candidate's `init()` in
+ * `currentCandidate.run(candidate, ...)`, which threads that candidate
+ * through its *entire* async continuation (every `await` inside its own
+ * `onInit()`) in a context isolated from every other concurrently-racing
+ * candidate. `call()` (below), when `target` is still self (race not yet
+ * decided), reads `currentCandidate.getStore()` to find out which
+ * candidate's own bootstrap call this is and forwards to *its* `call()`
+ * directly -- no shared field involved. This keeps the ALS mechanism
+ * entirely local to this class (`RacingHostAccessor` itself knows nothing
+ * about it, see its doc comment) and needs zero changes to `NThread` --
+ * `this.root.call(...)` there is untouched, so root-indirection stays a
+ * generic, reusable mechanism, not something hardcoded around racing.
  */
-export class NThreadRaceAccessor extends HostAccessor {
+export class NThreadRaceAccessor extends RacingHostAccessor {
+  private readonly aborts = new Map<NThread, () => void>();
+
   constructor(
     pid: number,
     nthreadOptions: NThreadOptions = {},
     root?: IHostAccessor,
   ) {
-    const helper = new NThreadRaceHelperAccessor(pid);
-    super(helper, root);
+    super(pid, root);
+    // RedirectorHostAccessor's own constructor sets `target` to a fresh
+    // placeholder `ThrowingHostAccessor`, never to `this` -- only
+    // `BootstrapHostAccessor` self-loops that way. `call()` below needs
+    // `target === this` to mean "race not yet decided", so set it
+    // explicitly here too.
+    this.target = this;
 
     const threads = Thread.getThreads(pid);
     if (threads.length === 0) {
@@ -264,33 +258,45 @@ export class NThreadRaceAccessor extends HostAccessor {
           );
       }
 
-      // nthread's own root is this self-looping redirector, unrelated to
-      // racing -- NThread.onInit()'s bootstrap `this.root.call(...)` calls
-      // need to land on this exact nthread's own call(), so it can't be
-      // `helper` (whose own backend isn't a real accessor until the race is
-      // over -- see class doc comment).
-      const redirector = new RedirectorHostAccessor(pid);
+      // root = this directly -- auto-registers as a racer via
+      // MiddlewareAccessor's constructor (root.registerChild(this)); see
+      // the class doc comment for why a shared root is safe here only
+      // because of startRacer()'s AsyncLocalStorage wrapping below.
       const nthread = new NThread(
         pid,
         t.tid,
         { ...nthreadOptions, signal: controller.signal },
-        redirector,
+        this,
       );
-      redirector.target = nthread;
-      // Auto-registers with `helper` via HostAccessor's constructor (root =
-      // helper triggers `helper.registerChild(this)`).
-      const registration = new HostAccessor(nthread, helper);
-      helper.trackAbort(registration, () => controller.abort());
+      this.aborts.set(nthread, () => controller.abort());
     }
   }
 
+  protected override startRacer(racer: IInittableAccessor): Promise<void> {
+    return currentCandidate.run(racer as unknown as NThread, () =>
+      racer.init(),
+    );
+  }
+
+  override async call(func: CFunction, ...args: any[]): Promise<CCallResult> {
+    if (this.target === this) {
+      const caller = currentCandidate.getStore();
+      if (caller) return caller.call(func, ...args);
+    }
+    return super.call(func, ...args);
+  }
+
+  protected override releaseLoser(
+    racer: IInittableAccessor,
+    settled: Promise<void>,
+  ): void {
+    this.aborts.get(racer as unknown as NThread)?.();
+    super.releaseLoser(racer, settled);
+  }
+
   protected override async onInit(): Promise<void> {
-    // initNext() (run before onInit()) already inited `this.backend` (the
-    // helper), racing every candidate -- helper.backend is now the winning
-    // candidate's thin registration wrapper.
-    const helper = this.backend as NThreadRaceHelperAccessor;
-    const winnerWrapper = helper.backend as HostAccessor;
-    this.backend = winnerWrapper.backend as NThread;
+    const winner = await this.race();
+    this.target = winner as unknown as NThread;
   }
 
   protected override onInitSync(): never {
