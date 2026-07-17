@@ -24,13 +24,15 @@
  *
  * What actually touches notepad.exe's memory: `nhook.create()`/`enable()`/
  * `disable()` only need `ReadProcessMemory`/`WriteProcessMemory`/
- * `VirtualProtectEx` (via a plain `RemoteCallableMemoryAccessor`) to install
- * the 2-byte `EB FE` patch -- no thread hijacking needed for that part. Only
- * when a real thread in notepad.exe actually *runs into* the patch does
- * `nhook` hijack that specific parked thread (via `IndirectNThreadHostAccessor`,
- * internally) to read its arguments and safely resume it afterwards. No
- * `CreateRemoteThread`, no injected DLL, no injected machineCode loop,
- * anywhere in this script.
+ * `VirtualProtectEx` to install the 2-byte `EB FE` patch, driven here through
+ * `createAccessor(notepad.pid, createAccessorOptions(2))` -- races every
+ * thread of notepad.pid for an `NThread` hijack and hands back an
+ * `IndirectNThreadHostAccessor`, so those ops run via thread redirection
+ * rather than a fresh `CreateRemoteThread`. Separately, when a real thread in
+ * notepad.exe actually *runs into* the patch, `nhook` hijacks that specific
+ * parked thread (its own, unrelated `IndirectNThreadHostAccessor`) to read
+ * its arguments and safely resume it afterwards. No `CreateRemoteThread`, no
+ * injected DLL, no injected machineCode loop, anywhere in this script.
  *
  * By default this is purely observational: the detour is never a custom
  * function that replaces `TranslateMessage` (that's what `minhook`'s
@@ -70,11 +72,12 @@
  */
 import {
   User32Impl,
-  RemoteCallableMemoryAccessor,
   Msg,
   WM,
   NHook,
   ProcessExitedError,
+  createAccessor,
+  createAccessorOptions,
 } from 'exoproc';
 import { DummyProcess } from 'exoproc-dummy';
 import { createDemo } from '../kit/server.js';
@@ -148,14 +151,12 @@ demo.publishStatus(
 
 const target = User32Impl.TranslateMessage;
 const nhook = new NHook(notepad.pid);
-// Reusing notepad.handle -- closeHandle: false is required here, otherwise
-// memory.close() and notepad.stop() would both call CloseHandle on the same
-// handle (see CLAUDE.md / the accessor.test.ts fix for exactly this
-// double-CloseHandle bug).
-const memory = new RemoteCallableMemoryAccessor(notepad.pid, {
-  handle: notepad.handle,
-  closeHandle: false,
-});
+// Level 2 (createAccessorOptions(2)): races every thread of notepad.pid for
+// an NThread hijack and hands back an already-`init()`'d IndirectNThreadHostAccessor
+// -- opens its own thread handle internally (via NThread), so unlike a plain
+// RemoteCallableMemoryAccessor there's no notepad.handle reuse here and no
+// double-CloseHandle concern to work around.
+const memory = await createAccessor(notepad.pid, createAccessorOptions(2));
 
 try {
   const hook = await nhook.create(memory, target);
@@ -265,7 +266,7 @@ try {
     demo.publishProcess(notepad.pid, false);
   }
 } finally {
-  memory.close();
+  await memory.deinit();
   await notepad.stop();
   demo.close();
 }
