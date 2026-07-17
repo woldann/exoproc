@@ -143,7 +143,15 @@ const demo = createDemo({
   },
 });
 
-const notepad = new DummyProcess({ executable: 'notepad.exe', args: [] });
+// visible: true -- this demo needs a real window you can click into and
+// type at; DummyProcess otherwise spawns headless (CREATE_NO_WINDOW, no
+// explicit lpDesktop), which is right for tests/most examples but leaves
+// nothing to see here.
+const notepad = new DummyProcess({
+  executable: 'notepad.exe',
+  args: [],
+  visible: true,
+});
 demo.publishProcess(notepad.pid, true);
 demo.publishStatus(
   `Spawned notepad.exe (pid=${notepad.pid}). Installing hook...`,
