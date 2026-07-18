@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "bun-xffi": "workspace:*",
-    "exoproc-accessors": "workspace:*",
     "exoproc-dummy": "workspace:*",
     "exoproc-utils": "workspace:*"
   }

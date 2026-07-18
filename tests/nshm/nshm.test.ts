@@ -1,9 +1,6 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
 import { Kernel32Impl } from 'bun-xffi';
-import { HostAccessor } from 'exoproc-accessors';
-import { IndirectNThreadHostAccessor } from 'bun-nthread';
-import { NShm } from 'bun-nshm';
+import { createAccessor, createAccessorWithoutInit } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Proves the full handle-relay flow: this (Bun) process never OpenProcess's
@@ -29,14 +26,15 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
   test('shares a genuinely usable mapping/view with both the target and this process', async () => {
     const target = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(target.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(target.pid, thread.tid, {
-      timeoutMs: 20000,
+    const memory = createAccessorWithoutInit(target.pid, {
+      idType: 'process',
+      hostOptions: { timeoutMs: 20000 },
     });
-    const host = new HostAccessor(memory);
-    const shm = new NShm(memory, host);
+    const shm = await createAccessor(target.pid, {
+      backend: memory,
+      sharedMemory: true,
+    });
 
     const addr = await shm.alloc(4096);
 
@@ -70,14 +68,15 @@ describe('nshm > NShm (handle relay via a single shared dummy process)', () => {
 
   test('supports multiple independent shared memory regions on the same target', async () => {
     const target = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(target.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const memory = new IndirectNThreadHostAccessor(target.pid, thread.tid, {
-      timeoutMs: 20000,
+    const memory = createAccessorWithoutInit(target.pid, {
+      idType: 'process',
+      hostOptions: { timeoutMs: 20000 },
     });
-    const host = new HostAccessor(memory);
-    const shm = new NShm(memory, host);
+    const shm = await createAccessor(target.pid, {
+      backend: memory,
+      sharedMemory: true,
+    });
 
     const addr1 = await shm.alloc(4096);
     const addr2 = await shm.alloc(4096);

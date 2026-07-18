@@ -542,3 +542,16 @@ export const CreateRestrictedTokenFlags = cdefines({
 export type CreateRestrictedTokenFlags = CDefineValueType<
   typeof CreateRestrictedTokenFlags
 >;
+
+// 28. StartupInfoFlags (STARTUPINFO.dwFlags)
+export const StartupInfoFlags = cdefines({
+  USESHOWWINDOW: 0x00000001,
+});
+export type StartupInfoFlags = CDefineValueType<typeof StartupInfoFlags>;
+
+// 29. ShowWindowCommand (STARTUPINFO.wShowWindow / ShowWindow's nCmdShow)
+export const ShowWindowCommand = cdefines({
+  SW_HIDE: 0,
+  SW_SHOWNORMAL: 1,
+});
+export type ShowWindowCommand = CDefineValueType<typeof ShowWindowCommand>;

@@ -1,7 +1,6 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
 import { MemoryProtection } from 'bun-xffi';
-import { IndirectNThreadHostAccessor } from 'bun-nthread';
+import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
 // Moved from tests/xffi/call-redirector.test.ts -- CallRedirectorAccessor/
@@ -19,11 +18,9 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 describe('nthread > IndirectCallRedirectorAccessor.protect() over IndirectNThreadHostAccessor', () => {
   test('mocks protect() for malloc blocks (throw on non-READWRITE, no-op on READWRITE) and calls real VirtualProtect otherwise', async () => {
     const tp = getGlobalDummyProcess();
-    const thread = Native.Thread.getThreads(tp.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
 
-    const accessor = new IndirectNThreadHostAccessor(tp.pid, thread.tid, {
-      timeoutMs: 20000,
+    const accessor = await createAccessor(tp.pid, {
+      hostOptions: { timeoutMs: 20000 },
     });
 
     try {

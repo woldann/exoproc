@@ -20,7 +20,8 @@ import {
   type X86Operand,
   X86_REG_TO_CONTEXT_NAME,
 } from 'bun-capstone';
-import { IndirectNThreadHostAccessor, getRandomSpinStub } from 'bun-nthread';
+import { getRandomSpinStub } from 'bun-nthread';
+import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
 import { log } from './logger.js';
 import { ProcessExitedError } from './errors.js';
 
@@ -48,6 +49,22 @@ export interface NHookOptions {
   originalBytes?: Buffer;
   patchBytes?: Buffer;
   enabled?: boolean;
+}
+
+/**
+ * `memory`'s own driving thread id, if it has one -- e.g. an
+ * `IndirectNThreadHostAccessor` backed by a real `NThread` (as
+ * `createAccessor` produces) permanently redirects one specific thread of
+ * the target process. Duck-typed (`.nthread.threadId`) rather than an
+ * `instanceof IndirectNThreadHostAccessor` check: `memory` may have been
+ * built by a different copy of that class than the one this package
+ * imports (cross-package `instanceof` is unreliable under Wine's isolated
+ * linker -- see CLAUDE.md).
+ */
+function getDrivingThreadId(memory: IMemoryAccessor): number | undefined {
+  const threadId = (memory as { nthread?: { threadId?: unknown } }).nthread
+    ?.threadId;
+  return typeof threadId === 'number' ? threadId : undefined;
 }
 
 /**
@@ -143,8 +160,20 @@ export class NHook
     if (hook.enabled) return;
     const addr = hook.address;
 
-    // Enumerate and handle threads
-    const threadIds = Native.Thread.getThreads(this.pid);
+    // Enumerate and handle threads -- excluding memory's own driving thread
+    // (if any). Suspending it here too would conflict with SetThreadContext
+    // + ResumeThread cycles memory.protect()/write() issue through that same
+    // thread below: this SuspendThread (via a separate handle) and NThread's
+    // own ResumeThread (via its own handle) both act on the one shared
+    // OS-level suspend count, but neither side knows about the other's call,
+    // so the net count never reaches 0 and the redirected call inside
+    // memory.protect() never lands -- CallTimeoutError. That thread doesn't
+    // need this suspend anyway: it's already fully under our control
+    // (parked/redirected by NThread), never executing the target's own code.
+    const drivingThreadId = getDrivingThreadId(memory);
+    const threadIds = Native.Thread.getThreads(this.pid).filter(
+      (t) => t.tid !== drivingThreadId,
+    );
     const isLocal = this.pid === Native.currentProcess.pid;
 
     try {
@@ -201,8 +230,14 @@ export class NHook
     // 1. Catch threads spinning at EB FE
     const pendingHits = await this.poll();
 
-    // 2. Enumerate and handle all threads to ensure safe restoration
-    const threadIds = Native.Thread.getThreads(this.pid);
+    // 2. Enumerate and handle all threads to ensure safe restoration --
+    // excluding memory's own driving thread (if any); see enable()'s
+    // comment on getDrivingThreadId() for why suspending it here would
+    // deadlock the very memory.protect()/write() calls below.
+    const drivingThreadId = getDrivingThreadId(memory);
+    const threadIds = Native.Thread.getThreads(this.pid).filter(
+      (t) => t.tid !== drivingThreadId,
+    );
     const isLocal = this.pid === Native.currentProcess.pid;
 
     try {

@@ -45,6 +45,9 @@
   },
   "dependencies": {
     "bun-xffi": "workspace:*",
+    "bun-winapi": "workspace:*",
+    "bun-nthread": "workspace:*",
+    "bun-nshm": "workspace:*",
     "exoproc-utils": "workspace:*"
   }
 }

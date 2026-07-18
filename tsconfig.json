@@ -56,14 +56,14 @@
   "references": [
     { "path": "./packages/utils" },
     { "path": "./packages/xffi" },
-    { "path": "./packages/accessors" },
+    { "path": "./packages/winapi" },
     { "path": "./packages/dummy" },
     { "path": "./packages/capstone" },
-    { "path": "./packages/winapi" },
     { "path": "./packages/nthread" },
+    { "path": "./packages/nshm" },
+    { "path": "./packages/accessors" },
     { "path": "./packages/nhook" },
     { "path": "./packages/minhook" },
-    { "path": "./packages/nshm" },
     { "path": "./packages/exoproc" }
   ]
 }

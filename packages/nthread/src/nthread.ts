@@ -12,14 +12,15 @@ import {
   WaitReturn,
   resolveAddress,
   stackAlign16,
+  type IHostAccessor,
 } from 'bun-xffi';
-import { HostAccessor } from 'exoproc-accessors';
 import {
   getRandomSpinStub,
   getRandomPushretStub,
   getRandomJumpStub,
   getRandomRetStub,
   getRandomAddRsp28RetStub,
+  whenStubsReady,
   type ThreadStubs,
 } from './stubs.js';
 import * as Native from 'bun-winapi';
@@ -63,10 +64,8 @@ const CTX_FLAGS =
 export interface NThreadOptions {
   /** Maximum ms to wait for the operation to complete. Default: 5000. */
   timeoutMs?: number;
-  /** Poll interval (ms) used during redirection wait. Default: 50. */
+  /** Poll interval (ms) used during redirection wait. Default: 2. */
   pollIntervalMs?: number;
-  /** Whether to automatically suspend/resume when fetching or applying context. Default: true. */
-  autoSuspend?: boolean;
   /** Optional cancellation signal. */
   signal?: AbortSignal;
 }
@@ -96,7 +95,6 @@ export class NThread extends InittableMiddlewareAccessor {
   public callRsp: bigint = 0n;
   public expectedRsp: bigint = 0n;
   public pollIntervalMs: number = 2;
-  public autoSuspend: boolean;
 
   public stubs: Partial<ThreadStubs> = {};
   public debug = false;
@@ -106,15 +104,19 @@ export class NThread extends InittableMiddlewareAccessor {
     backend: ISyncCallableMemoryAccessor | number,
     public readonly threadId: number,
     public readonly options: NThreadOptions = {},
-    root: HostAccessor,
+    root: IHostAccessor,
   ) {
     const actualBackend =
       typeof backend === 'number'
         ? new RemoteCallableMemoryAccessor(backend)
         : backend;
     super(actualBackend, root);
-    this.autoSuspend = options.autoSuspend ?? false;
   }
+
+  // No-op -- see IHostAccessor.registerChild's doc comment. NThread is only
+  // ever used as an IHostAccessor (e.g. a RedirectorHostAccessor's `target`),
+  // never as a racing host itself, so it has nothing to do with a child.
+  registerChild(): void {}
 
   /** The OS thread ID of the redirected thread. Only valid once initialized. */
   get tid(): number {
@@ -207,25 +209,23 @@ export class NThread extends InittableMiddlewareAccessor {
     }
   }
 
+  // Deliberately never suspends around fetch/apply -- NThread suspends
+  // exactly once, during onInit()'s landing sequence, and resumes once
+  // (via that same landing call's own resumeThread()); every op after that
+  // runs against the thread while it's parked (running) at the spin stub,
+  // relying on EB FE ('jmp $') never touching registers/memory between
+  // instructions for this to be safe. A caller-configurable "auto-suspend
+  // around every fetch/apply" option used to exist here but only ever added
+  // extra suspend/resume cycles beyond that single setup one -- exactly the
+  // kind of accounting an external suspend (e.g. NHook.enable()'s own
+  // SuspendThread on the same thread) can't see or coordinate with.
   fetchContext(): void {
-    const shouldSuspend = this.autoSuspend && this.suspendCount === 0;
-    if (shouldSuspend) this.suspendThread();
-    try {
-      this.ctx.fetch(CTX_FLAGS);
-      this._ctxFetched = true;
-    } finally {
-      if (shouldSuspend) this.resumeThread();
-    }
+    this.ctx.fetch(CTX_FLAGS);
+    this._ctxFetched = true;
   }
 
   applyContext(): void {
-    const shouldSuspend = this.autoSuspend && this.suspendCount === 0;
-    if (shouldSuspend) this.suspendThread();
-    try {
-      this.ctx.apply();
-    } finally {
-      if (shouldSuspend) this.resumeThread();
-    }
+    this.ctx.apply();
   }
 
   private suspendThread(): number {
@@ -398,6 +398,15 @@ export class NThread extends InittableMiddlewareAccessor {
   // ── Accessor lifecycle ──────────────────────────────────────────────────
 
   protected override async onInit(): Promise<void> {
+    // The stub descriptors (spin/pushRet/jump/ret/addRsp28Ret) start their
+    // background scans eagerly at module load, but scanning takes real time
+    // (walking kernel32/ntdll/kernelbase's executable sections). A caller
+    // that reaches onInit() soon after process start -- before those scans
+    // finish -- would otherwise get a misleading NoSleepAddressError/etc.
+    // below (getRandomXStub() swallows the real "still scanning" error and
+    // returns undefined, indistinguishable from "genuinely not found").
+    await whenStubsReady();
+
     if (this.options.pollIntervalMs) {
       const pollIntervalMs = Math.max(0, this.options.pollIntervalMs);
       this.pollIntervalMs = pollIntervalMs;

@@ -45,6 +45,7 @@
     "bun-winapi": "workspace:*",
     "bun-xffi": "workspace:*",
     "bun-nthread": "workspace:*",
+    "exoproc-accessors": "workspace:*",
     "exoproc-utils": "workspace:*",
     "bun-capstone": "workspace:*"
   }

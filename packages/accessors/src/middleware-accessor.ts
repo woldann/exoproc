@@ -43,9 +43,14 @@ import {
   isModuleLoadedInProcessSync,
   MiddlewareAccessor,
   InittableMiddlewareAccessor,
-  isMiddlewareAccessor,
+  isInittableAccessor,
+  HostAccessor,
   type IHostAccessor,
+  type IInittableAccessor,
+  type IMiddlewareAccessor,
 } from 'bun-xffi';
+
+export { HostAccessor };
 
 export abstract class MsvcrtDependentMiddlewareAccessor extends InittableMiddlewareAccessor {
   protected async onInit(): Promise<void> {
@@ -65,43 +70,6 @@ export abstract class MsvcrtDependentMiddlewareAccessor extends InittableMiddlew
       throw new Error('Target process does not have msvcrt.dll loaded.');
     }
   }
-}
-
-/**
- * HostAccessor is a base class that automatically initializes all nested InittableMiddlewareAccessors
- * in the backend decorator chain.
- */
-export class HostAccessor extends InittableMiddlewareAccessor {
-  override get processId(): number {
-    return this._processId;
-  }
-
-  constructor(backend: ISyncCallableMemoryAccessor, root?: IHostAccessor) {
-    super(backend, root ?? (null as any));
-    if (!root) {
-      (this as any).root = this;
-    }
-    let b: ISyncCallableMemoryAccessor = backend;
-    while (isMiddlewareAccessor(b)) {
-      b = b.backend;
-    }
-    if (b) {
-      this._processId = b.processId;
-    }
-  }
-
-  protected override async onInit(): Promise<void> {
-    // No-op. Chain initialization is automatically propagated by init().
-  }
-
-  protected override onInitSync(): void {
-    // No-op. Chain initialization is automatically propagated by initSync().
-  }
-
-  // deinit()/deinitSync() are inherited as-is from InittableMiddlewareAccessor:
-  // deinitNext()/deinitNextSync() already walk the whole `backend` chain and
-  // deinit every InittableMiddlewareAccessor on it, so there's nothing left
-  // for HostAccessor to reconcile separately.
 }
 
 /**
@@ -132,7 +100,15 @@ export class RedirectorHostAccessor extends HostAccessor {
 
   constructor(processId: number, root?: IHostAccessor) {
     super(new ThrowingMemoryAccessor(processId), root);
-    this._target = new ThrowingHostAccessor(processId, this.root);
+    // Deliberately self-rooted (no `root` arg) rather than `this.root`: this
+    // placeholder is never a real candidate, but constructing it with the
+    // outer `root` would still run through `MiddlewareAccessor`'s
+    // constructor -- which unconditionally calls `root.registerChild(this)`
+    // -- and register the placeholder itself as a racer on a
+    // `RacingHostAccessor` root. Since it always throws and never does real
+    // work, it would "win" the race instantly, before any genuine candidate
+    // could land.
+    this._target = new ThrowingHostAccessor(processId);
   }
 
   get target(): IHostAccessor {
@@ -352,8 +328,135 @@ export class RedirectorHostAccessor extends HostAccessor {
     // No-op. The target is initialized separately.
   }
 
+  /**
+   * Mirrors the `close()` override above for the async lifecycle: every op
+   * (read/write/call/...) routes to `target` once it's no longer `this`, so
+   * `deinit()` must too. Without this, the inherited `deinitNext()` (from
+   * `InittableMiddlewareAccessor`) walks `this.backend` -- which for a
+   * subclass like `NThreadRaceAccessor` stays pointed at its own
+   * placeholder `ThrowingMemoryAccessor` forever (only `target` ever gets
+   * reassigned to the winner, per `RedirectorHostAccessor`'s whole design;
+   * see its class doc comment) -- so the real accessor `target` resolved to
+   * would never actually get deinited, leaving its underlying resource
+   * (e.g. a hijacked thread) permanently stuck.
+   *
+   * Deliberately excludes `t === this.root`: `BootstrapHostAccessor.onInit()`
+   * itself resolves `target` to `this.root` once its own backend has landed
+   * -- that's a hand-off back to whatever *contains* this accessor (e.g. a
+   * per-candidate `BootstrapHostAccessor` inside `NThreadRaceAccessor`
+   * resolves to the race accessor itself), not a distinct resource this
+   * accessor now owns. Cascading `deinit()` there would tear down the
+   * container (and everything else riding on it, e.g. the actual race
+   * winner) from a single losing candidate's own cleanup.
+   */
+  protected override async onDeinit(): Promise<void> {
+    const t = this.getTarget();
+    if (t !== this && t !== this.root && isInittableAccessor(t)) {
+      await t.deinit();
+    }
+  }
+
   protected override onInitSync(): void {
     // No-op. The target is initialized separately.
+  }
+}
+
+/**
+ * A minimal `RedirectorHostAccessor` mixin meant to be *extended*, not used
+ * directly -- its only job is giving a subclass (e.g. `NThreadRaceAccessor`)
+ * two things for free: automatic candidate collection, and a `race()` helper
+ * to actually run the race once the subclass's own `onInit()` decides it's
+ * time. `target` (inherited) is left for the subclass to set to the winner
+ * however makes sense for it -- this class never touches it itself.
+ *
+ * Candidates are never added explicitly -- every `MiddlewareAccessor`'s
+ * constructor calls `root.registerChild(this)` (a no-op on every other
+ * `IHostAccessor`; see its doc comment), so simply constructing a candidate
+ * with a `RacingHostAccessor` (sub)instance as its `root` is enough to enter
+ * it into the race.
+ *
+ * Deliberately knows nothing about *why* a caller is racing candidates -- no
+ * `NThread`, no `AbortController`, no timeout, no `AsyncLocalStorage`; a
+ * caller that needs to cancel the losers does so itself, by extending this
+ * class and overriding `releaseLoser`, and a caller whose candidates need
+ * per-candidate context threaded through their own `init()` (e.g.
+ * `NThreadRaceAccessor`, whose candidates all share one root and need
+ * `root.call()` to resolve back to *this specific* candidate while racing)
+ * does so by overriding `startRacer` -- kept as a single, narrow extension
+ * point instead of baking any particular mechanism (like
+ * `AsyncLocalStorage`) into this generic base.
+ */
+export class RacingHostAccessor extends RedirectorHostAccessor {
+  protected readonly racers: IInittableAccessor[] = [];
+
+  override registerChild(child: IMiddlewareAccessor): void {
+    // Can fire before our own field initializers run: RedirectorHostAccessor's
+    // constructor builds a placeholder `new ThrowingHostAccessor(processId,
+    // this.root)`, and `this.root` is this very instance (self-rooted, still
+    // mid-construction) when nothing else was passed as `root` -- `this.racers`
+    // isn't assigned yet at that point. Harmless to skip: real candidates
+    // always register later, from a subclass's own constructor body, which
+    // only runs after every `super()` call (and therefore every field
+    // initializer) has completed.
+    if (!this.racers || !isInittableAccessor(child)) return;
+    this.racers.push(child);
+  }
+
+  /**
+   * Launches one racer's `init()`. Overridable so a subclass can wrap the
+   * call with its own per-candidate context (see `NThreadRaceAccessor`,
+   * which threads an `AsyncLocalStorage` context through this so its shared
+   * root's `call()` can resolve back to whichever candidate is currently
+   * bootstrapping) without this base class needing to know why.
+   */
+  protected startRacer(racer: IInittableAccessor): Promise<void> {
+    return racer.init();
+  }
+
+  /**
+   * Races every registered racer's `init()` and returns whichever settles
+   * first; every other racer gets {@link releaseLoser}'d. Doesn't touch
+   * `target` itself -- callers (a subclass's own `onInit()` override)
+   * decide what to do with the winner.
+   */
+  protected async race(): Promise<IInittableAccessor> {
+    if (this.racers.length === 0) {
+      throw new Error('RacingHostAccessor: no racers registered to race');
+    }
+    const attempts = this.racers.map((racer) => ({
+      racer,
+      settled: this.startRacer(racer),
+    }));
+    let winner: IInittableAccessor;
+    try {
+      winner = await Promise.any(
+        attempts.map((a) => a.settled.then(() => a.racer)),
+      );
+    } catch (err) {
+      throw new Error(
+        `RacingHostAccessor: none of ${attempts.length} racer(s) could be initialized`,
+        { cause: err },
+      );
+    }
+    for (const a of attempts) {
+      if (a.racer === winner) continue;
+      this.releaseLoser(a.racer, a.settled);
+    }
+    return winner;
+  }
+
+  /**
+   * Called once per losing racer, right after a winner is picked. Default:
+   * deinit it once (if) its own `init()` eventually settles -- `deinit()` is
+   * a no-op for one that never finished or that already failed. Subclasses
+   * (e.g. `NThreadRaceAccessor`) can override this to *also* cancel an
+   * in-flight racer immediately, instead of only cleaning up after the fact.
+   */
+  protected releaseLoser(
+    racer: IInittableAccessor,
+    settled: Promise<void>,
+  ): void {
+    settled.then(() => racer.deinit().catch(() => {})).catch(() => {});
   }
 }
 

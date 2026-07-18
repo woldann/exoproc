@@ -1,9 +1,12 @@
+import { ptr } from 'bun:ffi';
 import {
   Kernel32Impl,
   Advapi32Impl,
   TokenAccess,
   CreateRestrictedTokenFlags,
   ProcessCreationFlags,
+  StartupInfoFlags,
+  ShowWindowCommand,
   StartupInfoA,
   ProcessInformation,
 } from 'bun-xffi';
@@ -13,6 +16,15 @@ export interface DummyProcessOptions {
   executable?: string;
   /** Arguments for `executable` (default: an effectively-infinite ping). */
   args?: string[];
+  /**
+   * Spawn onto the interactive desktop with a real, visible window instead
+   * of the default headless/no-window spawn (default `false`). Needed for
+   * anything a human has to actually click into and type at (e.g. the
+   * `notepad-keystroke-hook` example) -- most callers (tests, most examples)
+   * want the default: `CREATE_NO_WINDOW` plus no explicit `lpDesktop`, so
+   * nothing pops up during automated/headless runs.
+   */
+  visible?: boolean;
 }
 
 interface SpawnedProcess {
@@ -28,6 +40,7 @@ interface SpawnedProcess {
 export type SpawnStrategy = (
   executable: string,
   args: string[],
+  visible?: boolean,
 ) => SpawnedProcess;
 
 /**
@@ -78,7 +91,7 @@ export class DummyProcess {
     const executable = options.executable ?? 'ping.exe';
     const args = options.args ?? ['127.0.0.1', '-n', '1000000'];
 
-    const spawned = spawnStrategy(executable, args);
+    const spawned = spawnStrategy(executable, args, options.visible);
     this.pid = spawned.pid;
     this.handle = spawned.handle;
 
@@ -112,12 +125,29 @@ export class DummyProcess {
   }
 }
 
-function spawnDeElevated(executable: string, args: string[]): SpawnedProcess {
+function spawnDeElevated(
+  executable: string,
+  args: string[],
+  visible = false,
+): SpawnedProcess {
   const commandLine = `"${executable}"${args.length ? ` ${args.join(' ')}` : ''}`;
   const commandLineBuf = Buffer.concat([
     Buffer.from(commandLine + '\0', 'latin1'),
     Buffer.alloc(32),
   ]);
+
+  // `CreateProcessAsUserA` with a token derived via `CreateRestrictedToken`
+  // doesn't reliably land the spawned process on the caller's own
+  // interactive window station/desktop unless `lpDesktop` says so
+  // explicitly -- an unset (null) `lpDesktop` leaves that up to the OS's own
+  // default, which isn't guaranteed to be the visible desktop. "winsta0"
+  // is always the interactive window station; "default" is its default
+  // desktop -- this is the standard fix for "spawned process's window never
+  // shows up" with CreateProcessAsUser*. Kept alive for the whole call
+  // (referenced by `startupInfo.lpDesktop` below via its native address).
+  const desktopBuf = visible
+    ? Buffer.from('winsta0\\default\0', 'latin1')
+    : null;
 
   const tokenOut = Buffer.alloc(8);
   const gotToken = Advapi32Impl.OpenProcessToken(
@@ -162,7 +192,7 @@ function spawnDeElevated(executable: string, args: string[]): SpawnedProcess {
   startupInfo.assign({
     cb: StartupInfoA.computed.totalSize,
     lpReserved: null,
-    lpDesktop: null,
+    lpDesktop: desktopBuf ? ptr(desktopBuf) : null,
     lpTitle: null,
     dwX: 0,
     dwY: 0,
@@ -171,8 +201,8 @@ function spawnDeElevated(executable: string, args: string[]): SpawnedProcess {
     dwXCountChars: 0,
     dwYCountChars: 0,
     dwFillAttribute: 0,
-    dwFlags: 0,
-    wShowWindow: 0,
+    dwFlags: visible ? StartupInfoFlags.USESHOWWINDOW : 0,
+    wShowWindow: visible ? ShowWindowCommand.SW_SHOWNORMAL : 0,
     cbReserved2: 0,
     lpReserved2: null,
     hStdInput: 0n,
@@ -195,7 +225,7 @@ function spawnDeElevated(executable: string, args: string[]): SpawnedProcess {
     0,
     0,
     0,
-    ProcessCreationFlags.CREATE_NO_WINDOW,
+    visible ? 0 : ProcessCreationFlags.CREATE_NO_WINDOW,
     0,
     0,
     startupInfo,

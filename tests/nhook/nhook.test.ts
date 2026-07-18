@@ -8,7 +8,8 @@ import {
   resolveAddress,
   CapstoneX86,
   type Instruction,
-  IndirectNThreadHostAccessor,
+  createAccessor,
+  type HostAccessor,
   NHook,
   NHookInstance,
   type NHookPoolResult,
@@ -27,7 +28,7 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 // needed: an existing thread in the spawned process is hijacked directly.
 describe('NHook instruction simulation', () => {
   const proc = getGlobalDummyProcess();
-  let memory: IndirectNThreadHostAccessor;
+  let memory: HostAccessor;
   let nhook: NHook;
   const capstone = new CapstoneX86();
 
@@ -35,11 +36,8 @@ describe('NHook instruction simulation', () => {
   let scratchMid: bigint;
 
   beforeAll(async () => {
-    const thread = Native.Thread.getThreads(proc.pid)[0];
-    if (!thread) throw new Error('No thread found in the spawned process');
-
-    memory = new IndirectNThreadHostAccessor(proc.pid, thread.tid, {
-      timeoutMs: 20000,
+    memory = await createAccessor(proc.pid, {
+      hostOptions: { timeoutMs: 20000 },
     });
 
     nhook = new NHook(proc.pid);
