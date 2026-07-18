@@ -202,6 +202,32 @@ const _jumpDescriptors = new Map<GeneralPurposeRegs, StubDescriptor>([
 ]);
 
 // ---------------------------------------------------------------------------
+// Readiness
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves once every registered stub descriptor's background scan has
+ * completed -- every `getRandomXStub()` below is safe to call synchronously
+ * after this resolves. Each `getRandomXStub()` swallows `StubNotReadyError`
+ * (and `NoStubFoundError`) via its own try/catch and just returns
+ * `undefined`, indistinguishable from "genuinely not found" -- so a caller
+ * that races ahead of the scan (e.g. a short script that reaches
+ * `NThread.onInit()` moments after process start, before these
+ * process-wide, eagerly-started background scans have had time to finish)
+ * gets a misleading `NoSleepAddressError`/etc. instead of the real
+ * "still scanning" cause. Awaiting this first removes that race entirely.
+ */
+export function whenStubsReady(): Promise<void> {
+  return Promise.all([
+    _sleepDescriptor.whenReady(),
+    _retDescriptor.whenReady(),
+    _addRsp28RetDescriptor.whenReady(),
+    ...Array.from(_pushRetDescriptors.values(), (d) => d.whenReady()),
+    ...Array.from(_jumpDescriptors.values(), (d) => d.whenReady()),
+  ]).then(() => undefined);
+}
+
+// ---------------------------------------------------------------------------
 // Public accessors — synchronous return, no wait
 // ---------------------------------------------------------------------------
 
