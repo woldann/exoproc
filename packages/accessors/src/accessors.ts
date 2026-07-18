@@ -258,8 +258,8 @@ export async function createAccessor(
  * throughput-vs-stability dial on NThread's own wait/poll timing (plus,
  * at level 2, turning on shared memory for extra throughput).
  *
- *   1 = gentle: long timeout, relaxed polling -- safest for a fragile/loaded target.
- *   2 = balanced: NThread's own defaults (5000ms timeout, 50ms poll) + shared memory.
+ *   1 = gentle: long timeout, NThread's own fast polling -- safest for a fragile/loaded target.
+ *   2 = balanced: NThread's own defaults (5000ms timeout, 2ms poll) + shared memory.
  */
 export type AccessorAggressiveness = 1 | 2;
 
@@ -268,11 +268,11 @@ const AGGRESSIVENESS_PRESETS: Record<
   { hostOptions: NThreadOptions; sharedMemory: boolean }
 > = {
   1: {
-    hostOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
+    hostOptions: { timeoutMs: 20000, pollIntervalMs: 2 },
     sharedMemory: false,
   },
   2: {
-    hostOptions: { timeoutMs: 5000, pollIntervalMs: 50 },
+    hostOptions: { timeoutMs: 5000, pollIntervalMs: 2 },
     sharedMemory: true,
   },
 };

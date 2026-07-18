@@ -257,7 +257,7 @@ describe('createAccessorOptions', () => {
   test('defaults to the gentle (level 1) preset, with shared memory off', () => {
     expect(createAccessorOptions()).toEqual(createAccessorOptions(1));
     expect(createAccessorOptions(1)).toEqual({
-      hostOptions: { timeoutMs: 20000, pollIntervalMs: 100 },
+      hostOptions: { timeoutMs: 20000, pollIntervalMs: 2 },
       sharedMemory: false,
     });
   });
