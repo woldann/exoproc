@@ -159,16 +159,34 @@ demo.publishStatus(
 
 const target = User32Impl.TranslateMessage;
 const nhook = new NHook(notepad.pid);
-// Level 2 (createAccessorOptions(2)): races every thread of notepad.pid for
-// an NThread hijack and hands back an already-`init()`'d IndirectNThreadHostAccessor
-// -- opens its own thread handle internally (via NThread), so unlike a plain
-// RemoteCallableMemoryAccessor there's no notepad.handle reuse here and no
-// double-CloseHandle concern to work around.
-const memory = await createAccessor(notepad.pid, createAccessorOptions(2));
+
+// createAccessor's NThread hijack parks notepad's own thread at *our* spin
+// stub for as long as the accessor is alive -- notepad's message loop (and
+// so keyboard handling) never runs on its own while that's true, on a
+// single-threaded target like this one. Building one fresh, short-lived
+// accessor per operation (create/enable/disable) and deinit()ing it right
+// after -- instead of keeping one alive for the whole session -- means
+// notepad is only ever unresponsive for the brief moment an operation is
+// actually running, not for the entire demo. hook.enable()/hook.disable()
+// (the convenience forwarders) are deliberately not used below: they always
+// reuse whatever `memory` was passed to nhook.create() (Hook.memory is
+// readonly), which would keep that original accessor's hijack alive
+// indefinitely -- nhook.enable()/disable() (the manager methods) take
+// `memory` explicitly instead, so each call can bring its own.
+async function withMemory<T>(
+  fn: (memory: Awaited<ReturnType<typeof createAccessor>>) => Promise<T>,
+): Promise<T> {
+  const memory = await createAccessor(notepad.pid, createAccessorOptions(2));
+  try {
+    return await fn(memory);
+  } finally {
+    await memory.deinit();
+  }
+}
 
 try {
-  const hook = await nhook.create(memory, target);
-  await hook.enable();
+  const hook = await withMemory((memory) => nhook.create(memory, target));
+  await withMemory((memory) => nhook.enable(memory, hook));
   demo.publishStatus('Hooked TranslateMessage -- watching for keystrokes.');
 
   const deadline = Date.now() + HOOK_DURATION_MS;
@@ -184,12 +202,12 @@ try {
       // the same hook/thread.
       if (pauseRequested && hook.enabled) {
         pauseRequested = false;
-        await hook.disable();
+        await withMemory((memory) => nhook.disable(memory, hook));
         demo.publishStatus('Paused -- hook disabled.');
       }
       if (resumeRequested && !hook.enabled) {
         resumeRequested = false;
-        await hook.enable();
+        await withMemory((memory) => nhook.enable(memory, hook));
         demo.publishStatus('Resumed -- hook enabled, watching for keystrokes.');
       }
 
@@ -268,13 +286,16 @@ try {
     nhook.forget(target);
     demo.publishStatus('notepad.exe closed -- hook removed.');
   } else {
-    await hook.disable();
+    await withMemory((memory) => nhook.disable(memory, hook));
+    // hook.enabled is now false, so destroy() (which internally re-calls
+    // disable() only if still enabled) never touches hook.memory -- the
+    // long-deinit()'d accessor from the very first withMemory() above --
+    // so this is safe without giving it a fresh one too.
     await hook.destroy();
     demo.publishStatus('Done -- hook removed.');
     demo.publishProcess(notepad.pid, false);
   }
 } finally {
-  await memory.deinit();
   await notepad.stop();
   demo.close();
 }
