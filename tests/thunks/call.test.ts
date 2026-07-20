@@ -13,6 +13,9 @@ import { getGlobalDummyProcess } from 'exoproc-dummy';
 import {
   callMachineCode,
   callMachineCodeFor,
+  fixedCallMachineCodeFor,
+  chainedCallMachineCode,
+  packChainedArgs,
   packArgs,
   Reg,
   movRegFromXmm,
@@ -140,6 +143,46 @@ async function callProbeThroughCallBytes(
   return resultBuf.readBigUInt64LE(0);
 }
 
+// Same probe/checksum setup as callProbeThroughCallBytes, but invoked
+// through chainedCallMachineCode's single-argument composed thunk instead of
+// calling callMachineCode directly -- exercises that `mask` really does
+// still control the *real* target's (the probe's) own register/XMM
+// assignment even though it's now reached through fixedCallMachineCode ->
+// callMachineCode indirection, not a hardcoded/ignored value.
+async function callProbeThroughChain(
+  accessor: IndirectAccessor,
+  mask: number,
+  values: readonly (number | bigint)[],
+  argTypes: readonly CTypeOrString[],
+  stackTestArgCount: number,
+): Promise<bigint> {
+  const probe = createPendingMachineCode(
+    ['u64', []],
+    buildChecksumProbeBytes(mask, stackTestArgCount),
+  );
+  const probeAddr = await accessor.machineCode(probe);
+
+  const chained = await chainedCallMachineCode(accessor, mask);
+  const chainedAddr = await accessor.machineCode(chained);
+  const chainedFn: CFunction = createCFunction(chainedAddr, ['u64', ['ptr']]);
+
+  const outputAddr = Number(
+    await accessor.alloc(8, null, MemoryProtection.READWRITE),
+  );
+  const allValues = [...values, outputAddr];
+  const allTypes = [...argTypes, 'ptr' as CTypeOrString];
+  const combinedAddr = await packChainedArgs(
+    accessor,
+    BigInt(probeAddr),
+    allValues,
+    allTypes,
+  );
+
+  await accessor.call(chainedFn, combinedAddr);
+  const resultBuf = await accessor.read(outputAddr, 8);
+  return resultBuf.readBigUInt64LE(0);
+}
+
 describe('thunks > call (cross-process, thread-hijack backend)', () => {
   const proc = getGlobalDummyProcess();
 
@@ -219,6 +262,31 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
       );
       expect(resultB).toBe(91n);
 
+      // B2) Same target as B, but through fixedCallMachineCodeFor -- ptr and
+      // argCount get baked into the bytes as immediates instead of being
+      // read from RCX/RDX at entry, so the thunk takes only the args buffer
+      // (one argument) rather than all three. Reuses B's already-packed
+      // argsAddr, since the args buffer layout is identical either way.
+      //
+      // Must target allInt6Addr (the *remote*, post-injection address), not
+      // allInt6.ptr (cmachinecode()'s *local* JIT address in this process) --
+      // baking in the wrong one means the generated "call <local_addr>"
+      // executes inside the remote process, jumping to whatever garbage
+      // happens to live at that address there.
+      const allInt6Remote: CFunction = createCFunction(allInt6Addr, [
+        allInt6.returns,
+        [...allInt6.args],
+      ]);
+      const fixedCaller = fixedCallMachineCodeFor(allInt6Remote);
+      expect(fixedCallMachineCodeFor(allInt6Remote)).toBe(fixedCaller); // cached by (ptr, argCount, mask, returns)
+      const fixedCallerAddr = await accessor.machineCode(fixedCaller);
+      const fixedCallerFn: CFunction = createCFunction(fixedCallerAddr, [
+        'i64',
+        ['ptr'],
+      ]);
+      const resultB2 = await accessor.call(fixedCallerFn, argsAddr);
+      expect(resultB2).toBe(91n);
+
       // C) Stack-arg path (positions 4 and 5) with real double bit patterns,
       // via the checksum probe -- proves packArgs' float packing plus the
       // raw 8-byte stack copy survive floats intact beyond the first 4 slots
@@ -297,16 +365,110 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
       expect(resultD).toBe(10.5);
 
       // E) Identity stability: repeated requests for the same (mask,
-      // category) always return the exact same object -- defined once as
-      // fixed globals up front, not lazily cached on first use. The int and
-      // float categories for the same mask also share their underlying byte
-      // array (only the wrapper's `returns` tag differs).
+      // category) always return the exact same object -- built lazily on
+      // first request, then cached globally, not rebuilt every call. The int
+      // and float categories for the same mask also share their underlying
+      // byte array (only the wrapper's `returns` tag differs).
       expect(callMachineCode(5)).toBe(callMachineCode(5));
       expect(callMachineCode(5, 'float')).toBe(callMachineCode(5, 'float'));
       expect(callMachineCode(5)).not.toBe(callMachineCode(5, 'float'));
       expect(callMachineCode(5, 'float').bytes).toBe(
         callMachineCode(5, 'int').bytes,
       );
+
+      // F) chainedCallMachineCode: a single-argument thunk (fixedCallMachineCode
+      // bound to an injected callMachineCode instance) that, given the
+      // combined [ptr, argCount, selfPointer, ...args] buffer packChainedArgs
+      // builds, can call any function matching (mask, category). Mixed
+      // int/float mask (same shape as A) proves `mask` still controls the
+      // *real* target's own register/XMM assignment through the extra
+      // indirection -- not silently ignored/hardcoded somewhere in the chain.
+      const chainRawValues = [7n, 3.5, 99n, 4.5] as const;
+      const chainArgTypes: CTypeOrString[] = [
+        CType.i64,
+        CType.f64,
+        CType.i64,
+        CType.f64,
+      ];
+      const chainMask = 0b1010; // slots 1 and 3 are the f64 ones
+      const chainIsFloatBySlot = [false, true, false, true];
+      const chainExpected = chainRawValues.reduce<bigint>(
+        (acc, v, i) => acc ^ rawBitsOf(v, chainIsFloatBySlot[i]!),
+        0n,
+      );
+      const chainResult = await callProbeThroughChain(
+        accessor,
+        chainMask,
+        chainRawValues as unknown as (number | bigint)[],
+        chainArgTypes,
+        0,
+      );
+      expect(chainResult).toBe(chainExpected);
+
+      // G) Same chain, >4 args -- proves argCount (packed into the combined
+      // buffer's header) correctly reaches the inner callMachineCode's own
+      // stack-arg copy loop, not just the first 4 register/XMM slots.
+      const chainStackValues = [1n, 2n, 3n, 4n, 1.5, 2.5];
+      const chainStackTypes: CTypeOrString[] = [
+        CType.i64,
+        CType.i64,
+        CType.i64,
+        CType.i64,
+        CType.f64,
+        CType.f64,
+      ];
+      const chainExpectedStack = chainStackValues.reduce<bigint>(
+        (acc, v, i) => acc ^ rawBitsOf(v, i >= 4),
+        0n,
+      );
+      const chainResultStack = await callProbeThroughChain(
+        accessor,
+        0,
+        chainStackValues,
+        chainStackTypes,
+        2,
+      );
+      expect(chainResultStack).toBe(chainExpectedStack);
+
+      // H) Identity/caching: chainedCallMachineCode(accessor, mask, category)
+      // returns the same object for the same (accessor, mask, category) --
+      // meaning it does NOT re-inject the inner callMachineCode into the
+      // process on every call.
+      const chained0 = await chainedCallMachineCode(accessor, 0);
+      const chained0Again = await chainedCallMachineCode(accessor, 0);
+      expect(chained0Again).toBe(chained0);
+      const chained0Float = await chainedCallMachineCode(accessor, 0, 'float');
+      expect(chained0Float).not.toBe(chained0);
+
+      // I) A 5-argument call through the chain -- 4 register/XMM slots (mixed
+      // int/float, same mask as F) plus 1 real stack argument, so this single
+      // call exercises the register dispatch and the stack-arg copy loop
+      // together. packChainedArgs' combined buffer here is 8 slots, not 7:
+      // targetPointer + targetArgCount + selfPointer (3 header slots -- see
+      // the CLAUDE.md writeup for why the self-pointer slot can't be folded
+      // away) + the 5 real arguments.
+      const fiveArgValues = [10n, 1.5, 20n, 2.5, 30n];
+      const fiveArgTypes: CTypeOrString[] = [
+        CType.i64,
+        CType.f64,
+        CType.i64,
+        CType.f64,
+        CType.i64,
+      ];
+      const fiveArgMask = 0b1010; // slots 1 and 3 are the f64 ones
+      const fiveArgIsFloatBySlot = [false, true, false, true, false];
+      const fiveArgExpected = fiveArgValues.reduce<bigint>(
+        (acc, v, i) => acc ^ rawBitsOf(v, fiveArgIsFloatBySlot[i]!),
+        0n,
+      );
+      const fiveArgResult = await callProbeThroughChain(
+        accessor,
+        fiveArgMask,
+        fiveArgValues,
+        fiveArgTypes,
+        1, // 1 stack arg: the 5th (index 4)
+      );
+      expect(fiveArgResult).toBe(fiveArgExpected);
     } finally {
       await accessor.deinit();
     }

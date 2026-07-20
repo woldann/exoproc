@@ -11,6 +11,7 @@
 
 import {
   createPendingMachineCode,
+  normalizeType,
   type CMachineCode,
   type CTypeOrString,
 } from 'bun-xffi';
@@ -207,6 +208,17 @@ export function movSibDisp0FromReg(
   ];
 }
 
+/** `mov r64, imm64` (REX.W B8+rd io) -- loads a full 64-bit immediate into a GPR. */
+export function movRegImm64(dst: Reg, imm64: bigint): number[] {
+  const bytes = [rex(true, false, false, dst >= 8), 0xb8 | (dst & 7)];
+  let value = BigInt.asUintN(64, imm64);
+  for (let i = 0; i < 8; i++) {
+    bytes.push(Number(value & 0xffn));
+    value >>= 8n;
+  }
+  return bytes;
+}
+
 export function jccShort(cc: number, rel8: number): number[] {
   return [cc, rel8 & 0xff];
 }
@@ -231,14 +243,11 @@ function assertValidCallMask(mask: number): void {
 }
 
 /**
- * Builds the raw bytes for a thunk that calls an arbitrary function pointer
- * with a runtime-sized argument list, per the Win64 calling convention.
- *
- * Entry (Win64 ABI): RCX=functionPointer, RDX=argCount, R8=args -- a flat
- * buffer of 8-byte slots. The caller must reserve at least 4 slots even when
- * argCount<4: slots 0-3 are always read regardless of the real argCount,
- * since an unused register/XMM the callee has no matching parameter for is
- * simply never looked at.
+ * Shared tail for both {@link buildCallBytes} (functionPointer/argCount are
+ * runtime values) and {@link buildFixedCallBytes} (they're baked-in
+ * immediates) -- assumes RAX=functionPointer, R10=argCount, R11=argsPointer
+ * are already set when this runs, and RBX already anchors the stack frame
+ * (see the comment on {@link buildCallBytes} for why).
  *
  * `mask` bit i (0-3) selects XMM_i (1) or the GPR pair RCX/RDX/R8/R9 (0) for
  * register-argument slot i -- this has to be picked per callsite because the
@@ -252,24 +261,13 @@ function assertValidCallMask(mask: number): void {
  * per the ABI -- callers just pick which register to read via the `returns`
  * type on the `CFunction`/`CMachineCode` they wrap the injected address with.
  */
-export function buildCallBytes(mask: number): number[] {
+function buildCallBody(mask: number): number[] {
   assertValidCallMask(mask);
 
   const bytes: number[] = [];
   const emit = (chunk: readonly number[]): void => {
     bytes.push(...chunk);
   };
-
-  // Preserve caller's RBX and use it as a stack-frame anchor: since RBX is
-  // callee-saved, the target function preserves it across `call`, so
-  // cleanup afterward is just "mov rsp,rbx; pop rbx" regardless of how much
-  // stack space we used for the args -- no bookkeeping needed post-call.
-  emit(pushReg(Reg.RBX));
-  emit(regRegOp(0x89, Reg.RBX, Reg.RSP));
-
-  emit(regRegOp(0x89, Reg.RAX, Reg.RCX)); // rax = functionPointer
-  emit(regRegOp(0x89, Reg.R10, Reg.RDX)); // r10 = argCount
-  emit(regRegOp(0x89, Reg.R11, Reg.R8)); // r11 = args pointer
 
   // r10 = M = max(argCount - 4, 0)
   emit(immOp8(5, Reg.R10, CALL_REGISTER_SLOTS));
@@ -326,53 +324,139 @@ export function buildCallBytes(mask: number): number[] {
   return bytes;
 }
 
-const CALL_ARGS_SIG: CTypeOrString[] = ['ptr', 'u64', 'ptr'];
+/**
+ * Builds the raw bytes for a thunk that calls an arbitrary function pointer
+ * with a runtime-sized argument list, per the Win64 calling convention.
+ *
+ * Entry (Win64 ABI): RCX=functionPointer, RDX=argCount, R8=args -- a flat
+ * buffer of 8-byte slots. The caller must reserve at least 4 slots even when
+ * argCount<4: slots 0-3 are always read regardless of the real argCount,
+ * since an unused register/XMM the callee has no matching parameter for is
+ * simply never looked at.
+ */
+export function buildCallBytes(mask: number): number[] {
+  // Preserve caller's RBX and use it as a stack-frame anchor: since RBX is
+  // callee-saved, the target function preserves it across `call`, so
+  // cleanup afterward is just "mov rsp,rbx; pop rbx" regardless of how much
+  // stack space we used for the args -- no bookkeeping needed post-call.
+  return [
+    ...pushReg(Reg.RBX),
+    ...regRegOp(0x89, Reg.RBX, Reg.RSP),
+    ...regRegOp(0x89, Reg.RAX, Reg.RCX), // rax = functionPointer
+    ...regRegOp(0x89, Reg.R10, Reg.RDX), // r10 = argCount
+    ...regRegOp(0x89, Reg.R11, Reg.R8), // r11 = args pointer
+    ...buildCallBody(mask),
+  ];
+}
 
 /**
- * All 16 mask variants x 2 return categories (int/ptr read from RAX, or
- * float/double read from XMM0) = 32 built once up front, not lazily on first
- * request: each is cheap (~100 bytes of pure array construction), and
- * defining the whole set as fixed globals means every caller asking for the
- * same (mask, category) always gets back the exact same `CMachineCode`
- * object -- no cache-miss branch to reason about, identity is just true by
- * construction. Both categories share the same 16 underlying byte arrays
- * (built once, reused for the float wrapper) -- only the wrapper's declared
- * `returns` tag differs, since that's all a caller (or `nthread`'s return
- * marshalling) needs to read the result from the right register correctly.
+ * Builds the raw bytes for a thunk bound to one specific function pointer
+ * and argument count, baked in as immediates rather than read from
+ * registers -- unlike {@link buildCallBytes}, which takes all three
+ * (functionPointer, argCount, args) at runtime, this only takes `args`: the
+ * other two are already known once you have a real target `CFunction`, so
+ * there's no reason to keep re-passing them on every call.
+ *
+ * Entry (Win64 ABI): RCX=args -- the same flat 8-byte-slot buffer
+ * {@link buildCallBytes} expects, still padded to at least 4 slots even when
+ * `argCount<4`.
  */
-const CALL_VARIANTS_INT: readonly CMachineCode[] = Array.from(
-  { length: CALL_VARIANT_COUNT },
-  (_unused, mask) =>
-    createPendingMachineCode(['u64', CALL_ARGS_SIG], buildCallBytes(mask)),
-);
-const CALL_VARIANTS_FLOAT: readonly CMachineCode[] = Array.from(
-  { length: CALL_VARIANT_COUNT },
-  (_unused, mask) =>
-    createPendingMachineCode(
-      ['f64', CALL_ARGS_SIG],
-      CALL_VARIANTS_INT[mask]!.bytes,
-    ),
-);
+export function buildFixedCallBytes(
+  functionPointer: bigint,
+  argCount: number,
+  mask: number,
+): number[] {
+  if (!Number.isInteger(argCount) || argCount < 0) {
+    throw new RangeError(
+      `argCount must be a non-negative integer, got ${argCount}`,
+    );
+  }
+  return [
+    ...pushReg(Reg.RBX),
+    ...regRegOp(0x89, Reg.RBX, Reg.RSP),
+    ...movRegImm64(Reg.RAX, functionPointer), // rax = functionPointer (fixed)
+    ...movRegImm64(Reg.R10, BigInt(argCount)), // r10 = argCount (fixed)
+    ...regRegOp(0x89, Reg.R11, Reg.RCX), // r11 = args pointer (the only runtime arg)
+    ...buildCallBody(mask),
+  ];
+}
+
+const CALL_ARGS_SIG: CTypeOrString[] = ['ptr', 'u64', 'ptr'];
+
+// Bytes are built lazily, once per mask, on first request from either
+// category -- not eagerly for all 16 up front -- and cached globally here so
+// a later request for the *other* category on the same mask still reuses
+// them instead of rebuilding.
+const callBytesCache = new Map<number, number[]>();
+function getCallBytes(mask: number): number[] {
+  let bytes = callBytesCache.get(mask);
+  if (!bytes) {
+    bytes = buildCallBytes(mask);
+    callBytesCache.set(mask, bytes);
+  }
+  return bytes;
+}
+
+const callVariantCache = new Map<string, CMachineCode>();
 
 /**
  * The not-yet-injected `CMachineCode` for one of the 32 (mask, category)
  * variants (signature `(ptr, u64, ptr) => u64` for `'int'`, `=> f64` for
- * `'float'`) -- always the same object for the same arguments. Inject it once
- * per accessor via `accessor.machineCode(...)`, then build a
- * `createCFunction(address, sig)` from `bun-xffi` around the returned address
- * for repeat calls -- re-injecting on every call would leak remote memory,
- * same as any other `CMachineCode` in this codebase. Need the result read
- * back as something more specific than `u64`/`f64` (e.g. `f32`, `i64`,
- * `ptr`)? Just build `createCFunction(address, [returns, ['ptr','u64','ptr']])`
- * -- no new bytes needed, the ABI already put the value in the right
- * register.
+ * `'float'`) -- built lazily on first request, then cached globally, so
+ * every later caller asking for the same `(mask, category)` gets back the
+ * exact same object without rebuilding it. Inject it once per accessor via
+ * `accessor.machineCode(...)`, then build a `createCFunction(address, sig)`
+ * from `bun-xffi` around the returned address for repeat calls --
+ * re-injecting on every call would leak remote memory, same as any other
+ * `CMachineCode` in this codebase. Need the result read back as something
+ * more specific than `u64`/`f64` (e.g. `f32`, `i64`, `ptr`)? Just build
+ * `createCFunction(address, [returns, ['ptr','u64','ptr']])` -- no new bytes
+ * needed, the ABI already put the value in the right register.
  */
 export function callMachineCode(
   mask: number,
   category: 'int' | 'float' = 'int',
 ): CMachineCode {
   assertValidCallMask(mask);
-  return (category === 'float' ? CALL_VARIANTS_FLOAT : CALL_VARIANTS_INT)[
-    mask
-  ]!;
+  const key = `${mask}_${category}`;
+  let cached = callVariantCache.get(key);
+  if (!cached) {
+    const returns: CTypeOrString = category === 'float' ? 'f64' : 'u64';
+    cached = createPendingMachineCode(
+      [returns, CALL_ARGS_SIG],
+      getCallBytes(mask),
+    );
+    callVariantCache.set(key, cached);
+  }
+  return cached;
+}
+
+const fixedCallVariantCache = new Map<string, CMachineCode>();
+
+/**
+ * The not-yet-injected `CMachineCode` for a thunk bound to one specific
+ * `functionPointer`/`argCount` (signature `(ptr) => returns`, a single
+ * argument -- the args buffer). Built lazily on first request and cached
+ * globally by the full signature -- `functionPointer`, `argCount`, `mask`,
+ * and `returns` all go into the cache key -- so a later request only gets
+ * back the same object when all four actually match; a different `mask` or
+ * `returns` for the same `functionPointer`+`argCount` builds (and caches)
+ * its own separate variant instead of silently reusing the wrong one.
+ */
+export function fixedCallMachineCode(
+  functionPointer: bigint,
+  argCount: number,
+  mask: number,
+  returns: CTypeOrString,
+): CMachineCode {
+  const key = `${functionPointer}_${argCount}_${mask}_${normalizeType(returns)}`;
+  let cached = fixedCallVariantCache.get(key);
+  if (!cached) {
+    cached = createPendingMachineCode(
+      [returns, ['ptr']],
+      buildFixedCallBytes(functionPointer, argCount, mask),
+    );
+    fixedCallVariantCache.set(key, cached);
+  }
+  return cached;
 }
