@@ -16,6 +16,9 @@ import {
   fixedCallMachineCodeFor,
   chainedCallMachineCode,
   packChainedArgs,
+  captureArgsMachineCodeFor,
+  chainedCaptureArgsMachineCode,
+  maskFromArgTypes,
   packArgs,
   Reg,
   movRegFromXmm,
@@ -469,6 +472,136 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
         1, // 1 stack arg: the 5th (index 4)
       );
       expect(fiveArgResult).toBe(fiveArgExpected);
+
+      // J) captureArgsMachineCodeFor: an ordinary function (called normally,
+      // with real typed args, not through any of the call-machine-code
+      // plumbing above) that writes its first argCount arguments to a target
+      // address -- now taken as its own trailing argument (argument #argCount)
+      // rather than baked in, so this one instance is reusable across as many
+      // target addresses as callers want. 6 real args: 4 register/XMM slots
+      // (mixed int/float, same mask as F/I) plus 2 real stack args (one of
+      // them float too), then the target address as a 7th trailing argument
+      // (itself landing on the stack, since slot 6 >= 4) -- proves both the
+      // register-slot capture and the stack-arg capture preserve exact bit
+      // patterns, that the trailing target-address argument is read correctly
+      // off the stack, and that the buffer is sized to exactly argCount*8 (no
+      // over-write past it, no padding to 4 like the args-buffer convention
+      // elsewhere).
+      const captureTypes: CTypeOrString[] = [
+        CType.i64,
+        CType.f64,
+        CType.i64,
+        CType.f64,
+        CType.i64,
+        CType.f64,
+      ];
+      const captureValues = [10n, 1.5, 20n, 2.5, 30n, 3.5];
+      const captureIsFloatBySlot = [false, true, false, true, false, true];
+      const targetAddr = Number(
+        await accessor.alloc(
+          captureTypes.length * 8,
+          null,
+          MemoryProtection.READWRITE,
+        ),
+      );
+      const capture = captureArgsMachineCodeFor(captureTypes);
+      expect(captureArgsMachineCodeFor(captureTypes)).toBe(capture); // cached by (argCount, mask)
+      const captureAddr = await accessor.machineCode(capture);
+      const captureFn: CFunction = createCFunction(captureAddr, [
+        'ptr',
+        [...captureTypes, 'ptr'],
+      ]);
+
+      const captureResult = await accessor.call(
+        captureFn,
+        ...captureValues,
+        targetAddr,
+      );
+      expect(Number(captureResult)).toBe(targetAddr);
+
+      const capturedBuf = await accessor.read(
+        targetAddr,
+        captureTypes.length * 8,
+      );
+      for (let i = 0; i < captureValues.length; i++) {
+        const expectedBits = rawBitsOf(
+          captureValues[i]!,
+          captureIsFloatBySlot[i]!,
+        );
+        expect(capturedBuf.readBigUInt64LE(i * 8)).toBe(expectedBits);
+      }
+
+      // K) chainedCaptureArgsMachineCode: the actual jump-hook thunk --
+      // targetAddress is baked in, so from an outside caller's perspective
+      // this has *exactly* the real function's own signature (argCount args,
+      // no trailing target-address argument), matching how a jump-hook
+      // landing point must look. Two argCount shapes:
+      //  - argCount=2 (< 4): targetAddress lands in a register (GPR_FOR_SLOT[2]
+      //    = R8) the 2 real args never use -- a plain register-set + tail-jmp,
+      //    no stack touched.
+      //  - argCount=6 (>= 4): targetAddress would land one stack slot past
+      //    what the real caller allocated -- needs the full
+      //    reserve/relocate/call path in buildFixedCaptureArgsBytes.
+      // Both mix int/float in the first 4 slots to prove mask still works
+      // through the wrapper, and both check the returned address plus every
+      // captured slot's exact bit pattern.
+      const chainedCaptureCases: {
+        types: CTypeOrString[];
+        values: (number | bigint)[];
+        isFloatBySlot: boolean[];
+      }[] = [
+        {
+          types: [CType.i64, CType.f64],
+          values: [42n, 6.5],
+          isFloatBySlot: [false, true],
+        },
+        {
+          types: [
+            CType.i64,
+            CType.f64,
+            CType.i64,
+            CType.f64,
+            CType.i64,
+            CType.f64,
+          ],
+          values: [11n, 1.25, 22n, 2.25, 33n, 3.25],
+          isFloatBySlot: [false, true, false, true, false, true],
+        },
+      ];
+      for (const { types, values, isFloatBySlot } of chainedCaptureCases) {
+        const mask = maskFromArgTypes(types);
+        const chainedTargetAddr = Number(
+          await accessor.alloc(
+            types.length * 8,
+            null,
+            MemoryProtection.READWRITE,
+          ),
+        );
+        const chainedCapture = await chainedCaptureArgsMachineCode(
+          accessor,
+          BigInt(chainedTargetAddr),
+          types.length,
+          mask,
+        );
+        const chainedCaptureAddr = await accessor.machineCode(chainedCapture);
+        const chainedCaptureFn: CFunction = createCFunction(
+          chainedCaptureAddr,
+          ['ptr', [...types]],
+        );
+
+        const chainedResult = await accessor.call(chainedCaptureFn, ...values);
+        expect(Number(chainedResult)).toBe(chainedTargetAddr);
+
+        const chainedBuf = await accessor.read(
+          chainedTargetAddr,
+          types.length * 8,
+        );
+        for (let i = 0; i < values.length; i++) {
+          expect(chainedBuf.readBigUInt64LE(i * 8)).toBe(
+            rawBitsOf(values[i]!, isFloatBySlot[i]!),
+          );
+        }
+      }
     } finally {
       await accessor.deinit();
     }

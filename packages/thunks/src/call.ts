@@ -8,11 +8,12 @@ import {
   type CTypeOrString,
   type ICallableMemoryAccessor,
 } from 'bun-xffi';
+import { CALL_REGISTER_SLOTS } from './asm.js';
+import { callMachineCode, fixedCallMachineCode } from './call-bytes.js';
 import {
-  callMachineCode,
-  fixedCallMachineCode,
-  CALL_REGISTER_SLOTS,
-} from './win64.js';
+  captureArgsMachineCode,
+  fixedCaptureArgsMachineCode,
+} from './capture-args.js';
 
 /**
  * Picks the variant mask for a real target signature: bit i is set when
@@ -71,6 +72,19 @@ export function fixedCallMachineCodeFor(
     mask,
     target.returns,
   );
+}
+
+/**
+ * Picks the mask for `argTypes` and builds the {@link captureArgsMachineCode}
+ * for it -- so callers describe the signature they want to capture the same
+ * way they'd describe any other target (a plain `CTypeOrString[]`) instead
+ * of computing a mask by hand.
+ */
+export function captureArgsMachineCodeFor(
+  argTypes: readonly CTypeOrString[],
+): CMachineCode {
+  const mask = maskFromArgTypes(argTypes);
+  return captureArgsMachineCode(argTypes.length, mask);
 }
 
 /**
@@ -183,4 +197,51 @@ export async function packChainedArgs(
   await accessor.write(addr, Buffer.concat([header, realArgsBuf]));
 
   return addr;
+}
+
+// Per-accessor, per-(argCount,mask) cache -- the injected captureArgsMachineCode
+// instance is reusable across as many different targetAddresses as callers
+// want (it takes targetAddress as its own trailing argument), so this only
+// needs to inject it once per (accessor, argCount, mask), not once per
+// targetAddress.
+const chainedCaptureCache = new WeakMap<
+  ICallableMemoryAccessor,
+  Map<string, number>
+>();
+
+/**
+ * Injects a `captureArgsMachineCode(argCount, mask)` instance into
+ * `accessor`'s process (reused across calls for the same `(accessor,
+ * argCount, mask)` regardless of `targetAddress`), then builds a
+ * {@link fixedCaptureArgsMachineCode} bound to that address and
+ * `targetAddress` -- i.e. the actual thunk to wire into a jump-based hook
+ * for one specific hook site, entered exactly like the real `argCount`
+ * -argument function being captured. Two genuinely separate `CMachineCode`s,
+ * never fused into one blob.
+ */
+export async function chainedCaptureArgsMachineCode(
+  accessor: ICallableMemoryAccessor,
+  targetAddress: bigint,
+  argCount: number,
+  mask: number,
+): Promise<CMachineCode> {
+  let perAccessor = chainedCaptureCache.get(accessor);
+  if (!perAccessor) {
+    perAccessor = new Map();
+    chainedCaptureCache.set(accessor, perAccessor);
+  }
+  const key = `${argCount}_${mask}`;
+  let innerAddr = perAccessor.get(key);
+  if (innerAddr === undefined) {
+    innerAddr = await accessor.machineCode(
+      captureArgsMachineCode(argCount, mask),
+    );
+    perAccessor.set(key, innerAddr);
+  }
+  return fixedCaptureArgsMachineCode(
+    targetAddress,
+    BigInt(innerAddr),
+    argCount,
+    mask,
+  );
 }
