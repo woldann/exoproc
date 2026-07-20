@@ -10,6 +10,7 @@ coverage/
 
 # Build outputs
 **/dist/
+docs/.vitepress/.temp/
 **/deps/
 build/
 *.tsbuildinfo

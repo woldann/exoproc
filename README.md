@@ -51,6 +51,9 @@ see [`examples/notepad-keystroke-hook/`](./examples/notepad-keystroke-hook).
 Each package's own README has the code — quick starts, the full API surface,
 and how the pieces compose.
 
+Project concepts, lifecycle boundaries, and troubleshooting are documented in
+the [Turkish documentation site](./docs/).
+
 ---
 
 ## Requirements

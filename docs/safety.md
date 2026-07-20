@@ -1,0 +1,5 @@
+# Güvenlik ve kapsam
+
+Exoproc; tersine mühendislik, güvenlik araştırması ve yetkili hata ayıklama gibi kontrollü senaryolar içindir. Başkasına ait yazılıma, üretim iş yüküne veya korumalı yazılıma izinsiz müdahale etmek hem zarar verici hem de hukuken sorunlu olabilir.
+
+Her denemede hedef sürecin kapanabileceğini varsayın. Test sürecini yeniden başlatılabilir tutun, sembol/adres varsayımlarını kaydedin ve bellek yazmadan önce okuma ile doğrulayın.
