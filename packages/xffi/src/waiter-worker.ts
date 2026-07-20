@@ -56,13 +56,51 @@ function waitForMultipleObjects(
 const WAIT_OBJECT_0 = 0;
 const WAIT_TIMEOUT = 258;
 const WAIT_FAILED = 0xffffffff;
-const INFINITE = 0xffffffff;
 /** DWORD max minus one -- reserve the literal `INFINITE` bit pattern for "no timeout". */
 const MAX_FINITE_TIMEOUT_MS = 0xfffffffe;
+/**
+ * Upper bound on any single `WaitForMultipleObjects` call this worker makes.
+ * Deliberately never passes literal `INFINITE`, and never waits past this
+ * even for a real, farther-out deadline -- see the timeoutMs comment below.
+ */
+const SELF_HEAL_INTERVAL_MS = 2000;
 
 type Outcome = 'signaled' | 'timeout' | 'error';
 
-function evictAndReport(
+/**
+ * Tracks, per slot, the generation this worker has already sent a report
+ * for but the main thread hasn't yet acknowledged (by clearing `occupied`).
+ * -1 means "nothing outstanding". Purely local to this worker -- not part
+ * of the shared table.
+ *
+ * This worker does NOT clear `table.occupied` itself (see `reportOutcome`
+ * for why); until the main thread does, the same fired/expired/invalid slot
+ * would otherwise be rediscovered and re-reported on every subsequent loop
+ * iteration. Safe either way (the main thread's generation check drops
+ * duplicates), but wasteful -- this skips re-sending a report for a
+ * generation already sent, without needing to touch the shared table to do
+ * it.
+ */
+const lastReportedGeneration = new Int32Array(MAX_WAIT_SLOTS).fill(-1);
+
+/**
+ * Reports `outcome` for `slot` to the main thread, once per generation.
+ *
+ * Deliberately does NOT clear `table.occupied[slot]` -- only the main
+ * thread does that, and only after it has actually claimed this exact
+ * report (see `handleWorkerMessage` in `waiter.ts`). Freeing it here used to
+ * be this worker's job, and it was a real, reproduced bug: the main thread
+ * could reallocate a just-freed slot (a brand new `waitAsync` call bumping
+ * its generation) *before* this report was delivered and processed, and the
+ * generation check would then correctly -- but permanently -- discard the
+ * report as stale, silently orphaning the original call's promise forever
+ * (reproduced both on a real Windows machine and, rarely, under Wine, in
+ * `tests/xffi/waiter-stress.test.ts`'s churn test -- a slot cycling through
+ * 3 generations within a few milliseconds, two of whose reports arrived
+ * only after the main thread had already moved on). Only the side that
+ * *consumes* a report can safely be the one to free the slot for reuse.
+ */
+function reportOutcome(
   table: WaiterTable,
   slot: number,
   outcome: Outcome,
@@ -70,14 +108,11 @@ function evictAndReport(
   acquireWaiterLock(table.lock);
   const generation = table.generation[slot]!;
   const stillOccupied = table.occupied[slot] === 1;
-  if (stillOccupied) table.occupied[slot] = 0;
   releaseWaiterLock(table.lock);
 
-  // Only report if we're the one transitioning it from occupied -- guards
-  // against reporting the same slot twice.
-  if (stillOccupied) {
-    postMessage({ slot, generation, outcome });
-  }
+  if (!stillOccupied || lastReportedGeneration[slot] === generation) return;
+  lastReportedGeneration[slot] = generation;
+  postMessage({ slot, generation, outcome });
 }
 
 /**
@@ -118,7 +153,7 @@ function isolateAndEvictBadHandles(
     // unverified assumption is exactly the kind of bug that's cheap to just
     // not have.
     if (waitForMultipleObjects(handles, 0) === WAIT_FAILED) {
-      evictAndReport(table, slots[0]!, 'error');
+      reportOutcome(table, slots[0]!, 'error');
     }
     return;
   }
@@ -167,12 +202,22 @@ function loop(table: WaiterTable): void {
     }
     releaseWaiterLock(table.lock);
 
+    // Never actually pass literal INFINITE, and never wait longer than
+    // SELF_HEAL_INTERVAL_MS even when a real deadline is further out --
+    // this is a deliberate safety net, not just an optimization. This
+    // worker has to be right about picking up every table change via the
+    // wake slot; a periodic self-heal re-scan bounds the damage of any
+    // as-yet-unidentified missed-wake race (one was empirically caught,
+    // rarely, under Wine -- see the WAIT_TIMEOUT comment two lines below and
+    // `tests/xffi/waiter-stress.test.ts`) to a bounded delay instead of a
+    // permanent hang, without needing to first prove the exact mechanism.
     const timeoutMs =
       nearestDeadline === NO_DEADLINE
-        ? INFINITE
+        ? SELF_HEAL_INTERVAL_MS
         : Math.min(
             Math.max(0, Math.ceil(nearestDeadline - Date.now())),
             MAX_FINITE_TIMEOUT_MS,
+            SELF_HEAL_INTERVAL_MS,
           );
 
     const result = waitForMultipleObjects(handles, timeoutMs);
@@ -221,7 +266,7 @@ function loop(table: WaiterTable): void {
         }
       }
       releaseWaiterLock(table.lock);
-      for (const slot of due) evictAndReport(table, slot, 'timeout');
+      for (const slot of due) reportOutcome(table, slot, 'timeout');
       continue;
     }
 
@@ -230,7 +275,7 @@ function loop(table: WaiterTable): void {
     const slot = waitSlots[idx]!;
     if (slot === WAKE_SLOT) continue; // table changed -- re-snapshot and re-wait
 
-    evictAndReport(table, slot, 'signaled');
+    reportOutcome(table, slot, 'signaled');
   }
 }
 

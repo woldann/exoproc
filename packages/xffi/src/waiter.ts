@@ -80,6 +80,21 @@ function handleWorkerMessage(e: MessageEvent): void {
   const entry = pending[slot];
   if (!entry || entry.generation !== generation) return; // stale report
   pending[slot] = undefined;
+
+  // Only now -- having definitively claimed this exact report -- release the
+  // slot for reuse. This has to be the ONLY place `occupied` transitions
+  // 1->0: the worker used to do it immediately after evicting, but that let
+  // a fast-enough `waitAsync` reallocate the slot (bumping its generation)
+  // before this report was ever delivered, so the generation check above
+  // would then correctly -- but permanently -- discard it as stale,
+  // orphaning the original call's promise forever. Reproduced both on a
+  // real Windows machine and, rarely, under Wine, in
+  // tests/xffi/waiter-stress.test.ts's churn test.
+  const t = table!;
+  acquireWaiterLock(t.lock);
+  t.occupied[slot] = 0;
+  releaseWaiterLock(t.lock);
+
   entry.resolve(outcome);
 }
 
