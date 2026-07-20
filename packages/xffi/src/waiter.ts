@@ -1,8 +1,19 @@
 import { Kernel32Impl } from './win/kernel32.js';
+import {
+  MAX_WAIT_SLOTS,
+  NO_DEADLINE,
+  WAKE_SLOT,
+  WAITER_SAB_BYTES,
+  createWaiterTable,
+  acquireWaiterLock,
+  releaseWaiterLock,
+  type WaiterTable,
+} from './waiter-shared.js';
 
-export type WaitOutcome = 'signaled' | 'timeout';
+export type WaitOutcome = 'signaled' | 'timeout' | 'error';
 
 const WAIT_OBJECT_0 = 0;
+const WAIT_FAILED = 0xffffffff;
 
 /**
  * A few immediate checks (no delay at all) before backing off -- catches a
@@ -24,32 +35,22 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Waits for `handle` to signal, or `timeoutMs` to elapse (pass a negative
- * number for an infinite wait), without blocking this thread.
- *
- * Just a non-blocking `WaitForSingleObject(handle, 0)` poll loop -- each
- * check returns immediately (a real OS query, not a wait), and the `await
- * setTimeout(...)` between checks already yields to the event loop, so
- * this never blocks JS execution regardless of how long the overall wait
- * ends up taking. No separate thread is needed here.
- *
- * The poll interval ramps up (`pollDelayMs`) rather than staying fixed:
- * a few instant re-checks first (catches near-immediate signals with zero
- * delay), then 1ms, 2ms, ... up to `MAX_POLL_INTERVAL_MS`, so a wait that
- * resolves quickly is caught with low latency while one that runs long
- * settles into infrequent, cheap checks instead of polling tightly the
- * whole time.
+ * The original non-blocking poll-loop implementation. Kept as a fallback for
+ * the one case the shared-table/worker path below can't serve: more than
+ * `MAX_WAIT_SLOTS - 1` waits already outstanding at once, since
+ * `WaitForMultipleObjects` itself refuses more than 64 handles total (a hard
+ * Windows limit, not something a bigger table works around).
  */
-export async function waitAsync(
+async function waitAsyncPolling(
   handle: bigint,
   timeoutMs: number,
 ): Promise<WaitOutcome> {
   const deadline = timeoutMs < 0 ? Infinity : performance.now() + timeoutMs;
 
   for (let attempt = 0; ; attempt++) {
-    if (Kernel32Impl.WaitForSingleObject(handle, 0) === WAIT_OBJECT_0) {
-      return 'signaled';
-    }
+    const result = Kernel32Impl.WaitForSingleObject(handle, 0);
+    if (result === WAIT_OBJECT_0) return 'signaled';
+    if (result === WAIT_FAILED) return 'error';
     if (performance.now() >= deadline) {
       return 'timeout';
     }
@@ -58,4 +59,132 @@ export async function waitAsync(
       await sleep(delay);
     }
   }
+}
+
+interface PendingWait {
+  resolve: (outcome: WaitOutcome) => void;
+  generation: number;
+}
+
+let table: WaiterTable | undefined;
+let wakeHandle = 0n;
+let readyPromise: Promise<void> | undefined;
+const pending: (PendingWait | undefined)[] = new Array(MAX_WAIT_SLOTS);
+
+function handleWorkerMessage(e: MessageEvent): void {
+  const { slot, generation, outcome } = e.data as {
+    slot: number;
+    generation: number;
+    outcome: WaitOutcome;
+  };
+  const entry = pending[slot];
+  if (!entry || entry.generation !== generation) return; // stale report
+  pending[slot] = undefined;
+  entry.resolve(outcome);
+}
+
+/**
+ * Lazily creates the shared table and spawns the worker, returning a promise
+ * that resolves once the worker has actually entered its wait loop.
+ *
+ * The wake event is `SetEvent`d *before* the worker is spawned, so its very
+ * first `WaitForMultipleObjects` call returns immediately (Win32 events
+ * retain their signaled state until a wait consumes it -- there's no window
+ * where this signal could be "missed" by starting the worker slightly late).
+ * The worker's very first loop iteration -- having thus been kicked
+ * immediately -- reports readiness back over the same message channel used
+ * for real signals, which doubles as proof its `dlopen`-bound
+ * `WaitForMultipleObjects` binding actually works, not just that message
+ * passing does.
+ */
+function ensureStarted(): Promise<void> {
+  if (readyPromise) return readyPromise;
+
+  const sab = new SharedArrayBuffer(WAITER_SAB_BYTES);
+  const t = createWaiterTable(sab);
+
+  wakeHandle = BigInt(Kernel32Impl.CreateEventA(0, 0, 0, 0));
+  t.handles[WAKE_SLOT] = wakeHandle;
+  t.occupied[WAKE_SLOT] = 1;
+  t.deadline[WAKE_SLOT] = NO_DEADLINE;
+  Kernel32Impl.SetEvent(wakeHandle);
+
+  // `waiter-worker.ts` is bundled as its own standalone entry point (see
+  // scripts/build.ts), so it exists as a sibling `.js` file next to whatever
+  // this module itself was loaded as when running from `dist/` -- and as a
+  // sibling `.ts` file when running live from `src/` (tests). Match whichever
+  // extension this module was loaded with.
+  const ext = import.meta.url.endsWith('.ts') ? '.ts' : '.js';
+  const w = new Worker(new URL(`./waiter-worker${ext}`, import.meta.url).href);
+  w.unref?.();
+
+  readyPromise = new Promise<void>((resolveReady) => {
+    w.onmessage = (e: MessageEvent) => {
+      if ((e.data as { type?: string }).type === 'ready') {
+        w.onmessage = handleWorkerMessage;
+        table = t;
+        resolveReady();
+        return;
+      }
+    };
+  });
+  w.postMessage({ sab });
+
+  return readyPromise;
+}
+
+function findFreeSlot(t: WaiterTable): number {
+  for (let i = WAKE_SLOT + 1; i < MAX_WAIT_SLOTS; i++) {
+    if (t.occupied[i] === 0) return i;
+  }
+  return -1;
+}
+
+/**
+ * Waits for `handle` to signal, or `timeoutMs` to elapse (pass a negative
+ * number for an infinite wait), without blocking this thread.
+ *
+ * Backed by a dedicated worker that runs a single `WaitForMultipleObjects`
+ * loop (a real OS wait, not a poll) over a table of handles shared with this
+ * thread via a `SharedArrayBuffer`. Registering a new wait writes the handle
+ * *and its absolute deadline* into a free slot and `SetEvent`s a reserved
+ * wake handle (slot 0), which kicks the worker's blocking call so it picks
+ * up the updated table. The worker itself derives its `WaitForMultipleObjects`
+ * timeout from the nearest deadline across all occupied slots and reports
+ * back one of three outcomes per slot -- `'signaled'`, `'timeout'`, or
+ * `'error'` (the handle became invalid, isolated via bisecting repeated
+ * `WaitForMultipleObjects` calls -- see `waiter-worker.ts`) -- which this
+ * resolves that slot's promise with. Because the kernel enforces the
+ * timeout, not a JS timer on either thread, it can't be delayed by either
+ * thread being busy. A per-slot generation counter guards against a stale
+ * report (e.g. for a slot since reallocated) resolving the wrong caller.
+ *
+ * Falls back to the old non-blocking `WaitForSingleObject(handle, 0)` poll
+ * loop when the shared table is full (`WaitForMultipleObjects` itself caps
+ * out at 64 handles) -- see `waitAsyncPolling`.
+ */
+export async function waitAsync(
+  handle: bigint,
+  timeoutMs: number,
+): Promise<WaitOutcome> {
+  await ensureStarted();
+  const t = table!;
+
+  acquireWaiterLock(t.lock);
+  const slot = findFreeSlot(t);
+  if (slot === -1) {
+    releaseWaiterLock(t.lock);
+    return waitAsyncPolling(handle, timeoutMs);
+  }
+  t.occupied[slot] = 1;
+  t.handles[slot] = handle;
+  t.deadline[slot] = timeoutMs >= 0 ? Date.now() + timeoutMs : NO_DEADLINE;
+  const generation = (t.generation[slot] = (t.generation[slot]! + 1) >>> 0);
+  releaseWaiterLock(t.lock);
+
+  Kernel32Impl.SetEvent(wakeHandle);
+
+  return new Promise<WaitOutcome>((resolve) => {
+    pending[slot] = { resolve, generation };
+  });
 }

@@ -138,9 +138,21 @@ async function buildAll() {
 
     log.info(`Building ${pkgName}...`);
 
+    // Standalone worker entry points (e.g. `waiter-worker.ts`) get their own
+    // bundle, built alongside the main entry in the same invocation, so each
+    // is fully self-contained and independently loadable via `new Worker(...)`
+    // -- the main bundle only ever references them by relative URL at
+    // runtime, never imports them, so `bun build` wouldn't otherwise know
+    // they're reachable.
+    const srcDir = join(pkgPath, 'src');
+    const workerEntries = readdirSync(srcDir).filter((f) =>
+      f.endsWith('-worker.ts'),
+    );
+
     const buildArgs = [
       'build',
       entryPath,
+      ...workerEntries.map((f) => join(srcDir, f)),
       '--outdir',
       join(pkgPath, 'dist'),
       '--target',
