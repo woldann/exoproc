@@ -82,6 +82,57 @@ export function createMachineCode(
 }
 
 /**
+ * Wraps bytes that need remote injection before they're callable there.
+ *
+ * Unlike `createMachineCode()` (whose `shouldCloneForAccessor` always returns
+ * `false` -- the "bytes already live at `address`" case), this always returns
+ * `true`, so `accessor.machineCode()`/`machineCodeSync()` actually
+ * allocate+write `bytes` into the target process instead of reporting
+ * `address` back as-is, and `cloneForAddress()` hands back a
+ * `createRemoteMachineCode()` wrapper for the concrete injected address.
+ *
+ * `address`/`callable` still describe local callability, same as
+ * `createMachineCode()`: pass a real local address+symbol (as `cmachinecode()`
+ * does with its `cjitopen`-compiled output below) to keep the bytes callable
+ * in-process too; omit both (the default) for bytes with no local meaning at
+ * all -- e.g. hand-assembled machine code for a different ABI than the host's
+ * own -- which then throws if ever called directly instead of via an
+ * accessor.
+ */
+export function createPendingMachineCode(
+  sig: [CTypeOrString, CTypeOrString[]],
+  bytes: number[] | Uint8Array,
+  address: number = 0,
+  callable?: CallableFunction,
+): CMachineCode {
+  const notLocallyCallable = (): never => {
+    throw new Error(
+      'This machineCode has no local address; inject it first via accessor.machineCode().',
+    );
+  };
+  const wrapper = createMachineCode(
+    address,
+    sig,
+    bytes,
+    callable ?? notLocallyCallable,
+  ) as any;
+
+  wrapper.shouldCloneForAccessor = (_accessor: any): boolean => true;
+
+  wrapper.machineCode = async (
+    accessor: ICallableMemoryAccessor,
+  ): Promise<number> => accessor.machineCode(wrapper);
+
+  wrapper.machineCodeSync = (accessor: ISyncMemoryAccessor): number =>
+    accessor.machineCodeSync(wrapper);
+
+  wrapper.cloneForAddress = (remoteAddr: number): CMachineCode =>
+    createRemoteMachineCode(remoteAddr, wrapper);
+
+  return wrapper as CMachineCode;
+}
+
+/**
  * Modern dynamic MachineCode Builder that acts as a thin wrapper over cjitopen.
  * Compiles relocatable standalone bytecode entirely in-memory without any
  * file system operations.
@@ -106,29 +157,22 @@ export function cmachinecode(options: MachineCodeOptions): CMachineCode {
   const shellSymbol = jitLib.symbols.machineCode as any;
   const bytes = Array.from<number>(Buffer.from(shellSymbol.bytes));
 
-  const wrapper = createMachineCode(
-    shellSymbol,
+  const wrapper = createPendingMachineCode(
     [returns, args],
     bytes,
+    shellSymbol,
     shellSymbol,
   ) as any;
 
   wrapper._jitLib = jitLib;
-  wrapper.shouldCloneForAccessor = (_accessor: any): boolean => true;
 
-  wrapper.machineCode = async function (
-    accessor: ICallableMemoryAccessor,
-  ): Promise<number> {
-    return accessor.machineCode(wrapper);
-  };
-
-  wrapper.machineCodeSync = function (accessor: ISyncMemoryAccessor): number {
-    return accessor.machineCodeSync(wrapper);
-  };
-
-  wrapper.cloneForAddress = function (remoteAddr: number): CMachineCode {
-    return createRemoteMachineCode(remoteAddr, wrapper);
-  };
+  // Unlike createPendingMachineCode's default (always needs remote
+  // injection), this was already compiled by cjitopen and is sitting at a
+  // real, directly-callable address in *this* process. So when the accessor
+  // IS this process, that existing local address is already usable as-is --
+  // only a genuinely different (remote) process needs the bytes copied over.
+  wrapper.shouldCloneForAccessor = (accessor: any): boolean =>
+    !accessor?.isLocal;
 
   return wrapper as CMachineCode;
 }

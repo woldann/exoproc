@@ -132,6 +132,13 @@
         "exoproc-utils": "workspace:*",
       },
     },
+    "packages/thunks": {
+      "name": "bun-thunks",
+      "version": "0.1.0",
+      "dependencies": {
+        "bun-xffi": "workspace:*",
+      },
+    },
     "packages/utils": {
       "name": "exoproc-utils",
       "version": "0.1.0",
@@ -764,6 +771,8 @@
     "bun-nshm": ["bun-nshm@workspace:packages/nshm"],
 
     "bun-nthread": ["bun-nthread@workspace:packages/nthread"],
+
+    "bun-thunks": ["bun-thunks@workspace:packages/thunks"],
 
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
