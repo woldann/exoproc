@@ -49,6 +49,7 @@
       "bun-nhook": ["packages/nhook/src/index.ts"],
       "bun-minhook": ["packages/minhook/src/index.ts"],
       "bun-nshm": ["packages/nshm/src/index.ts"],
+      "bun-thunks": ["packages/thunks/src/index.ts"],
       "exoproc": ["packages/exoproc/src/index.ts"]
     }
   },
@@ -61,6 +62,7 @@
     { "path": "./packages/capstone" },
     { "path": "./packages/nthread" },
     { "path": "./packages/nshm" },
+    { "path": "./packages/thunks" },
     { "path": "./packages/accessors" },
     { "path": "./packages/nhook" },
     { "path": "./packages/minhook" },
