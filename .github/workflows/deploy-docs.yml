@@ -29,8 +29,6 @@ jobs:
 
       - name: Build VitePress site
         run: bun run docs:build
-        env:
-          BASE_URL: /${{ github.event.repository.name }}/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

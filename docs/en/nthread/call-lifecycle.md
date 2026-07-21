@@ -1,13 +1,44 @@
 # NThread call lifecycle
 
-One `NThread` manages one OS thread. With the factory path, thread selection happens during initialization and `createAccessor()` resolves only after that work completes.
+One `NThread` redirects exactly one OS thread for its lifetime. With the factory path, thread selection happens during initialization and `createAccessor()` resolves only after that work completes.
 
-Initialization waits for the required system-stub scans, captures general-purpose, control, and XMM state, and parks the thread. That snapshot helps restore execution but cannot undo target lock semantics.
+In the slowed model below, each clock edge advances one instruction. Rather than displaying every code region at once, the disassembly window follows `RIP` between native code, separate stub locations in different modules, and a demo target. Its nine instruction groups and memory addresses are deterministic teaching data, not addresses read from a running process.
+
+<NThreadSimulator locale='en' />
+
+Initialization waits for the required system-stub scans, suspends the thread once to capture the `INTEGER`, `CONTROL`, and `FLOATING_POINT` context groups, then resumes it once into the running `EB FE` spin loop. For readability, the simulator shows `RIP`, `RSP`, `RAX`, `RBX`, `RBP`, `RCX`, `RDX`, `R8`, and `R9`; its NThread side handles those nine fields only through `getContext()` and `setContext()`. The real snapshot also contains XMM state. Restoring context cannot undo lock semantics or memory side effects produced by a call.
+
+Outside that initial `SuspendThread()` and `ResumeThread()` pair, the call path does not touch the thread's suspend count. Because `EB FE` changes neither registers nor memory, NThread can safely read and modify the context while the thread is running at spin.
+
+`savedContext` is copied twice during initialization. The first copy preserves the original `RIP` and selected jump-register value while the thread is initially suspended. After the `jumpStub → spinStub` landing, NThread clones the live context again while the thread runs at spin, then patches that second copy's `RIP` and jump-register field with the original values. The working snapshot therefore reflects the spin state while deinitialization can still release the thread at its captured instruction. The simulator's `CONTEXT BUS` and `0/2 → 2/2 COPIES` indicators visualize this sequence.
+
+NThread leaves a full page below the captured stack pointer before selecting its call workspace:
+
+```text
+stackBegin = align16(capturedRsp - 4096)
+callRsp    = stackBegin - 136
+
+example: capturedRsp = 0x000000A418F8C8C0
+         stackBegin  = 0x000000A418F8B8C0
+         callRsp     = 0x000000A418F8B838
+```
+
+The 4096-byte slack reduces the chance that stale dispatch pointers left in stack memory collide early with ordinary stack use after deinitialization. Stack memory itself is not restored.
 
 ## Two-stage return chain
 
 NThread constructs its normal call return path by executing `push reg; ret` in two stages. Stage A uses `RSP = callRsp + 56` and `push spinStub; ret`, establishing the spin stub slot at `[callRsp + 48]`. Stage B uses `RSP = callRsp + 8` and `push addRsp28RetStub; ret`; its first return enters `add rsp, 0x28; ret` and its second return reaches the spin stub slot.
 
-Those two consecutive returns execute the normal zero-stack-argument return route before a user call is dispatched. They establish and validate the cleanup, shadow-space skip, and known parked state that later calls rely on for stability.
+`add rsp, 0x28` executes between the two `ret` instructions. These two return jumps exercise the normal zero-stack-argument return route before a user call is dispatched. Landing at the expected destination after both returns establishes and validates the cleanup, shadow-space skip, and known running spin state that later calls rely on for stability. Initialization fails if either stage does not return to spin as expected.
 
-For a call, NThread writes arguments, sets `RIP`, resumes the thread, and reads the result after it returns through this chain. `call()` polls asynchronously; `callSync()` busy-spins the JavaScript thread and is only suitable for near-immediate calls. Always deinitialize in `finally`; do not blindly reuse an accessor after a timeout or thread death.
+## One call
+
+While the thread is running in the `EB FE` loop at `spinStub`, NThread reads its context with `getContext()`, prepares arguments and any required stack slots, then uses `setContext()` to point `RIP` at the target. The call path does not invoke `SuspendThread()` or `ResumeThread()`. After the target returns through the cleaner chain, the poller observes `RIP == spinStub` and reads the result from context. Between calls, the enabled thread remains running in the spin loop rather than roaming through native application code.
+
+Calls with more than four parameters use an additional stack-cleanup stub. NThread attempts to write the basic zero-stack-argument return chain back after such a call. `call()` polls asynchronously; `callSync()` busy-spins the JavaScript thread without yielding and is suitable only for near-immediate calls. A timeout means the thread did not return to the known spin point, not merely that a function was slow.
+
+## Cleanup and failure
+
+`deinit()` reapplies the saved context while the thread is running at spin, allowing execution to continue from the original `RIP` without another resume; it then frees temporary stack-argument stubs and closes the thread handle. Always deinitialize in `finally`. Do not blindly reuse an accessor after a timeout or thread death because the thread's live state may be unknown.
+
+If an automatic demo call is in flight, the simulator's **Disable** control waits for that call to return to spin before showing `deinit()`. That ordering belongs to the UI; production lifecycle ownership must avoid racing `call()` against `deinit()`.

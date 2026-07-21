@@ -109,13 +109,32 @@ const enSidebar = [
 ];
 
 export default defineConfig({
-  base: process.env.BASE_URL ?? '/',
+  base: '/',
   cleanUrls: true,
   title: 'Exoproc',
   description: 'Cross-process instrumentation for Windows x64',
   locales: {
-    root: { label: 'Türkçe', lang: 'tr-TR' },
-    en: { label: 'English', lang: 'en-US', link: '/en/' },
+    root: {
+      label: 'Türkçe',
+      lang: 'tr-TR',
+      themeConfig: {
+        nav: trNav,
+        sidebar: trSidebar,
+        outlineTitle: 'Bu sayfada',
+        docFooter: { prev: 'Önceki sayfa', next: 'Sonraki sayfa' },
+      },
+    },
+    en: {
+      label: 'English',
+      lang: 'en-US',
+      link: '/en/',
+      themeConfig: {
+        nav: enNav,
+        sidebar: enSidebar,
+        outlineTitle: 'On this page',
+        docFooter: { prev: 'Previous page', next: 'Next page' },
+      },
+    },
   },
   themeConfig: {
     siteTitle: 'Exoproc',
@@ -123,21 +142,5 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/woldann/exoproc' },
     ],
     search: { provider: 'local' },
-    locales: {
-      root: {
-        label: 'Türkçe',
-        nav: trNav,
-        sidebar: trSidebar,
-        outlineTitle: 'Bu sayfada',
-        docFooter: { prev: 'Önceki sayfa', next: 'Sonraki sayfa' },
-      },
-      en: {
-        label: 'English',
-        nav: enNav,
-        sidebar: enSidebar,
-        outlineTitle: 'On this page',
-        docFooter: { prev: 'Previous page', next: 'Next page' },
-      },
-    },
   },
 });
