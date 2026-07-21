@@ -102,6 +102,15 @@
         "exoproc-utils": "workspace:*",
       },
     },
+    "packages/nevent": {
+      "name": "bun-nevent",
+      "version": "0.1.0",
+      "dependencies": {
+        "bun-xffi": "workspace:*",
+        "exoproc-dummy": "workspace:*",
+        "exoproc-utils": "workspace:*",
+      },
+    },
     "packages/nhook": {
       "name": "bun-nhook",
       "version": "0.1.0",
@@ -765,6 +774,8 @@
     "bun-capstone": ["bun-capstone@workspace:packages/capstone"],
 
     "bun-minhook": ["bun-minhook@workspace:packages/minhook"],
+
+    "bun-nevent": ["bun-nevent@workspace:packages/nevent"],
 
     "bun-nhook": ["bun-nhook@workspace:packages/nhook"],
 
