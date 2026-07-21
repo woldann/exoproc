@@ -66,20 +66,28 @@ interface PendingWait {
   generation: number;
 }
 
-let table: WaiterTable | undefined;
-let wakeHandle = 0n;
-let readyPromise: Promise<void> | undefined;
-const pending: (PendingWait | undefined)[] = new Array(MAX_WAIT_SLOTS);
+/**
+ * Everything the shared-table/worker path needs, bundled as one unit rather
+ * than scattered module-level globals -- there is still exactly one
+ * (lazily-created) instance per process, but every consumer receives it
+ * explicitly instead of reading it back out of module state, so there's no
+ * "is it initialized yet" non-null assertion anywhere.
+ */
+interface WaiterRuntime {
+  readonly table: WaiterTable;
+  readonly wakeHandle: bigint;
+  readonly pending: (PendingWait | undefined)[];
+}
 
-function handleWorkerMessage(e: MessageEvent): void {
+function handleWorkerMessage(runtime: WaiterRuntime, e: MessageEvent): void {
   const { slot, generation, outcome } = e.data as {
     slot: number;
     generation: number;
     outcome: WaitOutcome;
   };
-  const entry = pending[slot];
+  const entry = runtime.pending[slot];
   if (!entry || entry.generation !== generation) return; // stale report
-  pending[slot] = undefined;
+  runtime.pending[slot] = undefined;
 
   // Only now -- having definitively claimed this exact report -- release the
   // slot for reuse. This has to be the ONLY place `occupied` transitions
@@ -90,17 +98,18 @@ function handleWorkerMessage(e: MessageEvent): void {
   // orphaning the original call's promise forever. Reproduced both on a
   // real Windows machine and, rarely, under Wine, in
   // tests/xffi/waiter-stress.test.ts's churn test.
-  const t = table!;
-  acquireWaiterLock(t.lock);
-  t.occupied[slot] = 0;
-  releaseWaiterLock(t.lock);
+  acquireWaiterLock(runtime.table.lock);
+  runtime.table.occupied[slot] = 0;
+  releaseWaiterLock(runtime.table.lock);
 
   entry.resolve(outcome);
 }
 
+let runtimePromise: Promise<WaiterRuntime> | undefined;
+
 /**
- * Lazily creates the shared table and spawns the worker, returning a promise
- * that resolves once the worker has actually entered its wait loop.
+ * Lazily creates the shared table and spawns the worker, resolving once the
+ * worker has actually entered its wait loop.
  *
  * The wake event is `SetEvent`d *before* the worker is spawned, so its very
  * first `WaitForMultipleObjects` call returns immediately (Win32 events
@@ -112,16 +121,17 @@ function handleWorkerMessage(e: MessageEvent): void {
  * `WaitForMultipleObjects` binding actually works, not just that message
  * passing does.
  */
-function ensureStarted(): Promise<void> {
-  if (readyPromise) return readyPromise;
+function ensureStarted(): Promise<WaiterRuntime> {
+  if (runtimePromise) return runtimePromise;
 
   const sab = new SharedArrayBuffer(WAITER_SAB_BYTES);
-  const t = createWaiterTable(sab);
+  const table = createWaiterTable(sab);
+  const pending: (PendingWait | undefined)[] = new Array(MAX_WAIT_SLOTS);
 
-  wakeHandle = BigInt(Kernel32Impl.CreateEventA(0, 0, 0, 0));
-  t.handles[WAKE_SLOT] = wakeHandle;
-  t.occupied[WAKE_SLOT] = 1;
-  t.deadline[WAKE_SLOT] = NO_DEADLINE;
+  const wakeHandle = BigInt(Kernel32Impl.CreateEventA(0, 0, 0, 0));
+  table.handles[WAKE_SLOT] = wakeHandle;
+  table.occupied[WAKE_SLOT] = 1;
+  table.deadline[WAKE_SLOT] = NO_DEADLINE;
   Kernel32Impl.SetEvent(wakeHandle);
 
   // `waiter-worker.ts` is bundled as its own standalone entry point (see
@@ -133,19 +143,20 @@ function ensureStarted(): Promise<void> {
   const w = new Worker(new URL(`./waiter-worker${ext}`, import.meta.url).href);
   w.unref?.();
 
-  readyPromise = new Promise<void>((resolveReady) => {
+  const runtime: WaiterRuntime = { table, wakeHandle, pending };
+
+  runtimePromise = new Promise<WaiterRuntime>((resolveReady) => {
     w.onmessage = (e: MessageEvent) => {
       if ((e.data as { type?: string }).type === 'ready') {
-        w.onmessage = handleWorkerMessage;
-        table = t;
-        resolveReady();
+        w.onmessage = (msg: MessageEvent) => handleWorkerMessage(runtime, msg);
+        resolveReady(runtime);
         return;
       }
     };
   });
   w.postMessage({ sab });
 
-  return readyPromise;
+  return runtimePromise;
 }
 
 function findFreeSlot(t: WaiterTable): number {
@@ -182,20 +193,20 @@ export async function waitAsync(
   handle: bigint,
   timeoutMs: number,
 ): Promise<WaitOutcome> {
-  await ensureStarted();
-  const t = table!;
+  const { table, wakeHandle, pending } = await ensureStarted();
 
-  acquireWaiterLock(t.lock);
-  const slot = findFreeSlot(t);
+  acquireWaiterLock(table.lock);
+  const slot = findFreeSlot(table);
   if (slot === -1) {
-    releaseWaiterLock(t.lock);
+    releaseWaiterLock(table.lock);
     return waitAsyncPolling(handle, timeoutMs);
   }
-  t.occupied[slot] = 1;
-  t.handles[slot] = handle;
-  t.deadline[slot] = timeoutMs >= 0 ? Date.now() + timeoutMs : NO_DEADLINE;
-  const generation = (t.generation[slot] = (t.generation[slot]! + 1) >>> 0);
-  releaseWaiterLock(t.lock);
+  table.occupied[slot] = 1;
+  table.handles[slot] = handle;
+  table.deadline[slot] = timeoutMs >= 0 ? Date.now() + timeoutMs : NO_DEADLINE;
+  const generation = (table.generation[slot] =
+    (table.generation[slot]! + 1) >>> 0);
+  releaseWaiterLock(table.lock);
 
   Kernel32Impl.SetEvent(wakeHandle);
 
