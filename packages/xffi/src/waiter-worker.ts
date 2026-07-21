@@ -166,11 +166,19 @@ function isolateAndEvictBadHandles(
     const probe = waitForMultipleObjects(halfHandles, 0);
     if (probe === WAIT_FAILED) {
       isolateAndEvictBadHandles(table, halfSlots, halfHandles);
+      continue;
     }
-    // Any other result (a real signal or WAIT_TIMEOUT) proves every handle
-    // in this half is valid -- nothing to recurse into. A real signal found
-    // this way is simply picked up again, correctly, by the main loop's next
-    // full-array wait (level-triggered), so it's not specially handled here.
+    if (probe === WAIT_TIMEOUT) continue; // every handle in this half is valid, nothing signaled
+    // A real signal: this half is all-valid, so no need to recurse -- but
+    // this probe call itself just consumed it (auto-reset events reset on
+    // any successful wait, including a throwaway 0ms probe like this one).
+    // Silently moving on here was a real bug: the signal would never be
+    // seen again, permanently orphaning that slot's promise. Report it
+    // through the same path a normal full-array wait would have.
+    const idx = probe - WAIT_OBJECT_0;
+    if (idx >= 0 && idx < halfSlots.length) {
+      reportOutcome(table, halfSlots[idx]!, 'signaled');
+    }
   }
 }
 

@@ -55,7 +55,7 @@ and how the pieces compose.
 
 ## Requirements
 
-- **Bun ≥ 1.3.0**
+- **Bun ≥ 1.3.11**
 - Windows x64 — or Linux with Wine for development (the whole test suite runs under Wine)
 
 ## Quick start

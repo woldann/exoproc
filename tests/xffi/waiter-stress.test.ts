@@ -163,4 +163,33 @@ describe('xffi > waitAsync stress', () => {
     expect(outcome).toBe('error');
     expect(elapsed).toBeLessThan(2000);
   }, 15000);
+
+  test('an already-signaled handle sharing a failed bisection round with a bad handle is not silently lost', async () => {
+    // Regression test for a real bug caught in review: bisection isolates a
+    // bad handle by zero-timeout-probing halves of the failing set, and a
+    // probe of a half that's *entirely valid* can itself succeed -- which,
+    // for an auto-reset event that's already signaled, actually consumes
+    // that signal (any successful wait on an auto-reset event resets it,
+    // including a throwaway isolation probe). The original code treated any
+    // non-WAIT_FAILED probe result as "nothing to do here, move on", so that
+    // consumed signal was never reported anywhere -- this exact promise
+    // would then hang forever, since the real signal had already been used
+    // up by the probe itself and nothing else would ever fire it again.
+    //
+    // With exactly one bad and one good handle, bisecting a 2-element
+    // failing set produces two single-element probes -- `good` is
+    // guaranteed to be probed in complete isolation from `bad`.
+    const bad = 0x7ffffffff00dacedn;
+    const good = createEvent(true); // already signaled before either is registered
+
+    const [badOutcome, goodOutcome] = await Promise.all([
+      waitAsync(bad, -1),
+      waitAsync(good, 3000),
+    ]);
+
+    expect(badOutcome).toBe('error');
+    expect(goodOutcome).toBe('signaled');
+
+    Kernel32Impl.CloseHandle(good);
+  }, 15000);
 });
