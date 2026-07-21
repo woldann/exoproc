@@ -1,0 +1,5 @@
+# Safety and scope
+
+Exoproc is for controlled reverse engineering, security research, and authorized debugging. Interfering with software you do not own or have permission to inspect can be harmful and unlawful.
+
+Assume every experiment can terminate the target. Keep test processes restartable, record address and symbol assumptions, and verify writes with reads before relying on them.
