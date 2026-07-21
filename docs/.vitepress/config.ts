@@ -109,7 +109,9 @@ const enSidebar = [
 ];
 
 export default defineConfig({
-  base: '/',
+  // Local development uses `/`. GitHub Pages builds inject the repository
+  // path (and, for branch previews, the preview path) through DOCS_BASE.
+  base: process.env.DOCS_BASE ?? '/',
   cleanUrls: true,
   title: 'Exoproc',
   description: 'Cross-process instrumentation for Windows x64',
