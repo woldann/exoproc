@@ -90,11 +90,63 @@ function buildExampleStyles() {
 }
 
 /**
+ * A package's `exports` field can declare subpaths (`./cdefine`,
+ * `./bun-ffi`, ...) pointing at their own `dist/*.js` file, distinct from
+ * the main `dist/index.js` bundle. `bun build entryPath` alone never
+ * produces those -- each needs to be its own entry point -- even though
+ * another package's bundle can reference one via a plain external
+ * `import ... from '<pkg>/<subpath>'` left in place by `--external` below.
+ * Resolves each declared subpath's `dist/....js` back to the `src/....ts`
+ * it's built from, skipping the main `"."` entry (already `entryPath`)
+ * and anything unresolvable (non-string `import` condition, missing
+ * source file).
+ */
+function additionalExportEntries(
+  pkgJson: Record<string, unknown>,
+  pkgPath: string,
+): string[] {
+  const exportsField = pkgJson.exports;
+  if (!exportsField || typeof exportsField !== 'object') return [];
+
+  const entries: string[] = [];
+  for (const [subpath, target] of Object.entries(
+    exportsField as Record<string, unknown>,
+  )) {
+    if (subpath === '.') continue;
+    const importPath =
+      target && typeof target === 'object'
+        ? (target as Record<string, unknown>).import
+        : target;
+    if (typeof importPath !== 'string') continue;
+
+    const relativeSrc = importPath
+      .replace(/^\.\/dist\//, '')
+      .replace(/\.js$/, '.ts');
+    const srcPath = join(pkgPath, 'src', relativeSrc);
+    if (existsSync(srcPath)) entries.push(srcPath);
+  }
+  return entries;
+}
+
+/**
  * Builds all packages in the monorepo centrally.
  */
 async function buildAll() {
   log.info('Generating TypeScript declaration files...');
-  const tscResult = spawnSync('bun', ['x', 'tsc', '-b'], { stdio: 'inherit' });
+  // `--force`, not a plain `tsc -b`: the incremental build cache
+  // (`*.tsbuildinfo`, gitignored) only tracks source mtimes vs. its own
+  // last-known state -- it never checks whether the `.d.ts` outputs it
+  // recorded are actually still on disk. Delete `dist/` (a clean checkout,
+  // a CI cache miss on `dist/` but not on a leftover `.tsbuildinfo`, ...)
+  // while the buildinfo survives, and a plain `tsc -b` reports every
+  // project "up to date" and silently emits nothing, even though every
+  // declaration file is gone -- confirmed reproducing exactly that against
+  // Cloudflare's own build-output caching. `--force` ignores the cache
+  // and always re-emits, trading a bit of rebuild time for actually being
+  // correct.
+  const tscResult = spawnSync('bun', ['x', 'tsc', '-b', '--force'], {
+    stdio: 'inherit',
+  });
   if (tscResult.status !== 0) {
     log.fail('Failed to generate declaration files');
     process.exit(1);
@@ -124,17 +176,18 @@ async function buildAll() {
 
     if (!existsSync(entryPath)) continue;
 
-    // Get the actual package name from package.json for logging
-    let pkgName = pkg;
+    // Parsed once and reused below for the package name, its additional
+    // export entries, and the LICENSE-copy check.
+    let pkgJson: Record<string, unknown> = {};
     const pkgJsonPath = join(pkgPath, 'package.json');
     if (existsSync(pkgJsonPath)) {
       try {
-        const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
-        pkgName = pkgJson.name || pkg;
-      } catch {
-        // Fallback to folder name
+        pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
+      } catch (err) {
+        log.warn(`Failed to parse package.json for ${pkg}: ${err}`);
       }
     }
+    const pkgName = (pkgJson.name as string | undefined) ?? pkg;
 
     log.info(`Building ${pkgName}...`);
 
@@ -153,6 +206,7 @@ async function buildAll() {
       'build',
       entryPath,
       ...workerEntries.map((f) => join(srcDir, f)),
+      ...additionalExportEntries(pkgJson, pkgPath),
       '--outdir',
       join(pkgPath, 'dist'),
       '--target',
@@ -173,15 +227,8 @@ async function buildAll() {
 
     // Each package's `files` array ships its own LICENSE copy -- keep that
     // promise true by copying the root LICENSE alongside its build output.
-    if (existsSync(pkgJsonPath)) {
-      try {
-        const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
-        if (Array.isArray(pkgJson.files) && pkgJson.files.includes('LICENSE')) {
-          copyFileSync(join(ROOT_DIR, 'LICENSE'), join(pkgPath, 'LICENSE'));
-        }
-      } catch {
-        // Already logged/handled above when reading pkgName
-      }
+    if (Array.isArray(pkgJson.files) && pkgJson.files.includes('LICENSE')) {
+      copyFileSync(join(ROOT_DIR, 'LICENSE'), join(pkgPath, 'LICENSE'));
     }
   }
 
