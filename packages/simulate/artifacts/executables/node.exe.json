@@ -1,0 +1,184 @@
+{
+  "format": "EXOPROC64",
+  "windowsPe": false,
+  "path": "C:\\Windows\\System32\\node.exe",
+  "name": "node.exe",
+  "imageBytes": 2361,
+  "headerBytes": 64,
+  "textBytes": 196,
+  "iatBytes": 32,
+  "importCount": 4,
+  "dataBytes": 2101,
+  "entryOffset": 0,
+  "relocationCount": 7,
+  "imports": [
+    "msvcrt.dll!printf",
+    "node.dll!createJSProcess",
+    "node.dll!enterJSProcess",
+    "node.dll!terminateJSProcess"
+  ],
+  "hashes": {
+    "imageSha256": "418a23b31df5338527e2078325fbeb8c2a43385518b1b2d25ee750c33135970a",
+    "compilerTextSha256": "fcf2c1bd167a9276379e27f187c90053df38c26d3f4acac4e494daf56cc32059",
+    "linkedTextSha256": "541be6edc9cb2bd34032aaddb8ae352950559575b72df195cf9129177b99bdb0",
+    "iatSha256": "3ab49dcffb099d5536bad5d627b4886b93e87694c265186fbb01f0ef70cdc91a",
+    "dataSha256": "8009bbc23be56d5ec5909531473dc0aa5c174739b2c8f509eb47713fcc59431b"
+  },
+  "sections": {
+    ".text": {
+      "address": "0x7ff600a01000",
+      "bytes": 196,
+      "protection": "rx"
+    },
+    ".idata": {
+      "address": "0x7ff600a02000",
+      "bytes": 32,
+      "protection": "r",
+      "symbols": [
+        {
+          "name": "createJSProcess",
+          "address": "0x7ff600a02000",
+          "target": "node.dll!createJSProcess",
+          "targetAddress": "0x7fe008000000",
+          "state": "resolved"
+        },
+        {
+          "name": "enterJSProcess",
+          "address": "0x7ff600a02008",
+          "target": "node.dll!enterJSProcess",
+          "targetAddress": "0x7fe008000400",
+          "state": "resolved"
+        },
+        {
+          "name": "terminateJSProcess",
+          "address": "0x7ff600a02010",
+          "target": "node.dll!terminateJSProcess",
+          "targetAddress": "0x7fe008000800",
+          "state": "resolved"
+        },
+        {
+          "name": "printf",
+          "address": "0x7ff600a02018",
+          "target": "msvcrt.dll!printf",
+          "targetAddress": "0x7fe002006400",
+          "state": "resolved"
+        }
+      ]
+    },
+    ".rdata": {
+      "address": "0x7ff600a03000",
+      "bytes": 53,
+      "zeroFill": false,
+      "symbols": [
+        {
+          "name": "usage",
+          "address": "0x7ff600a03000",
+          "offset": 0,
+          "bytes": 50
+        },
+        {
+          "name": "__exoproc_printf_string_format",
+          "address": "0x7ff600a03032",
+          "offset": 50,
+          "bytes": 3
+        }
+      ]
+    },
+    ".data": {
+      "address": "0x7ff600a03035",
+      "bytes": 0,
+      "zeroFill": false,
+      "symbols": []
+    },
+    ".bss": {
+      "address": "0x7ff600a03035",
+      "bytes": 2048,
+      "zeroFill": true,
+      "symbols": [
+        {
+          "name": "args",
+          "address": "0x7ff600a03035",
+          "offset": 53,
+          "bytes": 2048
+        }
+      ]
+    }
+  },
+  "relocations": [
+    {
+      "offset": 17,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "args",
+        "address": "0x7ff600a03035"
+      }
+    },
+    {
+      "offset": 95,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "node.dll",
+        "function": "createJSProcess",
+        "address": "0x7fe008000000",
+        "iatOffset": 0,
+        "iatSlotAddress": "0x7ff600a02000"
+      }
+    },
+    {
+      "offset": 121,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "node.dll",
+        "function": "enterJSProcess",
+        "address": "0x7fe008000400",
+        "iatOffset": 8,
+        "iatSlotAddress": "0x7ff600a02008"
+      }
+    },
+    {
+      "offset": 144,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "node.dll",
+        "function": "terminateJSProcess",
+        "address": "0x7fe008000800",
+        "iatOffset": 16,
+        "iatSlotAddress": "0x7ff600a02010"
+      }
+    },
+    {
+      "offset": 158,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "usage",
+        "address": "0x7ff600a03000"
+      }
+    },
+    {
+      "offset": 168,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "__exoproc_printf_string_format",
+        "address": "0x7ff600a03032"
+      }
+    },
+    {
+      "offset": 182,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "msvcrt.dll",
+        "function": "printf",
+        "address": "0x7fe002006400",
+        "iatOffset": 24,
+        "iatSlotAddress": "0x7ff600a02018"
+      }
+    }
+  ]
+}

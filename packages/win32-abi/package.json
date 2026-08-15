@@ -1,0 +1,39 @@
+{
+  "name": "@exoproc/win32-abi",
+  "version": "0.1.0",
+  "description": "Runtime-neutral Win32 x64 DLL and function ABI manifests.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun x tsc"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "win32",
+    "win64",
+    "abi",
+    "ffi",
+    "dll"
+  ]
+}

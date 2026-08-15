@@ -1,0 +1,246 @@
+{
+  "format": "EXOPROC64",
+  "windowsPe": false,
+  "path": "C:\\Windows\\System32\\where.exe",
+  "name": "where.exe",
+  "imageBytes": 4461,
+  "headerBytes": 64,
+  "textBytes": 217,
+  "iatBytes": 16,
+  "importCount": 2,
+  "dataBytes": 4180,
+  "entryOffset": 0,
+  "relocationCount": 14,
+  "imports": [
+    "kernel32.dll!SearchPathA",
+    "msvcrt.dll!printf"
+  ],
+  "hashes": {
+    "imageSha256": "fdc7f1e2e7fbdd99545f50a1a626526509d8770d9a7221aa7bde9f038dbc161b",
+    "compilerTextSha256": "9737b2c24b3d6b491c60e58f9352e77652c576202f5754d2a1f76fa98cbca76a",
+    "linkedTextSha256": "3ff9b4692a79cc71a4798818487e9cbd1870142f88983ffd831f322eb9dd9abb",
+    "iatSha256": "90b16475f5716eafd620330983e61cfe097f37c768dd772b03115e3958d6f285",
+    "dataSha256": "17df908576adefdb04a03e16211988b2332e5a1c2115bcefbf0b4bf811c8d52d"
+  },
+  "sections": {
+    ".text": {
+      "address": "0x7ff601601000",
+      "bytes": 217,
+      "protection": "rx"
+    },
+    ".idata": {
+      "address": "0x7ff601602000",
+      "bytes": 16,
+      "protection": "r",
+      "symbols": [
+        {
+          "name": "SearchPathA",
+          "address": "0x7ff601602000",
+          "target": "kernel32.dll!SearchPathA",
+          "targetAddress": "0x7fe000015800",
+          "state": "resolved"
+        },
+        {
+          "name": "printf",
+          "address": "0x7ff601602008",
+          "target": "msvcrt.dll!printf",
+          "targetAddress": "0x7fe002006400",
+          "state": "resolved"
+        }
+      ]
+    },
+    ".rdata": {
+      "address": "0x7ff601603000",
+      "bytes": 84,
+      "zeroFill": false,
+      "symbols": [
+        {
+          "name": "usage",
+          "address": "0x7ff601603000",
+          "offset": 0,
+          "bytes": 23
+        },
+        {
+          "name": "notFound",
+          "address": "0x7ff601603017",
+          "offset": 23,
+          "bytes": 55
+        },
+        {
+          "name": "newline",
+          "address": "0x7ff60160304e",
+          "offset": 78,
+          "bytes": 3
+        },
+        {
+          "name": "__exoproc_printf_string_format",
+          "address": "0x7ff601603051",
+          "offset": 81,
+          "bytes": 3
+        }
+      ]
+    },
+    ".data": {
+      "address": "0x7ff601603054",
+      "bytes": 0,
+      "zeroFill": false,
+      "symbols": []
+    },
+    ".bss": {
+      "address": "0x7ff601603054",
+      "bytes": 4096,
+      "zeroFill": true,
+      "symbols": [
+        {
+          "name": "result",
+          "address": "0x7ff601603054",
+          "offset": 84,
+          "bytes": 4096
+        }
+      ]
+    }
+  },
+  "relocations": [
+    {
+      "offset": 32,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "result",
+        "address": "0x7ff601603054"
+      }
+    },
+    {
+      "offset": 47,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "SearchPathA",
+        "address": "0x7fe000015800",
+        "iatOffset": 0,
+        "iatSlotAddress": "0x7ff601602000"
+      }
+    },
+    {
+      "offset": 68,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "result",
+        "address": "0x7ff601603054"
+      }
+    },
+    {
+      "offset": 78,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "__exoproc_printf_string_format",
+        "address": "0x7ff601603051"
+      }
+    },
+    {
+      "offset": 92,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "msvcrt.dll",
+        "function": "printf",
+        "address": "0x7fe002006400",
+        "iatOffset": 8,
+        "iatSlotAddress": "0x7ff601602008"
+      }
+    },
+    {
+      "offset": 102,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "newline",
+        "address": "0x7ff60160304e"
+      }
+    },
+    {
+      "offset": 112,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "__exoproc_printf_string_format",
+        "address": "0x7ff601603051"
+      }
+    },
+    {
+      "offset": 126,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "msvcrt.dll",
+        "function": "printf",
+        "address": "0x7fe002006400",
+        "iatOffset": 8,
+        "iatSlotAddress": "0x7ff601602008"
+      }
+    },
+    {
+      "offset": 139,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "notFound",
+        "address": "0x7ff601603017"
+      }
+    },
+    {
+      "offset": 149,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "__exoproc_printf_string_format",
+        "address": "0x7ff601603051"
+      }
+    },
+    {
+      "offset": 163,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "msvcrt.dll",
+        "function": "printf",
+        "address": "0x7fe002006400",
+        "iatOffset": 8,
+        "iatSlotAddress": "0x7ff601602008"
+      }
+    },
+    {
+      "offset": 179,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "usage",
+        "address": "0x7ff601603000"
+      }
+    },
+    {
+      "offset": 189,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "__exoproc_printf_string_format",
+        "address": "0x7ff601603051"
+      }
+    },
+    {
+      "offset": 203,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "msvcrt.dll",
+        "function": "printf",
+        "address": "0x7fe002006400",
+        "iatOffset": 8,
+        "iatSlotAddress": "0x7ff601602008"
+      }
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+node.exe / linked EXOPROC64 image
+text-base=0x7ff600a01000 iat-base=0x7ff600a02000 data-base=0x7ff600a03000
+entry=0x7ff600a01000
+text-bytes=196 data-bytes=2101
+
+relocations:
+; +0011 absolute64 -> args (0x7ff600a03035)
+; +005f iat-relative32 -> IAT+0000 (0x7ff600a02000) -> node.dll!createJSProcess (0x7fe008000000)
+; +0079 iat-relative32 -> IAT+0008 (0x7ff600a02008) -> node.dll!enterJSProcess (0x7fe008000400)
+; +0090 iat-relative32 -> IAT+0010 (0x7ff600a02010) -> node.dll!terminateJSProcess (0x7fe008000800)
+; +009e absolute64 -> usage (0x7ff600a03000)
+; +00a8 absolute64 -> __exoproc_printf_string_format (0x7ff600a03032)
+; +00b6 iat-relative32 -> IAT+0018 (0x7ff600a02018) -> msvcrt.dll!printf (0x7fe002006400)
+
+section .text
+; address=0x7ff600a01000 size=196 protection=rx
+0x00007ff600a01000 +0000  83 f9 01                        cmp      ecx, 0x1
+0x00007ff600a01003 +0003  0f 84 93 00 00 00               je       0x7ff600a0109c ; -> 0x7ff600a0109c
+0x00007ff600a01009 +0009  44 8b f9                        mov      r15d, ecx
+0x00007ff600a0100c +000c  4c 8b f2                        mov      r14, rdx
+0x00007ff600a0100f +000f  48 bb 35 30 a0 00 f6 7f 00 00   mov      rbx, 0x7ff600a03035
+0x00007ff600a01019 +0019  45 8b d7                        mov      r10d, r15d
+0x00007ff600a0101c +001c  41 81 fa 00 01 00 00            cmp      r10d, 0x100
+0x00007ff600a01023 +0023  0f 86 06 00 00 00               jbe      0x7ff600a0102f ; -> 0x7ff600a0102f
+0x00007ff600a01029 +0029  41 ba 00 01 00 00               mov      r10d, 0x100
+0x00007ff600a0102f +002f  45 31 db                        xor      r11d, r11d
+0x00007ff600a01032 +0032  4d 8b c6                        mov      r8, r14
+0x00007ff600a01035 +0035  4c 8b e3                        mov      r12, rbx
+0x00007ff600a01038 +0038  45 39 d3                        cmp      r11d, r10d
+0x00007ff600a0103b +003b  0f 83 18 00 00 00               jae      0x7ff600a01059 ; -> 0x7ff600a01059
+0x00007ff600a01041 +0041  49 8b 00                        mov      rax, [r8]
+0x00007ff600a01044 +0044  49 89 04 24                     mov      [r12], rax
+0x00007ff600a01048 +0048  49 83 c0 08                     add      r8, 0x8
+0x00007ff600a0104c +004c  49 83 c4 08                     add      r12, 0x8
+0x00007ff600a01050 +0050  41 83 c3 01                     add      r11d, 0x1
+0x00007ff600a01054 +0054  e9 df ff ff ff                  jmp      0x7ff600a01038 ; -> 0x7ff600a01038
+0x00007ff600a01059 +0059  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600a0105d +005d  ff 15 9d 0f 00 00               call     [rip+0xf9d] ; IAT[0x7ff600a02000] -> node.dll!createJSProcess (0x7fe008000000)
+0x00007ff600a01063 +0063  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600a01067 +0067  4c 8b e0                        mov      r12, rax
+0x00007ff600a0106a +006a  49 8b cc                        mov      rcx, r12
+0x00007ff600a0106d +006d  49 8b d7                        mov      rdx, r15
+0x00007ff600a01070 +0070  4c 8b c3                        mov      r8, rbx
+0x00007ff600a01073 +0073  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600a01077 +0077  ff 15 8b 0f 00 00               call     [rip+0xf8b] ; IAT[0x7ff600a02008] -> node.dll!enterJSProcess (0x7fe008000400)
+0x00007ff600a0107d +007d  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600a01081 +0081  44 8b e8                        mov      r13d, eax
+0x00007ff600a01084 +0084  49 8b cc                        mov      rcx, r12
+0x00007ff600a01087 +0087  49 8b d5                        mov      rdx, r13
+0x00007ff600a0108a +008a  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600a0108e +008e  ff 15 7c 0f 00 00               call     [rip+0xf7c] ; IAT[0x7ff600a02010] -> node.dll!terminateJSProcess (0x7fe008000800)
+0x00007ff600a01094 +0094  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600a01098 +0098  41 8b c5                        mov      eax, r13d
+0x00007ff600a0109b +009b  c3                              ret
+0x00007ff600a0109c +009c  48 ba 00 30 a0 00 f6 7f 00 00   mov      rdx, 0x7ff600a03000
+0x00007ff600a010a6 +00a6  48 b9 32 30 a0 00 f6 7f 00 00   mov      rcx, 0x7ff600a03032
+0x00007ff600a010b0 +00b0  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600a010b4 +00b4  ff 15 5e 0f 00 00               call     [rip+0xf5e] ; IAT[0x7ff600a02018] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600a010ba +00ba  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600a010be +00be  b8 09 00 00 00                  mov      eax, 0x9
+0x00007ff600a010c3 +00c3  c3                              ret
+
+section .idata
+; address=0x7ff600a02000 size=32 protection=r
+0x00007ff600a02000 +0000  00 00 00 08 e0 7f 00 00 createJSProcess              -> node.dll!createJSProcess (0x7fe008000000) state=resolved
+0x00007ff600a02008 +0008  00 04 00 08 e0 7f 00 00 enterJSProcess               -> node.dll!enterJSProcess (0x7fe008000400) state=resolved
+0x00007ff600a02010 +0010  00 08 00 08 e0 7f 00 00 terminateJSProcess           -> node.dll!terminateJSProcess (0x7fe008000800) state=resolved
+0x00007ff600a02018 +0018  00 64 00 02 e0 7f 00 00 printf                       -> msvcrt.dll!printf (0x7fe002006400) state=resolved
+
+section .rdata
+; address=0x7ff600a03000 size=53
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+usage: ; address=0x7ff600a03000 size=50
+  ; utf8="Usage: node [-e <code> | <script.js>] [args...]\r\n\u0000"
+  db 0x55, 0x73, 0x61, 0x67, 0x65, 0x3a, 0x20, 0x6e, 0x6f, 0x64, 0x65, 0x20, 0x5b, 0x2d, 0x65, 0x20
+  db 0x3c, 0x63, 0x6f, 0x64, 0x65, 0x3e, 0x20, 0x7c, 0x20, 0x3c, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74
+  db 0x2e, 0x6a, 0x73, 0x3e, 0x5d, 0x20, 0x5b, 0x61, 0x72, 0x67, 0x73, 0x2e, 0x2e, 0x2e, 0x5d, 0x0d
+  db 0x0a, 0x00
+
+__exoproc_printf_string_format: ; address=0x7ff600a03032 size=3
+  ; utf8="%s\u0000"
+  db 0x25, 0x73, 0x00
+
+section .data
+; address=0x7ff600a03035 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff600a03035 size=2048
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+args: ; address=0x7ff600a03035 size=2048
+  resb 2048

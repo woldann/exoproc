@@ -6,6 +6,7 @@
   "type": "module",
   "workspaces": [
     "packages/*",
+    "apps/*",
     "examples"
   ],
   "keywords": [
@@ -39,13 +40,23 @@
   },
   "scripts": {
     "build": "bun run scripts/build.ts",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs",
+    "docs:dev": "npm run dev --workspace=docs --",
+    "docs:build": "npm run build --workspace=docs --",
+    "docs:preview": "npm run start --workspace=docs --",
+    "simul": "npm run dev --workspace=@exoproc/simulate --",
+    "simulate": "npm run dev --workspace=@exoproc/simulate --",
+    "simulate:exec": "npm run exec --workspace=@exoproc/simulate --",
+    "simulate:inspect": "npm run inspect --workspace=@exoproc/simulate",
+    "simulate:inspect:nasm": "npm run inspect:nasm --workspace=@exoproc/simulate",
+    "simulate:build": "npm run build --workspace=@exoproc/simulate",
+    "simulate:test": "npm run test --workspace=@exoproc/simulate",
+    "simulate:test:node": "npm run test:node --workspace=@exoproc/simulate",
+    "tests:build": "npm exec --prefix packages/simulate -- tsx scripts/build-tests.ts",
     "build:clean": "bun run clean && bun run build",
     "clean": "find . -name dist -type d -not -path '*/node_modules/*' -exec rm -rf {} + 2>/dev/null; find . -name '*.tsbuildinfo' -not -path '*/node_modules/*' -delete 2>/dev/null; true",
     "download-deps": "bun scripts/download-deps.ts",
-    "test": "bun test",
+    "test": "npm run simulate:test:node",
+    "test:bun": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
     "lint": "eslint \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.ts\" \"examples/**/*.tsx\" --cache",
@@ -69,14 +80,15 @@
     "dotenv": "^16.6.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
+
     "globals": "^14.0.0",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
+
     "typescript": "~5.5.4",
     "typescript-eslint": "^7.0.2",
     "unzipper": "^0.12.3",
-    "vitepress": "^1.6.4",
     "winston": "^3.19.0"
   }
 }

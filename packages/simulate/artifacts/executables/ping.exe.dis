@@ -1,0 +1,249 @@
+ping.exe / linked EXOPROC64 image
+text-base=0x7ff600e01000 iat-base=0x7ff600e02000 data-base=0x7ff600e03000
+entry=0x7ff600e01000
+text-bytes=569 data-bytes=987
+
+relocations:
+; +001e absolute64 -> wsaData (0x7ff600e031fb)
+; +002c iat-relative32 -> IAT+0000 (0x7ff600e02000) -> ws2_32.dll!WSAStartup (0x7fe007000000)
+; +0052 iat-relative32 -> IAT+0008 (0x7ff600e02008) -> ws2_32.dll!socket (0x7fe007000c00)
+; +0070 iat-relative32 -> IAT+0010 (0x7ff600e02010) -> ws2_32.dll!inet_addr (0x7fe007002800)
+; +0083 absolute64 -> sockaddr (0x7ff600e031df)
+; +0093 absolute64 -> request (0x7ff600e031ef)
+; +00ac absolute64 -> sockaddr (0x7ff600e031df)
+; +00bb iat-relative32 -> IAT+0018 (0x7ff600e02018) -> ws2_32.dll!sendto (0x7fe007002000)
+; +00d1 absolute64 -> reply (0x7ff600e0338b)
+; +00e8 absolute64 -> fromLength (0x7ff600e031f7)
+; +00f3 absolute64 -> from (0x7ff600e033cb)
+; +0102 iat-relative32 -> IAT+0020 (0x7ff600e02020) -> ws2_32.dll!recvfrom (0x7fe007002400)
+; +0123 absolute64 -> pingFormat (0x7ff600e0301a)
+; +0131 iat-relative32 -> IAT+0028 (0x7ff600e02028) -> msvcrt.dll!printf (0x7fe002006400)
+; +0144 absolute64 -> replyFormat (0x7ff600e03040)
+; +0152 iat-relative32 -> IAT+0028 (0x7ff600e02028) -> msvcrt.dll!printf (0x7fe002006400)
+; +015f absolute64 -> statisticsFormat (0x7ff600e0306d)
+; +016d iat-relative32 -> IAT+0028 (0x7ff600e02028) -> msvcrt.dll!printf (0x7fe002006400)
+; +0182 absolute64 -> invalidFormat (0x7ff600e03152)
+; +0190 iat-relative32 -> IAT+0028 (0x7ff600e02028) -> msvcrt.dll!printf (0x7fe002006400)
+; +01a8 absolute64 -> blockedFormat (0x7ff600e030c2)
+; +01b6 iat-relative32 -> IAT+0028 (0x7ff600e02028) -> msvcrt.dll!printf (0x7fe002006400)
+; +01cb absolute64 -> winsockFailure (0x7ff600e0319e)
+; +01d5 absolute64 -> __exoproc_printf_string_format (0x7ff600e031dc)
+; +01e3 iat-relative32 -> IAT+0028 (0x7ff600e02028) -> msvcrt.dll!printf (0x7fe002006400)
+; +01f3 absolute64 -> usage (0x7ff600e03000)
+; +01fd absolute64 -> __exoproc_printf_string_format (0x7ff600e031dc)
+; +020b iat-relative32 -> IAT+0028 (0x7ff600e02028) -> msvcrt.dll!printf (0x7fe002006400)
+; +0222 iat-relative32 -> IAT+0030 (0x7ff600e02030) -> ws2_32.dll!closesocket (0x7fe007001000)
+; +0230 iat-relative32 -> IAT+0038 (0x7ff600e02038) -> ws2_32.dll!WSACleanup (0x7fe007000400)
+
+section .text
+; address=0x7ff600e01000 size=569 protection=rx
+0x00007ff600e01000 +0000  49 bd ff ff ff ff ff ff ff ff   mov      r13, 0xffffffffffffffff
+0x00007ff600e0100a +000a  83 f9 01                        cmp      ecx, 0x1
+0x00007ff600e0100d +000d  0f 84 de 01 00 00               je       0x7ff600e011f1 ; -> 0x7ff600e011f1
+0x00007ff600e01013 +0013  4c 8b 72 08                     mov      r14, [rdx+0x8]
+0x00007ff600e01017 +0017  b9 02 02 00 00                  mov      ecx, 0x202
+0x00007ff600e0101c +001c  48 ba fb 31 e0 00 f6 7f 00 00   mov      rdx, 0x7ff600e031fb
+0x00007ff600e01026 +0026  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e0102a +002a  ff 15 d0 0f 00 00               call     [rip+0xfd0] ; IAT[0x7ff600e02000] -> ws2_32.dll!WSAStartup (0x7fe007000000)
+0x00007ff600e01030 +0030  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e01034 +0034  85 c0                           test     eax, eax
+0x00007ff600e01036 +0036  0f 85 88 01 00 00               jne      0x7ff600e011c4 ; -> 0x7ff600e011c4
+0x00007ff600e0103c +003c  b9 02 00 00 00                  mov      ecx, 0x2
+0x00007ff600e01041 +0041  ba 03 00 00 00                  mov      edx, 0x3
+0x00007ff600e01046 +0046  41 b8 01 00 00 00               mov      r8d, 0x1
+0x00007ff600e0104c +004c  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e01050 +0050  ff 15 b2 0f 00 00               call     [rip+0xfb2] ; IAT[0x7ff600e02008] -> ws2_32.dll!socket (0x7fe007000c00)
+0x00007ff600e01056 +0056  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e0105a +005a  4c 8b e8                        mov      r13, rax
+0x00007ff600e0105d +005d  48 83 f8 ff                     cmp      rax, 0x-1
+0x00007ff600e01061 +0061  0f 84 5d 01 00 00               je       0x7ff600e011c4 ; -> 0x7ff600e011c4
+0x00007ff600e01067 +0067  49 8b ce                        mov      rcx, r14
+0x00007ff600e0106a +006a  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e0106e +006e  ff 15 9c 0f 00 00               call     [rip+0xf9c] ; IAT[0x7ff600e02010] -> ws2_32.dll!inet_addr (0x7fe007002800)
+0x00007ff600e01074 +0074  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e01078 +0078  83 f8 ff                        cmp      eax, 0x-1
+0x00007ff600e0107b +007b  0f 84 f7 00 00 00               je       0x7ff600e01178 ; -> 0x7ff600e01178
+0x00007ff600e01081 +0081  48 bb df 31 e0 00 f6 7f 00 00   mov      rbx, 0x7ff600e031df
+0x00007ff600e0108b +008b  89 43 04                        mov      [rbx+0x4], eax
+0x00007ff600e0108e +008e  49 8b cd                        mov      rcx, r13
+0x00007ff600e01091 +0091  48 ba ef 31 e0 00 f6 7f 00 00   mov      rdx, 0x7ff600e031ef
+0x00007ff600e0109b +009b  49 b8 08 00 00 00 00 00 00 00   mov      r8, 0x8
+0x00007ff600e010a5 +00a5  4d 31 c9                        xor      r9, r9
+0x00007ff600e010a8 +00a8  6a 10                           push     0x10
+0x00007ff600e010aa +00aa  48 b8 df 31 e0 00 f6 7f 00 00   mov      rax, 0x7ff600e031df
+0x00007ff600e010b4 +00b4  50                              push     rax
+0x00007ff600e010b5 +00b5  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e010b9 +00b9  ff 15 59 0f 00 00               call     [rip+0xf59] ; IAT[0x7ff600e02018] -> ws2_32.dll!sendto (0x7fe007002000)
+0x00007ff600e010bf +00bf  48 83 c4 30                     add      rsp, 0x30
+0x00007ff600e010c3 +00c3  83 f8 ff                        cmp      eax, 0x-1
+0x00007ff600e010c6 +00c6  0f 84 d2 00 00 00               je       0x7ff600e0119e ; -> 0x7ff600e0119e
+0x00007ff600e010cc +00cc  49 8b cd                        mov      rcx, r13
+0x00007ff600e010cf +00cf  48 ba 8b 33 e0 00 f6 7f 00 00   mov      rdx, 0x7ff600e0338b
+0x00007ff600e010d9 +00d9  49 b8 40 00 00 00 00 00 00 00   mov      r8, 0x40
+0x00007ff600e010e3 +00e3  4d 31 c9                        xor      r9, r9
+0x00007ff600e010e6 +00e6  48 b8 f7 31 e0 00 f6 7f 00 00   mov      rax, 0x7ff600e031f7
+0x00007ff600e010f0 +00f0  50                              push     rax
+0x00007ff600e010f1 +00f1  48 b8 cb 33 e0 00 f6 7f 00 00   mov      rax, 0x7ff600e033cb
+0x00007ff600e010fb +00fb  50                              push     rax
+0x00007ff600e010fc +00fc  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e01100 +0100  ff 15 1a 0f 00 00               call     [rip+0xf1a] ; IAT[0x7ff600e02020] -> ws2_32.dll!recvfrom (0x7fe007002400)
+0x00007ff600e01106 +0106  48 83 c4 30                     add      rsp, 0x30
+0x00007ff600e0110a +010a  83 f8 ff                        cmp      eax, 0x-1
+0x00007ff600e0110d +010d  0f 84 8b 00 00 00               je       0x7ff600e0119e ; -> 0x7ff600e0119e
+0x00007ff600e01113 +0113  e8 01 01 00 00                  call     0x7ff600e01219 ; -> 0x7ff600e01219
+0x00007ff600e01118 +0118  49 8b d6                        mov      rdx, r14
+0x00007ff600e0111b +011b  41 b8 08 00 00 00               mov      r8d, 0x8
+0x00007ff600e01121 +0121  48 b9 1a 30 e0 00 f6 7f 00 00   mov      rcx, 0x7ff600e0301a
+0x00007ff600e0112b +012b  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e0112f +012f  ff 15 f3 0e 00 00               call     [rip+0xef3] ; IAT[0x7ff600e02028] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600e01135 +0135  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e01139 +0139  49 8b d6                        mov      rdx, r14
+0x00007ff600e0113c +013c  41 b8 08 00 00 00               mov      r8d, 0x8
+0x00007ff600e01142 +0142  48 b9 40 30 e0 00 f6 7f 00 00   mov      rcx, 0x7ff600e03040
+0x00007ff600e0114c +014c  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e01150 +0150  ff 15 d2 0e 00 00               call     [rip+0xed2] ; IAT[0x7ff600e02028] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600e01156 +0156  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e0115a +015a  49 8b d6                        mov      rdx, r14
+0x00007ff600e0115d +015d  48 b9 6d 30 e0 00 f6 7f 00 00   mov      rcx, 0x7ff600e0306d
+0x00007ff600e01167 +0167  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e0116b +016b  ff 15 b7 0e 00 00               call     [rip+0xeb7] ; IAT[0x7ff600e02028] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600e01171 +0171  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e01175 +0175  31 c0                           xor      eax, eax
+0x00007ff600e01177 +0177  c3                              ret
+0x00007ff600e01178 +0178  e8 9c 00 00 00                  call     0x7ff600e01219 ; -> 0x7ff600e01219
+0x00007ff600e0117d +017d  49 8b d6                        mov      rdx, r14
+0x00007ff600e01180 +0180  48 b9 52 31 e0 00 f6 7f 00 00   mov      rcx, 0x7ff600e03152
+0x00007ff600e0118a +018a  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e0118e +018e  ff 15 94 0e 00 00               call     [rip+0xe94] ; IAT[0x7ff600e02028] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600e01194 +0194  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e01198 +0198  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff600e0119d +019d  c3                              ret
+0x00007ff600e0119e +019e  e8 76 00 00 00                  call     0x7ff600e01219 ; -> 0x7ff600e01219
+0x00007ff600e011a3 +01a3  49 8b d6                        mov      rdx, r14
+0x00007ff600e011a6 +01a6  48 b9 c2 30 e0 00 f6 7f 00 00   mov      rcx, 0x7ff600e030c2
+0x00007ff600e011b0 +01b0  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e011b4 +01b4  ff 15 6e 0e 00 00               call     [rip+0xe6e] ; IAT[0x7ff600e02028] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600e011ba +01ba  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e011be +01be  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff600e011c3 +01c3  c3                              ret
+0x00007ff600e011c4 +01c4  e8 50 00 00 00                  call     0x7ff600e01219 ; -> 0x7ff600e01219
+0x00007ff600e011c9 +01c9  48 ba 9e 31 e0 00 f6 7f 00 00   mov      rdx, 0x7ff600e0319e
+0x00007ff600e011d3 +01d3  48 b9 dc 31 e0 00 f6 7f 00 00   mov      rcx, 0x7ff600e031dc
+0x00007ff600e011dd +01dd  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e011e1 +01e1  ff 15 41 0e 00 00               call     [rip+0xe41] ; IAT[0x7ff600e02028] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600e011e7 +01e7  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e011eb +01eb  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff600e011f0 +01f0  c3                              ret
+0x00007ff600e011f1 +01f1  48 ba 00 30 e0 00 f6 7f 00 00   mov      rdx, 0x7ff600e03000
+0x00007ff600e011fb +01fb  48 b9 dc 31 e0 00 f6 7f 00 00   mov      rcx, 0x7ff600e031dc
+0x00007ff600e01205 +0205  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e01209 +0209  ff 15 19 0e 00 00               call     [rip+0xe19] ; IAT[0x7ff600e02028] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff600e0120f +020f  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e01213 +0213  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff600e01218 +0218  c3                              ret
+0x00007ff600e01219 +0219  49 8b cd                        mov      rcx, r13
+0x00007ff600e0121c +021c  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e01220 +0220  ff 15 0a 0e 00 00               call     [rip+0xe0a] ; IAT[0x7ff600e02030] -> ws2_32.dll!closesocket (0x7fe007001000)
+0x00007ff600e01226 +0226  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e0122a +022a  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600e0122e +022e  ff 15 04 0e 00 00               call     [rip+0xe04] ; IAT[0x7ff600e02038] -> ws2_32.dll!WSACleanup (0x7fe007000400)
+0x00007ff600e01234 +0234  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600e01238 +0238  c3                              ret
+
+section .idata
+; address=0x7ff600e02000 size=64 protection=r
+0x00007ff600e02000 +0000  00 00 00 07 e0 7f 00 00 WSAStartup                   -> ws2_32.dll!WSAStartup (0x7fe007000000) state=resolved
+0x00007ff600e02008 +0008  00 0c 00 07 e0 7f 00 00 socket                       -> ws2_32.dll!socket (0x7fe007000c00) state=resolved
+0x00007ff600e02010 +0010  00 28 00 07 e0 7f 00 00 inet_addr                    -> ws2_32.dll!inet_addr (0x7fe007002800) state=resolved
+0x00007ff600e02018 +0018  00 20 00 07 e0 7f 00 00 sendto                       -> ws2_32.dll!sendto (0x7fe007002000) state=resolved
+0x00007ff600e02020 +0020  00 24 00 07 e0 7f 00 00 recvfrom                     -> ws2_32.dll!recvfrom (0x7fe007002400) state=resolved
+0x00007ff600e02028 +0028  00 64 00 02 e0 7f 00 00 printf                       -> msvcrt.dll!printf (0x7fe002006400) state=resolved
+0x00007ff600e02030 +0030  00 10 00 07 e0 7f 00 00 closesocket                  -> ws2_32.dll!closesocket (0x7fe007001000) state=resolved
+0x00007ff600e02038 +0038  00 04 00 07 e0 7f 00 00 WSACleanup                   -> ws2_32.dll!WSACleanup (0x7fe007000400) state=resolved
+
+section .rdata
+; address=0x7ff600e03000 size=479
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+usage: ; address=0x7ff600e03000 size=26
+  ; utf8="Usage: ping target_name\r\n\u0000"
+  db 0x55, 0x73, 0x61, 0x67, 0x65, 0x3a, 0x20, 0x70, 0x69, 0x6e, 0x67, 0x20, 0x74, 0x61, 0x72, 0x67
+  db 0x65, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x0d, 0x0a, 0x00
+
+pingFormat: ; address=0x7ff600e0301a size=38
+  ; utf8="\r\nPinging %s with %d bytes of data:\r\n\u0000"
+  db 0x0d, 0x0a, 0x50, 0x69, 0x6e, 0x67, 0x69, 0x6e, 0x67, 0x20, 0x25, 0x73, 0x20, 0x77, 0x69, 0x74
+  db 0x68, 0x20, 0x25, 0x64, 0x20, 0x62, 0x79, 0x74, 0x65, 0x73, 0x20, 0x6f, 0x66, 0x20, 0x64, 0x61
+  db 0x74, 0x61, 0x3a, 0x0d, 0x0a, 0x00
+
+replyFormat: ; address=0x7ff600e03040 size=45
+  ; utf8="Reply from %s: bytes=%d time<1ms TTL=128\r\n\r\n\u0000"
+  db 0x52, 0x65, 0x70, 0x6c, 0x79, 0x20, 0x66, 0x72, 0x6f, 0x6d, 0x20, 0x25, 0x73, 0x3a, 0x20, 0x62
+  db 0x79, 0x74, 0x65, 0x73, 0x3d, 0x25, 0x64, 0x20, 0x74, 0x69, 0x6d, 0x65, 0x3c, 0x31, 0x6d, 0x73
+  db 0x20, 0x54, 0x54, 0x4c, 0x3d, 0x31, 0x32, 0x38, 0x0d, 0x0a, 0x0d, 0x0a, 0x00
+
+statisticsFormat: ; address=0x7ff600e0306d size=85
+  ; utf8="Ping statistics for %s:\r\n    Packets: Sent = 1, Received = 1, Lost = 0 (0%% loss),\r\n\u0000"
+  db 0x50, 0x69, 0x6e, 0x67, 0x20, 0x73, 0x74, 0x61, 0x74, 0x69, 0x73, 0x74, 0x69, 0x63, 0x73, 0x20
+  db 0x66, 0x6f, 0x72, 0x20, 0x25, 0x73, 0x3a, 0x0d, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x50, 0x61, 0x63
+  db 0x6b, 0x65, 0x74, 0x73, 0x3a, 0x20, 0x53, 0x65, 0x6e, 0x74, 0x20, 0x3d, 0x20, 0x31, 0x2c, 0x20
+  db 0x52, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x64, 0x20, 0x3d, 0x20, 0x31, 0x2c, 0x20, 0x4c, 0x6f
+  db 0x73, 0x74, 0x20, 0x3d, 0x20, 0x30, 0x20, 0x28, 0x30, 0x25, 0x25, 0x20, 0x6c, 0x6f, 0x73, 0x73
+  db 0x29, 0x2c, 0x0d, 0x0a, 0x00
+
+blockedFormat: ; address=0x7ff600e030c2 size=144
+  ; utf8="PING: transmit failed. %s is outside the simulated loopback network.\r\nOnly 127.0.0.0/8 is routable; no host network connection was attempted.\r\n\u0000"
+  db 0x50, 0x49, 0x4e, 0x47, 0x3a, 0x20, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x6d, 0x69, 0x74, 0x20, 0x66
+  db 0x61, 0x69, 0x6c, 0x65, 0x64, 0x2e, 0x20, 0x25, 0x73, 0x20, 0x69, 0x73, 0x20, 0x6f, 0x75, 0x74
+  db 0x73, 0x69, 0x64, 0x65, 0x20, 0x74, 0x68, 0x65, 0x20, 0x73, 0x69, 0x6d, 0x75, 0x6c, 0x61, 0x74
+  db 0x65, 0x64, 0x20, 0x6c, 0x6f, 0x6f, 0x70, 0x62, 0x61, 0x63, 0x6b, 0x20, 0x6e, 0x65, 0x74, 0x77
+  db 0x6f, 0x72, 0x6b, 0x2e, 0x0d, 0x0a, 0x4f, 0x6e, 0x6c, 0x79, 0x20, 0x31, 0x32, 0x37, 0x2e, 0x30
+  db 0x2e, 0x30, 0x2e, 0x30, 0x2f, 0x38, 0x20, 0x69, 0x73, 0x20, 0x72, 0x6f, 0x75, 0x74, 0x61, 0x62
+  db 0x6c, 0x65, 0x3b, 0x20, 0x6e, 0x6f, 0x20, 0x68, 0x6f, 0x73, 0x74, 0x20, 0x6e, 0x65, 0x74, 0x77
+  db 0x6f, 0x72, 0x6b, 0x20, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x20, 0x77
+  db 0x61, 0x73, 0x20, 0x61, 0x74, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x65, 0x64, 0x2e, 0x0d, 0x0a, 0x00
+
+invalidFormat: ; address=0x7ff600e03152 size=76
+  ; utf8="Ping request could not find host %s. Please check the name and try again.\r\n\u0000"
+  db 0x50, 0x69, 0x6e, 0x67, 0x20, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x20, 0x63, 0x6f, 0x75
+  db 0x6c, 0x64, 0x20, 0x6e, 0x6f, 0x74, 0x20, 0x66, 0x69, 0x6e, 0x64, 0x20, 0x68, 0x6f, 0x73, 0x74
+  db 0x20, 0x25, 0x73, 0x2e, 0x20, 0x50, 0x6c, 0x65, 0x61, 0x73, 0x65, 0x20, 0x63, 0x68, 0x65, 0x63
+  db 0x6b, 0x20, 0x74, 0x68, 0x65, 0x20, 0x6e, 0x61, 0x6d, 0x65, 0x20, 0x61, 0x6e, 0x64, 0x20, 0x74
+  db 0x72, 0x79, 0x20, 0x61, 0x67, 0x61, 0x69, 0x6e, 0x2e, 0x0d, 0x0a, 0x00
+
+winsockFailure: ; address=0x7ff600e0319e size=62
+  ; utf8="PING: the simulated Winsock stack could not be initialized.\r\n\u0000"
+  db 0x50, 0x49, 0x4e, 0x47, 0x3a, 0x20, 0x74, 0x68, 0x65, 0x20, 0x73, 0x69, 0x6d, 0x75, 0x6c, 0x61
+  db 0x74, 0x65, 0x64, 0x20, 0x57, 0x69, 0x6e, 0x73, 0x6f, 0x63, 0x6b, 0x20, 0x73, 0x74, 0x61, 0x63
+  db 0x6b, 0x20, 0x63, 0x6f, 0x75, 0x6c, 0x64, 0x20, 0x6e, 0x6f, 0x74, 0x20, 0x62, 0x65, 0x20, 0x69
+  db 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x2e, 0x0d, 0x0a, 0x00
+
+__exoproc_printf_string_format: ; address=0x7ff600e031dc size=3
+  ; utf8="%s\u0000"
+  db 0x25, 0x73, 0x00
+
+section .data
+; address=0x7ff600e031df size=28
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+sockaddr: ; address=0x7ff600e031df size=16
+  db 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+
+request: ; address=0x7ff600e031ef size=8
+  db 0x08, 0x00, 0x00, 0x00, 0x34, 0x12, 0x01, 0x00
+
+fromLength: ; address=0x7ff600e031f7 size=4
+  db 0x10, 0x00, 0x00, 0x00
+
+section .bss
+; address=0x7ff600e031fb size=480
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+wsaData: ; address=0x7ff600e031fb size=400
+  resb 400
+
+reply: ; address=0x7ff600e0338b size=64
+  resb 64
+
+from: ; address=0x7ff600e033cb size=16
+  resb 16

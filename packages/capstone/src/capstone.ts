@@ -4,7 +4,7 @@ import {
   cs_err,
   cs_opt_type,
   cs_opt_value,
-} from './types/index.js';
+} from 'bun-capstone-abi';
 import type {
   UINT32,
   INT32,
@@ -12,13 +12,12 @@ import type {
   csh,
   LPVOID,
   Detail,
-} from './types/index.js';
+} from 'bun-capstone-abi';
 import { Instruction, type RawInstruction } from './instruction.js';
 import { CapstoneImpl } from './def/index.js';
 import * as bunffi from 'bun:ffi';
 import type { Pointer } from 'bun:ffi';
 
-export * from './types/index.js';
 export * from './struct/index.js';
 export * from './def/index.js';
 

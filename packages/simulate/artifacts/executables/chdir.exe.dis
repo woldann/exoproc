@@ -1,0 +1,60 @@
+chdir.exe / linked EXOPROC64 image
+text-base=0x7ff603401000 iat-base=0x7ff603402000 data-base=0x7ff603403000
+entry=0x7ff603401000
+text-bytes=81 data-bytes=48
+
+relocations:
+; +0016 iat-relative32 -> IAT+0000 (0x7ff603402000) -> kernel32.dll!SetCurrentDirectoryA (0x7fe000013400)
+; +0028 absolute64 -> notFound (0x7ff603403000)
+; +0032 absolute64 -> __exoproc_printf_string_format (0x7ff60340302d)
+; +0040 iat-relative32 -> IAT+0008 (0x7ff603402008) -> msvcrt.dll!printf (0x7fe002006400)
+
+section .text
+; address=0x7ff603401000 size=81 protection=rx
+0x00007ff603401000 +0000  83 f9 01                        cmp      ecx, 0x1
+0x00007ff603401003 +0003  0f 84 45 00 00 00               je       0x7ff60340104e ; -> 0x7ff60340104e
+0x00007ff603401009 +0009  48 8b c2                        mov      rax, rdx
+0x00007ff60340100c +000c  48 8b 48 08                     mov      rcx, [rax+0x8]
+0x00007ff603401010 +0010  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603401014 +0014  ff 15 e6 0f 00 00               call     [rip+0xfe6] ; IAT[0x7ff603402000] -> kernel32.dll!SetCurrentDirectoryA (0x7fe000013400)
+0x00007ff60340101a +001a  48 83 c4 20                     add      rsp, 0x20
+0x00007ff60340101e +001e  85 c0                           test     eax, eax
+0x00007ff603401020 +0020  0f 85 28 00 00 00               jne      0x7ff60340104e ; -> 0x7ff60340104e
+0x00007ff603401026 +0026  48 ba 00 30 40 03 f6 7f 00 00   mov      rdx, 0x7ff603403000
+0x00007ff603401030 +0030  48 b9 2d 30 40 03 f6 7f 00 00   mov      rcx, 0x7ff60340302d
+0x00007ff60340103a +003a  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff60340103e +003e  ff 15 c4 0f 00 00               call     [rip+0xfc4] ; IAT[0x7ff603402008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff603401044 +0044  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603401048 +0048  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff60340104d +004d  c3                              ret
+0x00007ff60340104e +004e  31 c0                           xor      eax, eax
+0x00007ff603401050 +0050  c3                              ret
+
+section .idata
+; address=0x7ff603402000 size=16 protection=r
+0x00007ff603402000 +0000  00 34 01 00 e0 7f 00 00 SetCurrentDirectoryA         -> kernel32.dll!SetCurrentDirectoryA (0x7fe000013400) state=resolved
+0x00007ff603402008 +0008  00 64 00 02 e0 7f 00 00 printf                       -> msvcrt.dll!printf (0x7fe002006400) state=resolved
+
+section .rdata
+; address=0x7ff603403000 size=48
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+notFound: ; address=0x7ff603403000 size=45
+  ; utf8="The system cannot find the path specified.\r\n\u0000"
+  db 0x54, 0x68, 0x65, 0x20, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x20, 0x63, 0x61, 0x6e, 0x6e, 0x6f
+  db 0x74, 0x20, 0x66, 0x69, 0x6e, 0x64, 0x20, 0x74, 0x68, 0x65, 0x20, 0x70, 0x61, 0x74, 0x68, 0x20
+  db 0x73, 0x70, 0x65, 0x63, 0x69, 0x66, 0x69, 0x65, 0x64, 0x2e, 0x0d, 0x0a, 0x00
+
+__exoproc_printf_string_format: ; address=0x7ff60340302d size=3
+  ; utf8="%s\u0000"
+  db 0x25, 0x73, 0x00
+
+section .data
+; address=0x7ff603403030 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff603403030 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty

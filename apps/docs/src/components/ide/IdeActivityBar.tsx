@@ -1,0 +1,130 @@
+'use client';
+
+import { useRef, type KeyboardEvent } from 'react';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { BookOpenText, Settings } from 'lucide-react';
+import '@/workbench/contrib';
+import { getViewContainers } from '@/platform/views/viewContainerRegistry';
+
+interface IdeActivityBarProps {
+  readonly lang: string;
+}
+
+/**
+ * VS Code's activity bar: one icon per registered view container (see
+ * `platform/views/viewContainerRegistry.ts` -- populated by the
+ * `workbench/contrib/*.contribution.ts` side-effect imports above, not a
+ * hardcoded array), a `tablist`/`tab` ARIA structure with left/right... er,
+ * up/down arrow-key navigation between icons, and a bottom section for
+ * global actions (Settings) below the view containers, same layering VS
+ * Code uses (`.actions-container` top, `.global-activity` bottom).
+ */
+export function IdeActivityBar({ lang }: IdeActivityBarProps) {
+  const pathname = usePathname() ?? '';
+  // All three IDE views now share one route (`/ide`, see `IdeWorkbench`),
+  // told apart by this `?view=` search param -- see `ViewContainerDescriptor.isActive`'s doc comment.
+  const view = useSearchParams().get('view') ?? 'explorer';
+  const containers = getViewContainers();
+  const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+
+  const focusItem = (index: number) => {
+    const target =
+      itemRefs.current[(index + containers.length) % containers.length];
+    target?.focus();
+  };
+
+  const handleKeyDown = (
+    event: KeyboardEvent<HTMLAnchorElement>,
+    index: number,
+  ) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusItem(index + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusItem(index - 1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      focusItem(containers.length - 1);
+    }
+  };
+
+  return (
+    <aside
+      aria-label="IDE activity bar"
+      className="sticky top-0 z-60 flex h-dvh w-13 shrink-0 flex-col border-r border-white/10 bg-[#181818] text-[#9d9d9d]"
+    >
+      <nav
+        role="tablist"
+        aria-label="IDE görünümleri"
+        aria-orientation="vertical"
+        className="flex flex-1 flex-col"
+      >
+        {containers.map((container, index) => {
+          const Icon = container.icon;
+          const selected = container.isActive(pathname, lang, view);
+          return (
+            <Link
+              key={container.id}
+              ref={(node) => {
+                itemRefs.current[index] = node;
+              }}
+              href={container.getHref(lang)}
+              role="tab"
+              aria-selected={selected}
+              aria-label={container.title}
+              title={container.title}
+              tabIndex={selected ? 0 : -1}
+              onKeyDown={(event) => handleKeyDown(event, index)}
+              className={`relative flex h-12.5 items-center justify-center transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none ${
+                selected ? 'text-white' : ''
+              }`}
+            >
+              {selected && (
+                <span className="absolute inset-y-0 left-0 w-0.5 bg-[#007acc]" />
+              )}
+              <Icon className="size-6" strokeWidth={1.7} aria-hidden="true" />
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="flex flex-col border-t border-white/10">
+        <Link
+          href={`/${lang}/docs`}
+          aria-label="Docs"
+          title="Docs"
+          className={`relative flex h-12.5 items-center justify-center transition-colors hover:text-white ${
+            pathname.startsWith(`/${lang}/docs`) ? 'text-white' : ''
+          }`}
+        >
+          {pathname.startsWith(`/${lang}/docs`) && (
+            <span className="absolute inset-y-0 left-0 w-0.5 bg-[#007acc]" />
+          )}
+          <BookOpenText
+            className="size-6"
+            strokeWidth={1.7}
+            aria-hidden="true"
+          />
+        </Link>
+        {/* Placeholder, matching VS Code's activity bar bottom "Manage"/Settings
+         * slot visually -- no settings surface exists in this IDE yet. */}
+        <button
+          type="button"
+          aria-label="Settings"
+          title="Settings"
+          disabled
+          className="flex h-12.5 items-center justify-center opacity-40"
+        >
+          <Settings className="size-6" strokeWidth={1.7} aria-hidden="true" />
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+export default IdeActivityBar;

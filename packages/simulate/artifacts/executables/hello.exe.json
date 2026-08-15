@@ -1,0 +1,108 @@
+{
+  "format": "EXOPROC64",
+  "windowsPe": false,
+  "path": "C:\\Windows\\System32\\hello.exe",
+  "name": "hello.exe",
+  "imageBytes": 146,
+  "headerBytes": 64,
+  "textBytes": 40,
+  "iatBytes": 8,
+  "importCount": 1,
+  "dataBytes": 42,
+  "entryOffset": 0,
+  "relocationCount": 3,
+  "imports": [
+    "msvcrt.dll!printf"
+  ],
+  "hashes": {
+    "imageSha256": "9bda75a23976c9d9bc952816894a988f1b7d5c2ba4eb44935585cacb1d9c0ff7",
+    "compilerTextSha256": "46a125522762cce3c26204713b09b830c63c367d19bbbfd214f2f9b4d744f296",
+    "linkedTextSha256": "c1ce5a435142557c9cfe92071058461c71c0cb466374117ae76adaf4aeddc224",
+    "iatSha256": "0697d7df259fc6ae779a9b9525a56ccdcd8a5d051ae33cee6b07bc9799f9f27f",
+    "dataSha256": "53af9c833c1029ceef3139666a608a38dcea056dbadccb9911b78b0ec1ad2add"
+  },
+  "sections": {
+    ".text": {
+      "address": "0x7ff600201000",
+      "bytes": 40,
+      "protection": "rx"
+    },
+    ".idata": {
+      "address": "0x7ff600202000",
+      "bytes": 8,
+      "protection": "r",
+      "symbols": [
+        {
+          "name": "printf",
+          "address": "0x7ff600202000",
+          "target": "msvcrt.dll!printf",
+          "targetAddress": "0x7fe002006400",
+          "state": "resolved"
+        }
+      ]
+    },
+    ".rdata": {
+      "address": "0x7ff600203000",
+      "bytes": 42,
+      "zeroFill": false,
+      "symbols": [
+        {
+          "name": "output",
+          "address": "0x7ff600203000",
+          "offset": 0,
+          "bytes": 39
+        },
+        {
+          "name": "__exoproc_printf_string_format",
+          "address": "0x7ff600203027",
+          "offset": 39,
+          "bytes": 3
+        }
+      ]
+    },
+    ".data": {
+      "address": "0x7ff60020302a",
+      "bytes": 0,
+      "zeroFill": false,
+      "symbols": []
+    },
+    ".bss": {
+      "address": "0x7ff60020302a",
+      "bytes": 0,
+      "zeroFill": true,
+      "symbols": []
+    }
+  },
+  "relocations": [
+    {
+      "offset": 2,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "output",
+        "address": "0x7ff600203000"
+      }
+    },
+    {
+      "offset": 12,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "__exoproc_printf_string_format",
+        "address": "0x7ff600203027"
+      }
+    },
+    {
+      "offset": 26,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "msvcrt.dll",
+        "function": "printf",
+        "address": "0x7fe002006400",
+        "iatOffset": 0,
+        "iatSlotAddress": "0x7ff600202000"
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import type { Detail } from './types/index.js';
+import type { Detail } from 'bun-capstone-abi';
 
 export interface RawInstruction {
   id: number;

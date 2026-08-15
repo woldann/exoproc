@@ -1,5 +1,5 @@
-import { cs_mode, x86_op_type } from './types/index.js';
-import type { Detail, X86Detail, x86_reg } from './types/index.js';
+import { cs_mode, x86_op_type } from 'bun-capstone-abi';
+import type { Detail, X86Detail, x86_reg } from 'bun-capstone-abi';
 import { Instruction, type RawInstruction } from './instruction.js';
 import { Capstone } from './capstone.js';
 import { readX86Detail } from './detail.js';

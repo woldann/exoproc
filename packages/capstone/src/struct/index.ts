@@ -1,5 +1,5 @@
 import { ffi } from 'bun-xffi';
-import { CS_MNEMONIC_SIZE } from '../types/index.js';
+import { CS_MNEMONIC_SIZE } from 'bun-capstone-abi';
 
 export const cs_x86_encoding = ffi.struct('cs_x86_encoding', {
   modrm_offset: 'u8',
