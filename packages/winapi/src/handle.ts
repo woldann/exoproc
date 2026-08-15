@@ -108,7 +108,9 @@ export class Handle extends NativePointer {
       this.rawHandle,
       timeoutMs === INFINITE ? -1 : timeoutMs,
     );
-    return outcome === 'signaled' ? WaitReturn.OBJECT_0 : WaitReturn.TIMEOUT;
+    if (outcome === 'signaled') return WaitReturn.OBJECT_0;
+    if (outcome === 'error') return WaitReturn.FAILED;
+    return WaitReturn.TIMEOUT;
   }
 
   override toString(): string {

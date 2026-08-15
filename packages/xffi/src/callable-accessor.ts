@@ -13,7 +13,23 @@ import {
   RemoteMemoryAccessor,
 } from './accessor.js';
 import { Kernel32Impl } from './win/kernel32.js';
-import { waitAsync } from './waiter.js';
+import { waitAsync, type WaitOutcome } from './waiter.js';
+
+/**
+ * Thrown by `RemoteCallableMemoryAccessor.call()` when the remote thread
+ * doesn't signal `'signaled'` before `GetExitCodeThread` would otherwise run
+ * unconditionally -- on `'timeout'` the thread is still running (its "exit
+ * code" would actually be `STILL_ACTIVE`/259, easily mistaken for a real
+ * return value), and on `'error'` the wait handle itself went invalid.
+ */
+export class RemoteCallTimeoutError extends Error {
+  constructor(public readonly outcome: 'timeout' | 'error') {
+    super(
+      `Remote thread call did not complete (waitAsync outcome: ${outcome})`,
+    );
+    this.name = 'RemoteCallTimeoutError';
+  }
+}
 
 export abstract class AbstractCallableMemoryAccessor
   extends AbstractMemoryAccessor
@@ -192,7 +208,13 @@ export class RemoteCallableMemoryAccessor
     }
 
     try {
-      await waitAsync(BigInt(resolveAddress(thread)), this.waitTimeout);
+      const outcome: WaitOutcome = await waitAsync(
+        BigInt(resolveAddress(thread)),
+        this.waitTimeout,
+      );
+      if (outcome !== 'signaled') {
+        throw new RemoteCallTimeoutError(outcome);
+      }
       const exitCode = Buffer.alloc(4);
       const got = this.kernel32.GetExitCodeThread(thread, exitCode);
       if (!got) {

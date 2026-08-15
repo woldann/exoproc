@@ -10,7 +10,7 @@ Exoproc is a monorepo built using **Bun workspaces**. It targets Windows x64 env
 
 ### System Requirements
 
-- **Bun version 1.3.0+** (Bun 1.2.x has an FFI registration limit bug that can cause crashes).
+- **Bun version 1.3.11+** (Bun 1.2.x has an FFI registration limit bug that can cause crashes; Bun 1.3.0 itself has a separate, confirmed Worker/FFI segfault -- see CLAUDE.md).
 - **Windows x64** or **Linux with Wine x64** (Wine 8.0+ recommended).
 
 ### Initializing the Repository
