@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
-import { RootProvider } from 'fumadocs-ui/provider/next';
 import '../global.css';
 import { Inter } from 'next/font/google';
+import { AppRootProvider } from '@/components/i18n/AppRootProvider';
 import { i18n } from '@/lib/i18n';
 import { IdeActivityBar } from '@/components/ide/IdeActivityBar';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -36,7 +36,7 @@ export default async function Layout({
   return (
     <html lang={lang} className={inter.className} suppressHydrationWarning>
       <body className="min-h-screen">
-        <RootProvider i18n={i18n.provider(lang)}>
+        <AppRootProvider lang={lang}>
           <TooltipProvider>
             <div className="flex min-h-screen">
               <Suspense fallback={<ActivityBarFallback />}>
@@ -45,7 +45,7 @@ export default async function Layout({
               <div className="min-w-0 flex-1">{children}</div>
             </div>
           </TooltipProvider>
-        </RootProvider>
+        </AppRootProvider>
       </body>
     </html>
   );
