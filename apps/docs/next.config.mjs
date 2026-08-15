@@ -33,9 +33,13 @@ const config = {
   // It used to hide the default (tr) locale's URL prefix and redirect `/`
   // there implicitly; now every locale is always prefixed (see
   // `src/lib/i18n.ts`'s `hideLocale: 'never'`) and this static redirect
-  // covers the bare `/` case.
+  // covers the bare `/` case. Lands straight on `/tr/docs` (not `/tr`,
+  // the separate marketing/home page) -- `DocsHomeRedirect` then bounces
+  // that to wherever `DocsLastVisitedTracker` last recorded, or
+  // `getting-started` on a first visit, so the site's actual entry point
+  // is the docs reader, not a landing page pretending to be one.
   async redirects() {
-    return [{ source: '/', destination: '/tr', permanent: false }];
+    return [{ source: '/', destination: '/tr/docs', permanent: false }];
   },
   turbopack: {
     // Without this, Turbopack infers the workspace root itself by walking
