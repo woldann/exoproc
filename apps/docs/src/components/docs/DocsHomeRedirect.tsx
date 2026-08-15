@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { DOCS_LAST_VISITED_COOKIE } from '@/lib/docs-last-visited';
+import { localizedPath } from '@/lib/i18n';
 
 export interface DocsHomeRedirectProps {
   readonly lang: string;
@@ -31,11 +32,15 @@ export function DocsHomeRedirect({ lang }: DocsHomeRedirectProps) {
       new RegExp(`(?:^|; )${DOCS_LAST_VISITED_COOKIE}=([^;]*)`),
     );
     const lastVisited = match ? decodeURIComponent(match[1]) : undefined;
-    const prefix = `/${lang}/docs/`;
+    // Turkish (the hidden-prefix default locale, see `lib/i18n.ts`) records
+    // bare paths like `/docs/architecture/overview`, not `/tr/docs/...` --
+    // `localizedPath` gives the right prefix (or none) to match against
+    // either way.
+    const prefix = `${localizedPath(lang, '/docs')}/`;
     const target =
       lastVisited && lastVisited.startsWith(prefix)
         ? lastVisited
-        : `/${lang}/docs/getting-started`;
+        : `${localizedPath(lang, '/docs')}/getting-started`;
     router.replace(target);
   }, [lang, router]);
 

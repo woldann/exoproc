@@ -196,7 +196,7 @@ Bu ayrım DLL katmanlarını korur: CRT fonksiyonu ister Win32 API'lerine bağla
 
 `Win32CommandPrompt`, global makinede VFS'deki derlenmiş `cmd.exe` image'ını ayrı bir process'e yükler. Process spawn aşaması inherited `CONIN$` / `CONOUT$` handle'larını, `argc`, `argv` ve tam environment vector'ünü hazırlar. Guest main thread başlangıçta `RCX=argc`, `RDX=argv`, `R8=envp` alır; banner ve prompt'u standart output handle'ına `WriteFile` ile çizer ve standart input handle'ında `ReadFile` bekler. Input geldiğinde satırı `CreateProcessA` ile yeni executable process'ine dönüştürür. TypeScript tarafında komutları ayıran bir built-in `switch` bulunmaz.
 
-Backend kullanımı ve mevcut komut yüzeyi için [Win64 CMD](/tr/docs/playground/command-prompt) sayfasına bakın.
+Backend kullanımı ve mevcut komut yüzeyi için [Win64 CMD](/docs/playground/command-prompt) sayfasına bakın.
 
 ## Şu anda gerçek olanlar
 

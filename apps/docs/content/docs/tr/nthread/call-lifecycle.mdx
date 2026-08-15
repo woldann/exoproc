@@ -5,7 +5,7 @@ description: "Bir NThread, ömrü boyunca tam olarak bir OS thread'ini yönlendi
 
 Bir `NThread`, ömrü boyunca tam olarak bir OS thread'ini yönlendirir. Varsayılan factory yolunda hangi thread'in seçileceği `init()` sırasında belirlenir; `createAccessor()` ise bu işlemi bekleyip hazır accessor döndürür.
 
-Genel Win64 instruction simülasyonu NThread yaşam döngüsünden ayrılmıştır. Process açma, thread seçme, disassembly, register ve memory görünümünü denemek için [Win64 Debugger](/tr/docs/playground/win64-debugger) sayfasını kullanın.
+Genel Win64 instruction simülasyonu NThread yaşam döngüsünden ayrılmıştır. Process açma, thread seçme, disassembly, register ve memory görünümünü denemek için [Win64 Debugger](/docs/playground/win64-debugger) sayfasını kullanın.
 
 ```text
 init: thread'i suspend et → context'i kaydet → spin'e yönlendir → bir kez resume et

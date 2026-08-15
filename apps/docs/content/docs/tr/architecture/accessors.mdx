@@ -29,4 +29,4 @@ Bu kurulumda yalnızca `call()` değil, allocation, okuma ve yazma gibi işlemle
 
 Accessor zinciri yaşam döngüsü taşır. `IndirectNThreadHostAccessor` başlatıldığında bootstrap root ve alt zincir hazırlanır; NThread ise gerekli stub taramasını bekleyip thread'i park eder. `createAccessor()` bu `init()` akışını bekleyerek döner. Sınıfı doğrudan kuruyorsanız `await init()` tamamlanmadan kullanmayın; genel accessor üzerinde olmayan bir `whenReady()` çağrısını varsaymayın.
 
-Bir hata görüldüğünde önce hangi katmanın çağrıyı gerçekten yürüttüğünü belirleyin. `NThread` kaynaklı timeout ile middleware'in yanlış marshal ettiği imza aynı belirtiyi üretebilir, fakat çözüm yerleri farklıdır. Varsayılan zincirin seçim ve cleanup davranışı için [NThread accessor rehberine](/tr/docs/packages/nthread) bakın.
+Bir hata görüldüğünde önce hangi katmanın çağrıyı gerçekten yürüttüğünü belirleyin. `NThread` kaynaklı timeout ile middleware'in yanlış marshal ettiği imza aynı belirtiyi üretebilir, fakat çözüm yerleri farklıdır. Varsayılan zincirin seçim ve cleanup davranışı için [NThread accessor rehberine](/docs/packages/nthread) bakın.

@@ -6,8 +6,13 @@ import { DOCS_LAST_VISITED_COOKIE } from '@/lib/docs-last-visited';
 
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-/** Matches bare `/[lang]/docs` exactly -- not a real page, just where `DocsHomeRedirect` bounces from. */
-const DOCS_ROOT_PATTERN = /^\/[^/]+\/docs$/;
+/**
+ * Matches the docs root exactly -- not a real page, just where
+ * `DocsHomeRedirect` bounces from -- in any of its three reachable forms:
+ * bare `/docs` (Turkish, the hidden-prefix default locale, see
+ * `lib/i18n.ts`), or explicitly-prefixed `/tr/docs` / `/en/docs`.
+ */
+const DOCS_ROOT_PATTERN = /^(?:\/[^/]+)?\/docs$/;
 
 /**
  * Records every *real* docs page visited, so bare `/[lang]/docs` (see

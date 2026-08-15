@@ -9,6 +9,7 @@ import type {
   ThreadSnapshotDto,
 } from '@/shell/common/channels';
 import type { DebugSessionValue } from '@/components/debugger/DebugSessionScope';
+import { localizedPath } from '@/lib/i18n';
 import {
   BreakpointsPanel,
   CallStackPanel,
@@ -89,7 +90,7 @@ export function useDebuggerView(
     const nextThread = targetThread ?? preferredThread(target);
     if (!nextThread) return;
     router.push(
-      `/${lang}/ide?view=debugger&pid=${target.pid}&tid=${nextThread.tid}`,
+      `${localizedPath(lang, '/ide')}?view=debugger&pid=${target.pid}&tid=${nextThread.tid}`,
     );
   };
 

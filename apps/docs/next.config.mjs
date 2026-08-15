@@ -22,7 +22,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // the compiled dist/ file (not the .ts source) avoids relying on Turbopack
 // resolving explicit ".js" specifiers to sibling ".ts" files -- a NodeNext
 // ESM+TS convention Turbopack doesn't support the way Vite/webpack do.
-const bunFfiTarget = path.resolve(__dirname, '../../packages/simulate/dist/runtime/bun-ffi.js');
+const bunFfiTarget = path.resolve(
+  __dirname,
+  '../../packages/simulate/dist/runtime/bun-ffi.js',
+);
 
 /** @type {import('next').NextConfig} */
 const config = {
@@ -30,42 +33,58 @@ const config = {
   // `proxy.ts` (Next.js 16's renamed middleware) was dropped: it's
   // Node.js-runtime-only with no Edge option, which OpenNext Cloudflare
   // doesn't support ("Node.js middleware is not currently supported").
-  // It used to hide the default (tr) locale's URL prefix and redirect `/`
-  // there implicitly; now every locale is always prefixed (see
-  // `src/lib/i18n.ts`'s `hideLocale: 'never'`) and this static redirect
-  // covers the bare `/` case. Lands straight on `/tr/docs` (not `/tr`,
-  // the separate marketing/home page) -- `DocsHomeRedirect` then bounces
-  // that to wherever `DocsLastVisitedTracker` last recorded, or
-  // `getting-started` on a first visit, so the site's actual entry point
-  // is the docs reader, not a landing page pretending to be one.
+  // It used to hide the default (tr) locale's URL prefix and negotiate
+  // a bare `/` by `Accept-Language`; now that's done without middleware
+  // (see `rewrites()` below) -- `/` itself just redirects to bare `/docs`
+  // (not `/tr`, the separate marketing/home page) and lets that same
+  // negotiation decide the language, rather than duplicating it here.
+  // `DocsHomeRedirect` then bounces that to wherever
+  // `DocsLastVisitedTracker` last recorded, or `getting-started` on a
+  // first visit, so the site's actual entry point is the docs reader,
+  // not a landing page pretending to be one.
   async redirects() {
-    return [{ source: '/', destination: '/tr/docs', permanent: false }];
+    return [{ source: '/', destination: '/docs', permanent: false }];
   },
   // Without `proxy.ts` (see above), the default locale can't hide its own
-  // prefix the usual way -- but an unprefixed `/docs`/`/ide` still needs
-  // to work and serve Turkish, since that's the site's actual entry point
-  // for anyone who lands on a bare link. `rewrites()` (unlike `redirects()`)
-  // is invisible to the browser -- the URL bar keeps showing `/docs`, only
-  // the internally-served content is `/tr/docs` -- and, like `redirects()`,
-  // it's resolved at the static routing layer rather than in a Worker
-  // request handler, so it doesn't need the Node.js runtime `proxy.ts`
-  // would. Every other internal link (nav, language switcher, ...) still
-  // points at the fully `/tr/...`-prefixed URL as before -- this only
-  // covers someone arriving at the unprefixed one directly.
+  // prefix or content-negotiate the usual way -- but an unprefixed
+  // `/docs`/`/ide` still needs to work, and land on whichever language the
+  // visitor's browser actually prefers rather than always Turkish
+  // (confirmed fumadocs' own middleware doesn't do this either even with
+  // `hideLocale: 'default-locale'` -- it hardcodes the default language
+  // unconditionally for a bare path; this negotiation is bespoke).
+  // `rewrites()` (unlike `redirects()`) is invisible to the browser -- the
+  // URL bar keeps showing `/docs`, only the internally-served content is
+  // `/tr/docs` or `/en/docs` -- and, like `redirects()`, `has` conditions
+  // (matching request headers) are resolved at the static routing layer
+  // rather than in a Worker request handler, so this doesn't need the
+  // Node.js runtime `proxy.ts` would.
   //
-  // Two rules per route, not one `/docs/:path*`: that pattern's leading
-  // `/` before `:path*` is a literal character, so it only matches
+  // Two rules per route (English match, then an unconditional Turkish
+  // fallback), not one with a fallback baked into the `has` regex: Next.js
+  // tries `rewrites()` entries in order and stops at the first match, so
+  // this reads the same as the middleware's own if/else would.
+  //
+  // Also two rules each for the *shape* of the path (bare `/docs`, then
+  // `/docs/:path*`), not one `/docs/:path*`: that pattern's leading `/`
+  // before `:path*` is a literal character, so it only matches
   // `/docs/...` (something has to follow that slash) and 404s on bare
   // `/docs` itself -- confirmed reproducing exactly that. The `{/:path*}`
   // optional-group syntax Next.js docs show for this exact case also
   // failed here ("Unexpected MODIFIER", a parser limitation in this
-  // Next.js version) -- two separate rules sidesteps needing it at all.
+  // Next.js version) -- separate rules sidesteps needing it at all.
   async rewrites() {
+    const englishHas = [
+      { type: 'header', key: 'accept-language', value: '^en.*' },
+    ];
+    const localize = (path) => [
+      { source: path, has: englishHas, destination: `/en${path}` },
+      { source: path, destination: `/tr${path}` },
+    ];
     return [
-      { source: '/docs', destination: '/tr/docs' },
-      { source: '/docs/:path*', destination: '/tr/docs/:path*' },
-      { source: '/ide', destination: '/tr/ide' },
-      { source: '/ide/:path*', destination: '/tr/ide/:path*' },
+      ...localize('/docs'),
+      ...localize('/docs/:path*'),
+      ...localize('/ide'),
+      ...localize('/ide/:path*'),
     ];
   },
   turbopack: {

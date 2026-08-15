@@ -26,4 +26,4 @@ Bu düzenleme yalnızca NThread'in kurduğu çağrı için geçerlidir. Hedef fo
 - Geri dönmeyen ya da uzun süre bloklanan fonksiyonlar park noktasına dönmez; NThread çağrısı için uygun değildir.
 - `expectedRsp` ayarlanmışsa NThread hem async `call()` hem `callSync()` dönüşünde gerçek `RSP` değerini denetler; uyarı, çağrının güvenle sürdürülebileceği anlamına gelmez.
 
-Çağrıyı önce argümansız veya basit tamsayı imzalı, yan etkisi düşük bir fonksiyonla doğrulamak en güvenli başlangıçtır. Çağrı akışının geri kalanı için [NThread yaşam döngüsüne](/tr/docs/nthread/call-lifecycle) bakın.
+Çağrıyı önce argümansız veya basit tamsayı imzalı, yan etkisi düşük bir fonksiyonla doğrulamak en güvenli başlangıçtır. Çağrı akışının geri kalanı için [NThread yaşam döngüsüne](/docs/nthread/call-lifecycle) bakın.

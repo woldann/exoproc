@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { BookOpenText, Settings } from 'lucide-react';
 import '@/workbench/contrib';
 import { getViewContainers } from '@/platform/views/viewContainerRegistry';
+import { localizedPath } from '@/lib/i18n';
 
 interface IdeActivityBarProps {
   readonly lang: string;
@@ -101,14 +102,16 @@ export function IdeActivityBar({ lang }: IdeActivityBarProps) {
 
       <div className="flex flex-col border-t border-white/10">
         <Link
-          href={`/${lang}/docs`}
+          href={localizedPath(lang, '/docs')}
           aria-label="Docs"
           title="Docs"
           className={`relative flex h-12.5 items-center justify-center transition-colors hover:text-white ${
-            pathname.startsWith(`/${lang}/docs`) ? 'text-white' : ''
+            pathname.startsWith(localizedPath(lang, '/docs'))
+              ? 'text-white'
+              : ''
           }`}
         >
-          {pathname.startsWith(`/${lang}/docs`) && (
+          {pathname.startsWith(localizedPath(lang, '/docs')) && (
             <span className="absolute inset-y-0 left-0 w-0.5 bg-[#007acc]" />
           )}
           <BookOpenText

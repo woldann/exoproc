@@ -22,4 +22,4 @@ Belirli bir thread seçmek, özel bir root accessor kurmak veya düşük seviye 
 
 NThread, seçilen thread'in o anda güvenle durdurulup tekrar yürütülebileceğini garanti edemez. Thread bir lock, loader lock veya uygulamaya özgü kritik kaynak tutuyor olabilir; fonksiyon thread-local bağlam bekliyor ya da hiç dönmüyor olabilir. Yarışın bir thread seçmesi de bu semantik riskleri ortadan kaldırmaz.
 
-NThread görünmez veya risksiz değildir. Yeni thread oluşturmamak, mimari bir tercihtir; hedefin davranışını doğru seçme yükünü kullanıcıdan kaldırmaz. Devam etmeden önce [thread seçimi](/tr/docs/nthread/thread-selection), [çağrı yaşam döngüsü](/tr/docs/nthread/call-lifecycle) ve [hata sınırlarını](/tr/docs/nthread/failure-modes) okuyun.
+NThread görünmez veya risksiz değildir. Yeni thread oluşturmamak, mimari bir tercihtir; hedefin davranışını doğru seçme yükünü kullanıcıdan kaldırmaz. Devam etmeden önce [thread seçimi](/docs/nthread/thread-selection), [çağrı yaşam döngüsü](/docs/nthread/call-lifecycle) ve [hata sınırlarını](/docs/nthread/failure-modes) okuyun.
