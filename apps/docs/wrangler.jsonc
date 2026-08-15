@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "exoproc-docs",
+  "name": "exoproc",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-07-24",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -14,7 +14,7 @@
       // Used internally by OpenNext for cache/revalidation callbacks.
       // See https://opennext.js.org/cloudflare/caching
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "exoproc-docs"
+      "service": "exoproc"
     }
   ],
   "routes": [
