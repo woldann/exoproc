@@ -59,10 +59,19 @@ const config = {
   // rather than in a Worker request handler, so this doesn't need the
   // Node.js runtime `proxy.ts` would.
   //
-  // Two rules per route (English match, then an unconditional Turkish
-  // fallback), not one with a fallback baked into the `has` regex: Next.js
-  // tries `rewrites()` entries in order and stops at the first match, so
-  // this reads the same as the middleware's own if/else would.
+  // Four rules per route, tried in order (first match wins, same as the
+  // middleware's own if/else chain would read): an explicit `NEXT_LOCALE`
+  // cookie wins over everything, then `Accept-Language`, then an
+  // unconditional Turkish fallback. The cookie check has to come first --
+  // without it, a bare path is *always* renegotiated by `Accept-Language`
+  // on every request (including the fetch a client-side language-switcher
+  // navigation makes), so a browser set to English could never actually
+  // reach Turkish content at a bare URL, even right after the user
+  // explicitly picked "Türkçe" from the switcher (a real reported bug --
+  // `AppRootProvider`'s `onLocaleChange`, `components/i18n/`, sets this
+  // cookie for exactly this reason before navigating). Once set, the
+  // cookie also makes the choice sticky across future visits, not just
+  // the one navigation that set it.
   //
   // Also two rules each for the *shape* of the path (bare `/docs`, then
   // `/docs/:path*`), not one `/docs/:path*`: that pattern's leading `/`
@@ -73,10 +82,13 @@ const config = {
   // failed here ("Unexpected MODIFIER", a parser limitation in this
   // Next.js version) -- separate rules sidesteps needing it at all.
   async rewrites() {
+    const cookieIs = (value) => [{ type: 'cookie', key: 'NEXT_LOCALE', value }];
     const englishHas = [
       { type: 'header', key: 'accept-language', value: '^en.*' },
     ];
     const localize = (path) => [
+      { source: path, has: cookieIs('en'), destination: `/en${path}` },
+      { source: path, has: cookieIs('tr'), destination: `/tr${path}` },
       { source: path, has: englishHas, destination: `/en${path}` },
       { source: path, destination: `/tr${path}` },
     ];

@@ -3,6 +3,19 @@ import { defineI18nUI } from 'fumadocs-ui/i18n';
 /** Kept in sync with `defaultLanguage` below by hand -- `defineI18nUI`'s return value doesn't re-expose it in a form worth destructuring from. */
 export const DEFAULT_LOCALE = 'tr';
 
+/**
+ * Cookie name an explicit language-switcher choice is recorded under
+ * (`AppRootProvider`'s `onLocaleChange`) so `next.config.mjs`'s `rewrites()`
+ * can honor it ahead of `Accept-Language` for a bare `/docs`/`/ide` --
+ * without this, a bare path is *always* renegotiated by the header on
+ * every request, so an English browser could never reach Turkish content
+ * at a bare URL even right after explicitly picking "Türkçe" (a real
+ * reported bug). Must match the literal `'NEXT_LOCALE'` string used in
+ * `next.config.mjs` -- that file can't import this constant (Next.js
+ * config files aren't run through the app's own TS/bundler pipeline).
+ */
+export const LOCALE_COOKIE = 'NEXT_LOCALE';
+
 // Turkish is the default language and its prefix is hidden (`hideLocale:
 // 'default-locale'`): every fumadocs-generated link (sidebar, breadcrumbs,
 // language switcher, ...) for Turkish content omits the `/tr` segment,
