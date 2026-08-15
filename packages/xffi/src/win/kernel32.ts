@@ -190,6 +190,15 @@ const lib = cimport(
       args: [CType.HANDLE, CType.DWORD],
       returns: CType.DWORD,
     },
+    WaitForMultipleObjects: {
+      args: [CType.DWORD, CType.ptr, CType.BOOL, CType.DWORD],
+      returns: CType.DWORD,
+    },
+    CreateEventA: {
+      args: [CType.ptr, CType.BOOL, CType.BOOL, CType.cstring],
+      returns: CType.HANDLE,
+    },
+    SetEvent: { args: [CType.HANDLE], returns: CType.BOOL },
     GetModuleHandleW: { args: ['cwstring'], returns: CType.HMODULE },
     GetModuleHandleA: { args: [CType.cstring], returns: CType.HMODULE },
     GetModuleHandleExW: {
