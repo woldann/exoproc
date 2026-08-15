@@ -56,7 +56,13 @@ export function IdeActivityBar({ lang }: IdeActivityBarProps) {
   return (
     <aside
       aria-label="IDE activity bar"
-      className="sticky top-0 z-60 flex h-dvh w-13 shrink-0 flex-col border-r border-white/10 bg-[#181818] text-[#9d9d9d]"
+      // Hidden below `md`: phones only ever read docs here (no room to
+      // usefully browse code or drive a debugger), so the IDE views this
+      // bar switches between have no reason to be reachable -- see
+      // `[lang]/layout.tsx`'s doc comment. Purely a `hidden md:flex` CSS
+      // toggle, not `useIsMobile`-driven, so there's no client-only
+      // hydration flash before JS decides whether to show it.
+      className="sticky top-0 z-60 hidden h-dvh w-13 shrink-0 flex-col border-r border-white/10 bg-[#181818] text-[#9d9d9d] md:flex"
     >
       <nav
         role="tablist"

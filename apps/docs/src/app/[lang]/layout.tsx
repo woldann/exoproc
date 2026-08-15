@@ -11,12 +11,14 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 // requires a Suspense boundary around that so pages that *are* statically
 // prerendered (the docs pages this same activity bar renders on) don't
 // deopt to fully dynamic rendering. The fallback matches the real bar's
-// width/background exactly to avoid any layout shift.
+// width/background (and its `hidden md:flex` -- see `IdeActivityBar`'s
+// own doc comment for why it's hidden on phones) exactly to avoid any
+// layout shift.
 function ActivityBarFallback() {
   return (
     <aside
       aria-hidden="true"
-      className="sticky top-0 z-60 h-dvh w-13 shrink-0 border-r border-white/10 bg-[#181818]"
+      className="sticky top-0 z-60 hidden h-dvh w-13 shrink-0 border-r border-white/10 bg-[#181818] md:block"
     />
   );
 }
