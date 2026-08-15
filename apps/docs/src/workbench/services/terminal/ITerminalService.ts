@@ -41,9 +41,8 @@ export interface ITerminalService {
   createSession(): Promise<ITerminalSession>;
 }
 
-export const ITerminalService = createDecorator<ITerminalService>(
-  'terminalService',
-);
+export const ITerminalService =
+  createDecorator<ITerminalService>('terminalService');
 
 class TerminalSession implements ITerminalSession {
   // `Win32CommandPrompt.execute()` echoes the whole submitted line itself

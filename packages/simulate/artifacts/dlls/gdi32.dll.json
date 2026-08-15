@@ -50,9 +50,7 @@
       "thunkBytes": 16,
       "syscallId": 20480,
       "binding": "syscall",
-      "args": [
-        5
-      ],
+      "args": [5],
       "returns": 12,
       "compilerBytes": "b8 00 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 00 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
@@ -67,10 +65,7 @@
       "thunkBytes": 16,
       "syscallId": 20481,
       "binding": "syscall",
-      "args": [
-        12,
-        6
-      ],
+      "args": [12, 6],
       "returns": 6,
       "compilerBytes": "b8 01 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 01 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
@@ -85,10 +80,7 @@
       "thunkBytes": 16,
       "syscallId": 20482,
       "binding": "syscall",
-      "args": [
-        12,
-        5
-      ],
+      "args": [12, 5],
       "returns": 5,
       "compilerBytes": "b8 02 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 02 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
@@ -103,10 +95,7 @@
       "thunkBytes": 16,
       "syscallId": 20483,
       "binding": "syscall",
-      "args": [
-        12,
-        6
-      ],
+      "args": [12, 6],
       "returns": 6,
       "compilerBytes": "b8 03 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 03 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
@@ -121,9 +110,7 @@
       "thunkBytes": 16,
       "syscallId": 20484,
       "binding": "syscall",
-      "args": [
-        6
-      ],
+      "args": [6],
       "returns": 12,
       "compilerBytes": "b8 04 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 04 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
@@ -138,9 +125,7 @@
       "thunkBytes": 16,
       "syscallId": 20485,
       "binding": "syscall",
-      "args": [
-        12
-      ],
+      "args": [12],
       "returns": 5,
       "compilerBytes": "b8 05 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 05 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
@@ -155,10 +140,7 @@
       "thunkBytes": 16,
       "syscallId": 20486,
       "binding": "syscall",
-      "args": [
-        12,
-        12
-      ],
+      "args": [12, 12],
       "returns": 12,
       "compilerBytes": "b8 06 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 06 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
@@ -173,13 +155,7 @@
       "thunkBytes": 16,
       "syscallId": 20487,
       "binding": "syscall",
-      "args": [
-        12,
-        5,
-        5,
-        5,
-        5
-      ],
+      "args": [12, 5, 5, 5, 5],
       "returns": 5,
       "compilerBytes": "b8 07 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 07 50 00 00 0f 05 c3 90 90 90 90 90 90 90 90",

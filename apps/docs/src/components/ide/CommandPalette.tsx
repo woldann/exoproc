@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { Search } from 'lucide-react';
 import {
   CommandsRegistry,
@@ -124,7 +130,10 @@ export function CommandPalette() {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-white/10 px-3">
-          <Search aria-hidden="true" className="size-4 shrink-0 text-[#8c8c8c]" />
+          <Search
+            aria-hidden="true"
+            className="size-4 shrink-0 text-[#8c8c8c]"
+          />
           <input
             ref={inputRef}
             value={query}
@@ -142,7 +151,11 @@ export function CommandPalette() {
             className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-[#6b6b6b]"
           />
         </div>
-        <ul id="command-palette-list" role="listbox" className="max-h-80 overflow-y-auto py-1">
+        <ul
+          id="command-palette-list"
+          role="listbox"
+          className="max-h-80 overflow-y-auto py-1"
+        >
           {commands.length === 0 ? (
             <li className="px-3 py-6 text-center text-xs text-[#8c8c8c]">
               Eşleşen komut yok

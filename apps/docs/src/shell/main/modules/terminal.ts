@@ -3,7 +3,10 @@ import {
   Win32CommandPrompt,
   type HostConsoleScreen,
 } from '@exoproc/simulate';
-import { TerminalChannel, type TerminalCreateOptions } from '../../common/channels';
+import {
+  TerminalChannel,
+  type TerminalCreateOptions,
+} from '../../common/channels';
 import { ipc } from '../ipc';
 import { getMachine } from './machine';
 
@@ -98,18 +101,23 @@ export function registerTerminalHandlers(): void {
 
     if (options?.presenter) {
       const screen = new BufferedAnsiScreen();
-      const presenter = new ConsoleScreenPresenter(prompt.process.console.videoOutput, screen);
+      const presenter = new ConsoleScreenPresenter(
+        prompt.process.console.videoOutput,
+        screen,
+      );
       presenter.present();
       // First `present()` is the initial full-screen draw -- returned
       // inline for the same race-avoidance reason the plain model
       // returns its own `initialOutput` inline (see `TerminalSessionInfo`).
       const initialOutput = screen.drain();
 
-      const unsubscribeVideo = prompt.process.console.videoOutput.subscribe(() => {
-        presenter.present();
-        const chunk = screen.drain();
-        if (chunk) ipc.send(TerminalChannel.onData, { sessionId, chunk });
-      });
+      const unsubscribeVideo = prompt.process.console.videoOutput.subscribe(
+        () => {
+          presenter.present();
+          const chunk = screen.drain();
+          if (chunk) ipc.send(TerminalChannel.onData, { sessionId, chunk });
+        },
+      );
       const interval = setInterval(() => {
         if (prompt.isClosed) closeSession(sessionId, requireSession(sessionId));
       }, POLL_INTERVAL_MS);

@@ -11,10 +11,7 @@
   "dataBytes": 48,
   "entryOffset": 0,
   "relocationCount": 4,
-  "imports": [
-    "kernel32.dll!SetCurrentDirectoryA",
-    "msvcrt.dll!printf"
-  ],
+  "imports": ["kernel32.dll!SetCurrentDirectoryA", "msvcrt.dll!printf"],
   "hashes": {
     "imageSha256": "c28c5a8d7d9283c3dadb364cd3f8b35709140695842be3716d1b35aa31a76f06",
     "compilerTextSha256": "6579547ed056eb42167c14983d61295d275a25db7aca82ee699dfbcb32c4c688",

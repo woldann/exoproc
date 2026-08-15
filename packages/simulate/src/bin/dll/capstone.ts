@@ -7,8 +7,17 @@ import { CapstoneDll } from '@exoproc/win32-abi';
 // run under plain Node, which this simulator also has to support. Only the
 // pure numeric constants (backed by `bun-xffi/cdefine`, which has zero
 // imports) are safe to pull in here.
-import { cs_arch, cs_err, x86_op_type, x86_reg, x86_insn } from 'bun-capstone-abi';
-import type { Win64Machine, Win64Process } from '../../runtime/win64-machine.js';
+import {
+  cs_arch,
+  cs_err,
+  x86_op_type,
+  x86_reg,
+  x86_insn,
+} from 'bun-capstone-abi';
+import type {
+  Win64Machine,
+  Win64Process,
+} from '../../runtime/win64-machine.js';
 import type { DecodedInstruction, X64Operand } from '../../runtime/types.js';
 import type { Win32GuestDllSource } from './types.js';
 
@@ -103,7 +112,10 @@ interface CapstoneHandleState {
   detail: boolean;
 }
 
-const handlesByProcess = new WeakMap<Win64Process, Map<bigint, CapstoneHandleState>>();
+const handlesByProcess = new WeakMap<
+  Win64Process,
+  Map<bigint, CapstoneHandleState>
+>();
 const nextHandleByProcess = new WeakMap<Win64Process, bigint>();
 const stringsByProcess = new WeakMap<Win64Process, Map<string, bigint>>();
 
@@ -125,7 +137,12 @@ function guestCString(process: Win64Process, value: string): bigint {
   const existing = strings.get(value);
   if (existing !== undefined) return existing;
   const bytes = new TextEncoder().encode(`${value}\0`);
-  const address = process.allocate(bytes.byteLength, 'rw', 0n, 'capstone string');
+  const address = process.allocate(
+    bytes.byteLength,
+    'rw',
+    0n,
+    'capstone string',
+  );
   process.memory.write(address, bytes);
   strings.set(value, address);
   return address;
@@ -148,7 +165,8 @@ function writeRegList(
   regs: number[] | undefined,
 ): number {
   const count = Math.min(regs?.length ?? 0, capacity);
-  for (let i = 0; i < count; i++) view.setUint16(offset + i * 2, regs![i]!, true);
+  for (let i = 0; i < count; i++)
+    view.setUint16(offset + i * 2, regs![i]!, true);
   return count;
 }
 
@@ -169,13 +187,21 @@ function writeX86Operand(
   }
   view.setInt32(base + CS_X86_OP_TYPE_OFFSET, x86_op_type.MEM, true);
   view.setUint32(base + CS_X86_OP_MEM_SEGMENT_OFFSET, 0, true);
-  view.setUint32(base + CS_X86_OP_MEM_BASE_OFFSET, operand.mem?.base ?? 0, true);
+  view.setUint32(
+    base + CS_X86_OP_MEM_BASE_OFFSET,
+    operand.mem?.base ?? 0,
+    true,
+  );
   view.setUint32(
     base + CS_X86_OP_MEM_INDEX_OFFSET,
     operand.mem?.index ?? 0,
     true,
   );
-  view.setInt32(base + CS_X86_OP_MEM_SCALE_OFFSET, operand.mem?.scale ?? 1, true);
+  view.setInt32(
+    base + CS_X86_OP_MEM_SCALE_OFFSET,
+    operand.mem?.scale ?? 1,
+    true,
+  );
   view.setBigInt64(
     base + CS_X86_OP_MEM_DISP_OFFSET,
     operand.mem?.disp ?? 0n,
@@ -231,8 +257,7 @@ function logicalOperands(
   logicalAddress: bigint,
 ): string {
   if (instruction.branchTarget === undefined) return instruction.operands;
-  const logicalTarget =
-    logicalAddress + (instruction.branchTarget - decodedAt);
+  const logicalTarget = logicalAddress + (instruction.branchTarget - decodedAt);
   return `0x${logicalTarget.toString(16)}`;
 }
 
@@ -250,10 +275,14 @@ export function registerCapstoneHandlers(machine: Win64Machine): void {
       return 0x400n;
     },
   );
-  machine.registerHandler('capstone.dll', 'cs_support', (_process, _thread, registers) =>
-    registers.RCX === BigInt(CS_ARCH_X86) || registers.RCX === BigInt(CS_ARCH_ALL)
-      ? 1n
-      : 0n,
+  machine.registerHandler(
+    'capstone.dll',
+    'cs_support',
+    (_process, _thread, registers) =>
+      registers.RCX === BigInt(CS_ARCH_X86) ||
+      registers.RCX === BigInt(CS_ARCH_ALL)
+        ? 1n
+        : 0n,
   );
   machine.registerHandler(
     'capstone.dll',
@@ -291,8 +320,11 @@ export function registerCapstoneHandlers(machine: Win64Machine): void {
       return CS_ERR_OK;
     },
   );
-  machine.registerHandler('capstone.dll', 'cs_errno', (process, _thread, registers) =>
-    handlesFor(process).has(registers.RCX) ? CS_ERR_OK : CS_ERR_HANDLE,
+  machine.registerHandler(
+    'capstone.dll',
+    'cs_errno',
+    (process, _thread, registers) =>
+      handlesFor(process).has(registers.RCX) ? CS_ERR_OK : CS_ERR_HANDLE,
   );
   machine.registerHandler(
     'capstone.dll',
@@ -303,7 +335,10 @@ export function registerCapstoneHandlers(machine: Win64Machine): void {
         [CS_ERR_ARCH, 'Invalid/unsupported architecture (CS_ERR_ARCH)'],
         [CS_ERR_HANDLE, 'Invalid handle (CS_ERR_HANDLE)'],
       ]);
-      return guestCString(process, messages.get(registers.RCX) ?? 'Capstone error');
+      return guestCString(
+        process,
+        messages.get(registers.RCX) ?? 'Capstone error',
+      );
     },
   );
   machine.registerHandler(
@@ -314,9 +349,16 @@ export function registerCapstoneHandlers(machine: Win64Machine): void {
       const codePointer = registers.RDX;
       const codeSize = Number(registers.R8);
       const logicalBase = registers.R9;
-      const requestedCount = Number(process.memory.readU64(registers.RSP + 0x28n));
+      const requestedCount = Number(
+        process.memory.readU64(registers.RSP + 0x28n),
+      );
       const resultPointer = process.memory.readU64(registers.RSP + 0x30n);
-      if (!state || codePointer === 0n || codeSize <= 0 || resultPointer === 0n) {
+      if (
+        !state ||
+        codePointer === 0n ||
+        codeSize <= 0 ||
+        resultPointer === 0n
+      ) {
         return 0n;
       }
 
@@ -348,7 +390,8 @@ export function registerCapstoneHandlers(machine: Win64Machine): void {
         } catch {
           break;
         }
-        if (instruction.size <= 0 || offset + instruction.size > codeSize) break;
+        if (instruction.size <= 0 || offset + instruction.size > codeSize)
+          break;
         decoded.push({
           instruction,
           decodedAt,
@@ -395,23 +438,28 @@ export function registerCapstoneHandlers(machine: Win64Machine): void {
           const detailAddress = detailsBase + BigInt(index * CS_DETAIL_SIZE);
           view.setBigUint64(CS_INSN_DETAIL_OFFSET, detailAddress, true);
           const detailRecord = new Uint8Array(CS_DETAIL_SIZE);
-          writeDetail(detailRecord, new DataView(detailRecord.buffer), instruction);
+          writeDetail(
+            detailRecord,
+            new DataView(detailRecord.buffer),
+            instruction,
+          );
           process.memory.write(detailAddress, detailRecord);
         }
-        process.memory.write(
-          allocation + BigInt(index * CS_INSN_SIZE),
-          record,
-        );
+        process.memory.write(allocation + BigInt(index * CS_INSN_SIZE), record);
       });
       process.free(decodeBase);
       process.memory.writeU64(resultPointer, allocation);
       return BigInt(decoded.length);
     },
   );
-  machine.registerHandler('capstone.dll', 'cs_free', (process, _thread, registers) => {
-    if (registers.RCX !== 0n) process.free(registers.RCX);
-    return 0n;
-  });
+  machine.registerHandler(
+    'capstone.dll',
+    'cs_free',
+    (process, _thread, registers) => {
+      if (registers.RCX !== 0n) process.free(registers.RCX);
+      return 0n;
+    },
+  );
   machine.registerHandler(
     'capstone.dll',
     'cs_reg_name',

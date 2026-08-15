@@ -140,12 +140,20 @@ export class ZipFsProvider implements FileSystemProvider {
 
   private findEndOfCentralDirectory(): number {
     const minOffset = Math.max(0, this.bytes.length - 22 - MAX_COMMENT_LENGTH);
-    for (let offset = this.bytes.length - 22; offset >= minOffset; offset -= 1) {
-      if (this.view.getUint32(offset, true) === END_OF_CENTRAL_DIRECTORY_SIGNATURE) {
+    for (
+      let offset = this.bytes.length - 22;
+      offset >= minOffset;
+      offset -= 1
+    ) {
+      if (
+        this.view.getUint32(offset, true) === END_OF_CENTRAL_DIRECTORY_SIGNATURE
+      ) {
         return offset;
       }
     }
-    throw new Error('Not a valid zip archive: end-of-central-directory record not found.');
+    throw new Error(
+      'Not a valid zip archive: end-of-central-directory record not found.',
+    );
   }
 
   private registerAncestorDirectories(path: string): void {
@@ -154,7 +162,8 @@ export class ZipFsProvider implements FileSystemProvider {
     let current = '';
     for (const segment of segments) {
       current += `/${segment}`;
-      if (!this.index.has(current)) this.index.set(current, { kind: 'directory' });
+      if (!this.index.has(current))
+        this.index.set(current, { kind: 'directory' });
     }
   }
 
@@ -172,8 +181,20 @@ export class ZipFsProvider implements FileSystemProvider {
   public async stat(resource: ResourceUri): Promise<FileStat> {
     const entry = this.require(resource.path);
     return entry.kind === 'file'
-      ? { type: FileType.File, ctime: 0, mtime: 0, size: entry.uncompressedSize, readonly: true }
-      : { type: FileType.Directory, ctime: 0, mtime: 0, size: 0, readonly: true };
+      ? {
+          type: FileType.File,
+          ctime: 0,
+          mtime: 0,
+          size: entry.uncompressedSize,
+          readonly: true,
+        }
+      : {
+          type: FileType.Directory,
+          ctime: 0,
+          mtime: 0,
+          size: 0,
+          readonly: true,
+        };
   }
 
   public async readDirectory(
@@ -193,7 +214,10 @@ export class ZipFsProvider implements FileSystemProvider {
       if (path === resource.path || !path.startsWith(prefix)) continue;
       const rest = path.slice(prefix.length);
       if (rest.includes('/')) continue;
-      children.push([rest, child.kind === 'directory' ? FileType.Directory : FileType.File]);
+      children.push([
+        rest,
+        child.kind === 'directory' ? FileType.Directory : FileType.File,
+      ]);
     }
     return children;
   }
@@ -217,7 +241,10 @@ export class ZipFsProvider implements FileSystemProvider {
     const nameLength = this.view.getUint16(offset + 26, true);
     const extraLength = this.view.getUint16(offset + 28, true);
     const dataStart = offset + 30 + nameLength + extraLength;
-    const compressed = this.bytes.subarray(dataStart, dataStart + entry.compressedSize);
+    const compressed = this.bytes.subarray(
+      dataStart,
+      dataStart + entry.compressedSize,
+    );
 
     if (entry.compressionMethod === 0) return compressed.slice();
     if (entry.compressionMethod === 8) {
@@ -243,7 +270,10 @@ export class ZipFsProvider implements FileSystemProvider {
     return this.readonly();
   }
 
-  public delete(_resource: ResourceUri, _options: FileDeleteOptions): Promise<void> {
+  public delete(
+    _resource: ResourceUri,
+    _options: FileDeleteOptions,
+  ): Promise<void> {
     return this.readonly();
   }
 
@@ -277,7 +307,9 @@ function detectStrippablePrefix(names: readonly string[]): string | undefined {
   if (slashIndex === -1) return undefined;
 
   const candidate = relevant[0].slice(0, slashIndex + 1);
-  return relevant.every((name) => name.startsWith(candidate)) ? candidate : undefined;
+  return relevant.every((name) => name.startsWith(candidate))
+    ? candidate
+    : undefined;
 }
 
 export interface ExtractedZipFile {
@@ -292,7 +324,9 @@ export interface ExtractedZipFile {
  * parsing rather than a separate extraction code path -- this function is
  * just a recursive `readDirectory`/`readFile` walk over it.
  */
-export async function extractZipEntries(bytes: Uint8Array): Promise<readonly ExtractedZipFile[]> {
+export async function extractZipEntries(
+  bytes: Uint8Array,
+): Promise<readonly ExtractedZipFile[]> {
   const provider = new ZipFsProvider(bytes);
   const results: ExtractedZipFile[] = [];
 
@@ -303,7 +337,10 @@ export async function extractZipEntries(bytes: Uint8Array): Promise<readonly Ext
       if (kind === FileType.Directory) {
         await walk(child);
       } else {
-        results.push({ path: child.path, data: await provider.readFile(child) });
+        results.push({
+          path: child.path,
+          data: await provider.readFile(child),
+        });
       }
     }
   }

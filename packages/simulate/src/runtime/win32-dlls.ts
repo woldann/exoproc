@@ -40,7 +40,8 @@ export type Win32GuestWrapperCompiler = (
  * through the IAT/syscall surface -- it's invoked once per process, directly
  * by address, right after its module is mapped.
  */
-export type Win32DllMainCompiler = () => Uint8Array | Win32RelocatableExportThunk;
+export type Win32DllMainCompiler = () =>
+  Uint8Array | Win32RelocatableExportThunk;
 
 export type Win32ExportBinding =
   | { readonly kind: 'syscall' }

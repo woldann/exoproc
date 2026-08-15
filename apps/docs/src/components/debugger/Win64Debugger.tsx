@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DockviewReact, type DockviewApi, type DockviewReadyEvent } from 'dockview-react';
+import {
+  DockviewReact,
+  type DockviewApi,
+  type DockviewReadyEvent,
+} from 'dockview-react';
 import 'dockview-core/dist/styles/dockview.css';
 import { useService } from '@/platform/instantiation/browser/instantiationService';
 import { IDebugService } from '@/workbench/services/debug/IDebugService';
@@ -31,7 +35,11 @@ export interface Win64DebuggerProps {
  * group) -- this only seeds the VS Code-like starting layout.
  */
 function buildInitialLayout(api: DockviewApi) {
-  api.addPanel({ id: 'disassembly', component: 'disassembly', title: 'DISASSEMBLY' });
+  api.addPanel({
+    id: 'disassembly',
+    component: 'disassembly',
+    title: 'DISASSEMBLY',
+  });
   api.addPanel({
     id: 'sidebar',
     component: 'sidebar',
@@ -158,7 +166,12 @@ export function Win64Debugger({
 
       const { session: live, selectedAddress: cursor } = shortcutsRef.current;
       let action: (() => void) | undefined;
-      if (event.key === 'F5' && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      if (
+        event.key === 'F5' &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
         action = live.continueExecution;
       } else if (event.key === 'F10' && (event.ctrlKey || event.metaKey)) {
         if (cursor !== undefined) action = () => live.runToCursor(cursor);
@@ -216,8 +229,17 @@ export function Win64Debugger({
     api.getPanel('trace')?.api.setTitle(`TRACE (${session.trace.length})`);
     api
       .getPanel('scanner')
-      ?.api.setTitle(scanner.scanned ? `TARAYICI (${scanner.report?.total ?? 0})` : 'TARAYICI');
-  }, [dockviewReady, session.trace.length, scanner.scanned, scanner.report?.total]);
+      ?.api.setTitle(
+        scanner.scanned
+          ? `TARAYICI (${scanner.report?.total ?? 0})`
+          : 'TARAYICI',
+      );
+  }, [
+    dockviewReady,
+    session.trace.length,
+    scanner.scanned,
+    scanner.report?.total,
+  ]);
 
   const rootClassName = fullscreen
     ? `relative flex min-h-0 flex-1 flex-col text-sm outline-none ${SURFACE}`
@@ -229,13 +251,21 @@ export function Win64Debugger({
         ref={rootRef}
         tabIndex={-1}
         className={rootClassName}
-        style={fullscreen ? undefined : { height: typeof height === 'number' ? `${height}px` : height }}
+        style={
+          fullscreen
+            ? undefined
+            : { height: typeof height === 'number' ? `${height}px` : height }
+        }
       >
         {/* Inline styles for Monaco decorations, resize handles and the dockview theme */}
         <style>{DEBUGGER_CSS}</style>
         <style>{DOCKVIEW_THEME_CSS}</style>
 
-        <DebugToolbar session={session} tid={tid} selectedAddress={selectedAddress} />
+        <DebugToolbar
+          session={session}
+          tid={tid}
+          selectedAddress={selectedAddress}
+        />
 
         <div className="min-h-0 flex-1">
           <DockviewReact

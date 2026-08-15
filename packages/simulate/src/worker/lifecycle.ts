@@ -23,6 +23,9 @@ import type { Win64Process } from '../runtime/win64-machine.js';
  * terminateProcess` being called from *outside* (a real `TerminateProcess`),
  * which this function is not a substitute for.
  */
-export function finalizeWorkerProcess(process: Win64Process, exitCode = 0): boolean {
+export function finalizeWorkerProcess(
+  process: Win64Process,
+  exitCode = 0,
+): boolean {
   return process.machine.terminateProcess(process.pid, exitCode);
 }

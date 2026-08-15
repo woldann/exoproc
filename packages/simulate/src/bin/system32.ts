@@ -34,7 +34,7 @@ export interface InstallDefaultWin32ProgramsOptions {
 export function installDefaultWin32Programs(
   registry: Win32ProgramRegistry,
   username = 'Serkan',
-  options: InstallDefaultWin32ProgramsOptions = {},
+  _options: InstallDefaultWin32ProgramsOptions = {},
 ): void {
   registry.install(`${SYSTEM32}\\cmd.exe`, compileCmdExe());
   registry.install(`${SYSTEM32}\\cat.exe`, compileCatExe());

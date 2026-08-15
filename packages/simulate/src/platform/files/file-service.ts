@@ -14,7 +14,11 @@ import {
   type ResolveFileOptions,
   type ResolvedFileStat,
 } from './files.js';
-import { joinResourcePath, resourceBasename, type ResourceUri } from './resource-uri.js';
+import {
+  joinResourcePath,
+  resourceBasename,
+  type ResourceUri,
+} from './resource-uri.js';
 
 interface ProviderRegistration {
   readonly provider: FileSystemProvider;
@@ -26,7 +30,9 @@ interface ProviderRegistration {
 export class FileService implements Disposable {
   private readonly providers = new Map<string, ProviderRegistration>();
   private readonly fileChangeEmitter = new Emitter<readonly FileChange[]>();
-  private readonly capabilityChangeEmitter = new Emitter<{ readonly scheme: string }>();
+  private readonly capabilityChangeEmitter = new Emitter<{
+    readonly scheme: string;
+  }>();
 
   public readonly onDidFilesChange = this.fileChangeEmitter.event;
   public readonly onDidChangeFileSystemProviderCapabilities =
@@ -38,7 +44,9 @@ export class FileService implements Disposable {
   ): Disposable {
     const normalizedScheme = scheme.toLowerCase();
     if (this.providers.has(normalizedScheme)) {
-      throw new Error(`A filesystem provider is already registered for ${normalizedScheme}`);
+      throw new Error(
+        `A filesystem provider is already registered for ${normalizedScheme}`,
+      );
     }
 
     const registration: ProviderRegistration = {
@@ -71,7 +79,7 @@ export class FileService implements Disposable {
     capability: FileSystemProviderCapabilities,
   ): boolean {
     const provider = this.providers.get(resource.scheme)?.provider;
-    return Boolean(provider && (provider.capabilities & capability));
+    return Boolean(provider && provider.capabilities & capability);
   }
 
   public async resolve(

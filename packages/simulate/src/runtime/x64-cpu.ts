@@ -920,10 +920,7 @@ export class X64Cpu {
           },
           undefined,
           {
-            operands: [
-              rmOperand(destination, width),
-              rmOperand(source, width),
-            ],
+            operands: [rmOperand(destination, width), rmOperand(source, width)],
           },
         );
       }
@@ -1028,7 +1025,8 @@ export class X64Cpu {
               const bits = rexW ? 64n : 32n;
               const mask = (1n << bits) - 1n;
               const dividend =
-                ((cpu.registers.RDX & mask) << bits) | (cpu.registers.RAX & mask);
+                ((cpu.registers.RDX & mask) << bits) |
+                (cpu.registers.RAX & mask);
               const quotient = dividend / divisor;
               if (quotient > mask) {
                 throw new RangeError('x64 divide error: quotient overflow');
@@ -1230,7 +1228,9 @@ export class X64Cpu {
               cpu.registers[parsed.reg] = readRM16(cpu, parsed.rm, nextRip);
             },
             undefined,
-            { operands: [regOperand(parsed.reg, 32), rmOperand(parsed.rm, 16)] },
+            {
+              operands: [regOperand(parsed.reg, 32), rmOperand(parsed.rm, 16)],
+            },
           );
         }
         throw new UnsupportedInstructionFault(address, second);

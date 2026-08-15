@@ -65,7 +65,8 @@ export function TerminalPanel() {
       term = new Terminal({
         cols: CONSOLE_COLS,
         rows: CONSOLE_ROWS,
-        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+        fontFamily:
+          "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
         fontSize: 13,
         theme: {
           background: '#1e1e1e',

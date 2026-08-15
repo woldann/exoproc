@@ -21,13 +21,18 @@ interface WorkerReport {
  */
 describe('Win32FileSystem folder binds: real compiled dist/ through a simulated path', () => {
   it('reads a real dist/worker/lifecycle.js file via a bound simulated path, inside a Worker', async () => {
-    const fixturePath = path.resolve(moduleDirectory, 'fixtures/bind-real-dist-entry.ts');
+    const fixturePath = path.resolve(
+      moduleDirectory,
+      'fixtures/bind-real-dist-entry.ts',
+    );
     const worker = new Worker(new URL(`file://${fixturePath}`).href);
 
     const report = await new Promise<WorkerReport>((resolve, reject) => {
       const timeout = setTimeout(() => {
         worker.terminate();
-        reject(new Error('bind-real-dist-entry worker did not report back in time'));
+        reject(
+          new Error('bind-real-dist-entry worker did not report back in time'),
+        );
       }, 15000);
       worker.addEventListener('message', (event) => {
         clearTimeout(timeout);

@@ -296,12 +296,22 @@ export class Win32ProgramRegistry {
     program: Win32CompiledProgram,
   ): Win64Module {
     const codeSize = Math.max(1, program.code.length);
-    const textBase = process.allocate(codeSize, 'rx', 0n, `${moduleName} / .text`);
+    const textBase = process.allocate(
+      codeSize,
+      'rx',
+      0n,
+      `${moduleName} / .text`,
+    );
     const linkedCode = program.code.slice();
 
     let dataBase = 0n;
     if (program.data.length > 0) {
-      dataBase = process.allocate(program.data.length, 'rw', 0n, `${moduleName} / .data`);
+      dataBase = process.allocate(
+        program.data.length,
+        'rw',
+        0n,
+        `${moduleName} / .data`,
+      );
       process.memory.write(dataBase, program.data);
     }
 
@@ -319,7 +329,8 @@ export class Win32ProgramRegistry {
       }
       const resolved =
         target.kind === 'data'
-          ? dataBase + BigInt(this.requireDataSymbol(program, target.symbol).offset)
+          ? dataBase +
+            BigInt(this.requireDataSymbol(program, target.symbol).offset)
           : process.resolveSymbol(target.dllName, target.functionName);
       if (resolved === undefined) {
         throw new Error(

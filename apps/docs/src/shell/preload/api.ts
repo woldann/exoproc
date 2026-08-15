@@ -102,11 +102,7 @@ export function createApi(connection: ShellConnection): ExoprocApi {
       continueRun: (ref) =>
         connection.invoke<RunOutcomeDto>(DebugChannel.continueRun, ref),
       runToCursor: (ref, target) =>
-        connection.invoke<RunOutcomeDto>(
-          DebugChannel.runToCursor,
-          ref,
-          target,
-        ),
+        connection.invoke<RunOutcomeDto>(DebugChannel.runToCursor, ref, target),
       getCallStack: (ref) =>
         connection.invoke<readonly bigint[]>(DebugChannel.getCallStack, ref),
       writeRegister: (ref, name, value) =>
@@ -176,7 +172,9 @@ export function createApi(connection: ShellConnection): ExoprocApi {
       bind: (source: WorkspaceSource) =>
         connection.invoke<WorkspaceInfoDto>(WorkspaceChannel.bind, source),
       getInfo: () =>
-        connection.invoke<WorkspaceInfoDto | undefined>(WorkspaceChannel.getInfo),
+        connection.invoke<WorkspaceInfoDto | undefined>(
+          WorkspaceChannel.getInfo,
+        ),
       browseSimulateTree: (path: string) =>
         connection.invoke<readonly DirectoryEntryDto[]>(
           WorkspaceChannel.browseSimulateTree,
@@ -187,13 +185,18 @@ export function createApi(connection: ShellConnection): ExoprocApi {
       deleteSimulateEntry: (path: string) =>
         connection.invoke<void>(WorkspaceChannel.deleteSimulateEntry, path),
       renameSimulateEntry: (source: string, target: string) =>
-        connection.invoke<void>(WorkspaceChannel.renameSimulateEntry, source, target),
+        connection.invoke<void>(
+          WorkspaceChannel.renameSimulateEntry,
+          source,
+          target,
+        ),
       onDidChangeRoot: (listener) =>
         connection.on(WorkspaceChannel.onDidChangeRoot, listener),
     },
 
     fs: {
-      stat: (path: string) => connection.invoke<FileStatDto>(FsChannel.stat, path),
+      stat: (path: string) =>
+        connection.invoke<FileStatDto>(FsChannel.stat, path),
       readDirectory: (path: string) =>
         connection.invoke<readonly DirectoryEntryDto[]>(
           FsChannel.readDirectory,
@@ -201,8 +204,11 @@ export function createApi(connection: ShellConnection): ExoprocApi {
         ),
       readFile: (path: string) =>
         connection.invoke<Uint8Array>(FsChannel.readFile, path),
-      writeFile: (path: string, content: Uint8Array, options?: WriteFileOptions) =>
-        connection.invoke<void>(FsChannel.writeFile, path, content, options),
+      writeFile: (
+        path: string,
+        content: Uint8Array,
+        options?: WriteFileOptions,
+      ) => connection.invoke<void>(FsChannel.writeFile, path, content, options),
       createDirectory: (path: string) =>
         connection.invoke<void>(FsChannel.createDirectory, path),
       delete: (path: string, options?: DeleteOptions) =>
@@ -210,7 +216,10 @@ export function createApi(connection: ShellConnection): ExoprocApi {
       rename: (source: string, target: string, options?: RenameOptions) =>
         connection.invoke<void>(FsChannel.rename, source, target, options),
       onDidChangeFile: (listener) =>
-        connection.on<readonly FileChangeDto[]>(FsChannel.onDidChangeFile, listener),
+        connection.on<readonly FileChangeDto[]>(
+          FsChannel.onDidChangeFile,
+          listener,
+        ),
     },
 
     terminal: {

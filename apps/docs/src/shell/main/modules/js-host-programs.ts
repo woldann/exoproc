@@ -79,7 +79,10 @@ export function registerJsHostPrograms(): void {
 function parseEvalArgument(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   let code = raw;
-  if ((code.startsWith("'") && code.endsWith("'")) || (code.startsWith('"') && code.endsWith('"'))) {
+  if (
+    (code.startsWith("'") && code.endsWith("'")) ||
+    (code.startsWith('"') && code.endsWith('"'))
+  ) {
     code = code.slice(1, -1);
   }
   return code.replace(/\\+"/g, '"').replace(/\\+'/g, "'");
@@ -106,7 +109,10 @@ export function bootExoprocIdeProcess(machine: Win64Machine): void {
     path: `C:\\Windows\\System32\\${EXOPROC_IDE_IMAGE}`,
   });
   const loaded = machine.programs.load(process, program);
-  const thread = process.createThread(`${EXOPROC_IDE_IMAGE} main thread`, loaded.entryPoint);
+  const thread = process.createThread(
+    `${EXOPROC_IDE_IMAGE} main thread`,
+    loaded.entryPoint,
+  );
   machine.scheduler.enqueue(thread);
   machine.pumpScheduler();
 }

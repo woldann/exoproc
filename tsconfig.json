@@ -53,7 +53,9 @@
       "exoproc": ["packages/exoproc/src/index.ts"],
       "@exoproc/win32-abi": ["packages/win32-abi/src/index.ts"],
       "@exoproc/simulate": ["packages/simulate/src/index.ts"],
-      "@exoproc/simulate/files": ["packages/simulate/src/platform/files/index.ts"]
+      "@exoproc/simulate/files": [
+        "packages/simulate/src/platform/files/index.ts"
+      ]
     }
   },
   "files": [],

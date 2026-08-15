@@ -57,11 +57,15 @@ function joinPath(directory: string, name: string): string {
  * then pick a directory as the new workspace root (`WorkspaceSource`'s
  * `simulate-path`).
  */
-export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerProps) {
+export function SimulateFolderPicker({
+  open,
+  onCancel,
+}: SimulateFolderPickerProps) {
   const fileService = useService(IFileService);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  const startPath = fileService.getWorkspaceInfo()?.rootPath ?? SIMULATE_TREE_ROOT;
+  const startPath =
+    fileService.getWorkspaceInfo()?.rootPath ?? SIMULATE_TREE_ROOT;
 
   const [browsePath, setBrowsePath] = useState(startPath);
   const [entries, setEntries] = useState<readonly DirectoryEntryDto[]>([]);
@@ -109,7 +113,9 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
       },
       (cause: unknown) => {
         if (cancelled) return;
-        setFetchError(cause instanceof Error ? cause.message : 'Dizin okunamadı.');
+        setFetchError(
+          cause instanceof Error ? cause.message : 'Dizin okunamadı.',
+        );
         setLoadedPath(browsePath);
         setLoadedToken(refreshToken);
       },
@@ -119,7 +125,8 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
     };
   }, [open, browsePath, refreshToken, fileService]);
 
-  const loading = open && (loadedPath !== browsePath || loadedToken !== refreshToken);
+  const loading =
+    open && (loadedPath !== browsePath || loadedToken !== refreshToken);
   const error = loading ? undefined : (actionError ?? bindError ?? fetchError);
 
   const refresh = () => setRefreshToken((token) => token + 1);
@@ -133,10 +140,15 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
     setBusy(true);
     setBindError(undefined);
     try {
-      await fileService.bindWorkspace({ type: 'simulate-path', path: browsePath });
+      await fileService.bindWorkspace({
+        type: 'simulate-path',
+        path: browsePath,
+      });
       onCancel();
     } catch (cause) {
-      setBindError(cause instanceof Error ? cause.message : 'Workspace bağlanamadı.');
+      setBindError(
+        cause instanceof Error ? cause.message : 'Workspace bağlanamadı.',
+      );
       setBusy(false);
     }
   };
@@ -151,13 +163,16 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
       await fileService.createSimulateDirectory(joinPath(browsePath, name));
       refresh();
     } catch (cause) {
-      setActionError(cause instanceof Error ? cause.message : 'Klasör oluşturulamadı.');
+      setActionError(
+        cause instanceof Error ? cause.message : 'Klasör oluşturulamadı.',
+      );
     }
   };
 
   const deleteEntry = async (name: string, isDirectory: boolean) => {
     const kind = isDirectory ? 'klasör' : 'dosya';
-    if (!window.confirm(`"${name}" ${kind}ı ve içindeki her şey silinsin mi?`)) return;
+    if (!window.confirm(`"${name}" ${kind}ı ve içindeki her şey silinsin mi?`))
+      return;
     setActionError(undefined);
     try {
       await fileService.deleteSimulateEntry(joinPath(browsePath, name));
@@ -173,20 +188,34 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
     if (!newName || newName === oldName) return;
     setActionError(undefined);
     try {
-      await fileService.renameSimulateEntry(joinPath(browsePath, oldName), joinPath(browsePath, newName));
+      await fileService.renameSimulateEntry(
+        joinPath(browsePath, oldName),
+        joinPath(browsePath, newName),
+      );
       refresh();
     } catch (cause) {
-      setActionError(cause instanceof Error ? cause.message : 'Yeniden adlandırılamadı.');
+      setActionError(
+        cause instanceof Error ? cause.message : 'Yeniden adlandırılamadı.',
+      );
     }
   };
 
   const segments = segmentsOf(browsePath);
   const shortcuts = [
-    { label: 'Workspace', path: fileService.getWorkspaceInfo()?.rootPath, icon: Briefcase },
+    {
+      label: 'Workspace',
+      path: fileService.getWorkspaceInfo()?.rootPath,
+      icon: Briefcase,
+    },
     { label: 'Masaüstü', path: DESKTOP_PATH, icon: Monitor },
     { label: 'Belgeler', path: DOCUMENTS_PATH, icon: FileText },
     { label: 'Bu Bilgisayar (C:)', path: SIMULATE_TREE_ROOT, icon: HardDrive },
-  ].filter((shortcut): shortcut is { label: string; path: string; icon: typeof Briefcase } => !!shortcut.path);
+  ].filter(
+    (
+      shortcut,
+    ): shortcut is { label: string; path: string; icon: typeof Briefcase } =>
+      !!shortcut.path,
+  );
 
   return (
     <Dialog
@@ -200,7 +229,10 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
         className="flex w-[min(760px,calc(100vw-2rem))] max-w-none flex-col gap-0 overflow-hidden rounded-sm border border-[#454545] bg-[#1e1e1e] p-0 text-[#cccccc] shadow-2xl ring-0 sm:max-w-none"
       >
         <header className="flex h-10 shrink-0 items-center border-b border-[#3c3c3c] bg-[#252526] px-3">
-          <FolderOpen aria-hidden="true" className="mr-2 size-4 text-[#75beff]" />
+          <FolderOpen
+            aria-hidden="true"
+            className="mr-2 size-4 text-[#75beff]"
+          />
           <DialogTitle className="truncate text-[13px] font-normal text-[#f0f0f0]">
             Klasör Seç
           </DialogTitle>
@@ -228,7 +260,10 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
             key={browsePath}
             defaultValue={browsePath}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') navigate(event.currentTarget.value.trim() || SIMULATE_TREE_ROOT);
+              if (event.key === 'Enter')
+                navigate(
+                  event.currentTarget.value.trim() || SIMULATE_TREE_ROOT,
+                );
             }}
             aria-label="Yol"
             spellCheck={false}
@@ -239,10 +274,17 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
         <div className="flex items-center gap-1 overflow-x-auto border-b border-[#3c3c3c] bg-[#1e1e1e] px-3 py-1.5 text-xs text-[#cccccc]">
           {segments.map((segment, index) => (
             <span key={index} className="flex shrink-0 items-center gap-1">
-              {index > 0 ? <ChevronRight aria-hidden="true" className="size-3 text-[#6b6b6b]" /> : null}
+              {index > 0 ? (
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-3 text-[#6b6b6b]"
+                />
+              ) : null}
               <button
                 type="button"
-                onClick={() => navigate(pathFromSegments(segments.slice(0, index + 1)))}
+                onClick={() =>
+                  navigate(pathFromSegments(segments.slice(0, index + 1)))
+                }
                 className="rounded-sm px-1 hover:bg-[#3a3d41] hover:text-white"
               >
                 {segment}
@@ -268,10 +310,15 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
                 type="button"
                 onClick={() => navigate(path)}
                 className={`flex h-7 items-center gap-2 rounded-sm px-2 text-left text-xs hover:bg-[#2a2d2e] ${
-                  browsePath === path ? 'bg-[#37373d] text-white' : 'text-[#cccccc]'
+                  browsePath === path
+                    ? 'bg-[#37373d] text-white'
+                    : 'text-[#cccccc]'
                 }`}
               >
-                <Icon aria-hidden="true" className="size-3.5 shrink-0 text-[#75beff]" />
+                <Icon
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 text-[#75beff]"
+                />
                 <span className="min-w-0 flex-1 truncate">{label}</span>
               </button>
             ))}
@@ -280,7 +327,10 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
           <div className="h-80 min-w-0 flex-1 overflow-y-auto bg-[#181818]">
             {creatingFolder ? (
               <div className="flex h-7 items-center gap-2 border-b border-[#252525] px-3">
-                <Folder aria-hidden="true" className="size-3.5 shrink-0 text-[#c09553]" />
+                <Folder
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 text-[#c09553]"
+                />
                 <input
                   autoFocus
                   value={newFolderName}
@@ -315,19 +365,28 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
                       className="group flex h-7 items-center gap-2 border-b border-[#252525] pr-1 pl-3 hover:bg-[#2a2d2e]"
                     >
                       {isDirectory ? (
-                        <Folder aria-hidden="true" className="size-3.5 shrink-0 text-[#c09553]" />
+                        <Folder
+                          aria-hidden="true"
+                          className="size-3.5 shrink-0 text-[#c09553]"
+                        />
                       ) : (
-                        <File aria-hidden="true" className="size-3.5 shrink-0 text-[#8b8b8b]" />
+                        <File
+                          aria-hidden="true"
+                          className="size-3.5 shrink-0 text-[#8b8b8b]"
+                        />
                       )}
                       {isRenaming ? (
                         <input
                           ref={renameInputRef}
                           autoFocus
                           value={renameValue}
-                          onChange={(event) => setRenameValue(event.target.value)}
+                          onChange={(event) =>
+                            setRenameValue(event.target.value)
+                          }
                           onKeyDown={(event) => {
                             if (event.key === 'Enter') void commitRename(name);
-                            if (event.key === 'Escape') setRenamingName(undefined);
+                            if (event.key === 'Escape')
+                              setRenamingName(undefined);
                           }}
                           onBlur={() => void commitRename(name)}
                           aria-label={`"${name}" için yeni ad`}
@@ -377,7 +436,10 @@ export function SimulateFolderPicker({ open, onCancel }: SimulateFolderPickerPro
         </div>
 
         {error ? (
-          <div role="alert" className="border-t border-[#5a1d1d] bg-[#3d1f1f] px-3 py-2 text-xs text-[#f4b8b8]">
+          <div
+            role="alert"
+            className="border-t border-[#5a1d1d] bg-[#3d1f1f] px-3 py-2 text-xs text-[#f4b8b8]"
+          >
             {error}
           </div>
         ) : null}

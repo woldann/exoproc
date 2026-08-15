@@ -35,11 +35,14 @@ export class SnapshotStore {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = () => {
-        const store = request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        const store = request.result.createObjectStore(STORE_NAME, {
+          keyPath: 'id',
+        });
         store.createIndex('createdAt', 'createdAt');
       };
       request.onsuccess = () => resolve(new SnapshotStore(request.result));
-      request.onerror = () => reject(request.error ?? new Error('IndexedDB açılamadı.'));
+      request.onerror = () =>
+        reject(request.error ?? new Error('IndexedDB açılamadı.'));
     });
   }
 
@@ -48,9 +51,20 @@ export class SnapshotStore {
     blob: Win64MachineSnapshot,
     warnings: readonly string[],
   ): Promise<SnapshotMetaDto> {
-    const record: SnapshotRecord = { id: crypto.randomUUID(), name, createdAt: Date.now(), warnings, blob };
+    const record: SnapshotRecord = {
+      id: crypto.randomUUID(),
+      name,
+      createdAt: Date.now(),
+      warnings,
+      blob,
+    };
     await this.run('readwrite', (store) => store.add(record));
-    return { id: record.id, name: record.name, createdAt: record.createdAt, warnings: record.warnings };
+    return {
+      id: record.id,
+      name: record.name,
+      createdAt: record.createdAt,
+      warnings: record.warnings,
+    };
   }
 
   public list(): Promise<readonly SnapshotMetaDto[]> {
@@ -76,15 +90,23 @@ export class SnapshotStore {
         });
         cursor.continue();
       };
-      request.onerror = () => reject(request.error ?? new Error('Snapshot listesi okunamadı.'));
+      request.onerror = () =>
+        reject(request.error ?? new Error('Snapshot listesi okunamadı.'));
     });
   }
 
   public get(id: string): Promise<Win64MachineSnapshot | undefined> {
     return new Promise((resolve, reject) => {
-      const request = this.db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(id);
-      request.onsuccess = () => resolve((request.result as SnapshotRecord | undefined)?.blob);
-      request.onerror = () => reject(request.error ?? new Error(`"${id}" kimlikli snapshot okunamadı.`));
+      const request = this.db
+        .transaction(STORE_NAME, 'readonly')
+        .objectStore(STORE_NAME)
+        .get(id);
+      request.onsuccess = () =>
+        resolve((request.result as SnapshotRecord | undefined)?.blob);
+      request.onerror = () =>
+        reject(
+          request.error ?? new Error(`"${id}" kimlikli snapshot okunamadı.`),
+        );
     });
   }
 
@@ -92,12 +114,16 @@ export class SnapshotStore {
     return this.run('readwrite', (store) => store.delete(id));
   }
 
-  private run(mode: IDBTransactionMode, op: (store: IDBObjectStore) => IDBRequest): Promise<void> {
+  private run(
+    mode: IDBTransactionMode,
+    op: (store: IDBObjectStore) => IDBRequest,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(STORE_NAME, mode);
       op(transaction.objectStore(STORE_NAME));
       transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB işlemi başarısız.'));
+      transaction.onerror = () =>
+        reject(transaction.error ?? new Error('IndexedDB işlemi başarısız.'));
     });
   }
 }

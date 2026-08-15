@@ -795,7 +795,7 @@ export function extractExternDeclarations(
   types: TypeTable,
 ): ExternDeclaration[] {
   const declarations: ExternDeclaration[] = [];
-  const pattern = /extern\s+([\w \*]+?)\s+(\w+)\s*\([^)]*\)\s*;/g;
+  const pattern = /extern\s+([\w *]+?)\s+(\w+)\s*\([^)]*\)\s*;/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text))) {
     const returnTypeText = match[1]!;
@@ -826,7 +826,7 @@ export function extractDummyExternDeclarations(
 ): ExternDeclaration[] {
   const declarations: ExternDeclaration[] = [];
   const pattern =
-    /(?:^|[^\w])([\w ]+?[\w \*]*?)\s+(\w+)\s*\([^)]*\)\s*\{\s*(?:return\s+0\s*;)?\s*\}/g;
+    /(?:^|[^\w])([\w ]+?[\w *]*?)\s+(\w+)\s*\([^)]*\)\s*\{\s*(?:return\s+0\s*;)?\s*\}/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text))) {
     const returnTypeText = match[1]!.trim();

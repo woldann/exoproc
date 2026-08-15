@@ -776,10 +776,8 @@ describe('@exoproc/simulate Win64 machine', () => {
     );
 
     assert.equal(
-      process.invoke(fopen, [
-        'C:\\Users\\Serkan\\Workspace\\README.txt',
-        'rx',
-      ]).value,
+      process.invoke(fopen, ['C:\\Users\\Serkan\\Workspace\\README.txt', 'rx'])
+        .value,
       0n,
     );
 
@@ -1443,9 +1441,7 @@ describe('@exoproc/simulate Win64 machine', () => {
     );
     const silentCd = commandPrompt.execute('cd');
     assert.ok(
-      silentCd.screenText.endsWith(
-        'cd\r\nC:\\Users\\Serkan\\Workspace>',
-      ),
+      silentCd.screenText.endsWith('cd\r\nC:\\Users\\Serkan\\Workspace>'),
     );
 
     const listing = commandPrompt.execute('ls');
@@ -1480,10 +1476,7 @@ describe('@exoproc/simulate Win64 machine', () => {
     assert.equal(machine.getProcesses().length, processCount + 1);
 
     const where = commandPrompt.execute('where hello');
-    assert.match(
-      where.screenText,
-      /C:\\Windows\\System32\\hello\.exe/i,
-    );
+    assert.match(where.screenText, /C:\\Windows\\System32\\hello\.exe/i);
     const hello = commandPrompt.execute('hello');
     assert.match(hello.screenText, /Hello from a compiled Win64 process\./);
 

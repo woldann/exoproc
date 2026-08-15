@@ -25,30 +25,30 @@ kaydı üretmesini sağlar.
 ABI kataloğu export adlarının bütün DLL'ler arasında benzersiz olduğunu
 doğrular. `.json` section/symbol haritasıyla SHA-256 değerlerini taşır.
 
-| Image | .text byte | IAT byte | .data byte | Relocation |
-| --- | ---: | ---: | ---: | ---: |
-| `cat.exe` | 305 | 48 | 4155 | 13 |
-| `cd.exe` | 81 | 16 | 48 | 4 |
-| `chdir.exe` | 81 | 16 | 48 | 4 |
-| `clear.exe` | 101 | 24 | 4 | 4 |
-| `cls.exe` | 101 | 24 | 4 | 4 |
-| `cmd.exe` | 534 | 64 | 4592 | 28 |
-| `dir.exe` | 443 | 48 | 704 | 28 |
-| `echo.exe` | 169 | 16 | 8 | 9 |
-| `exit.exe` | 40 | 8 | 4 | 3 |
-| `hello.exe` | 40 | 8 | 42 | 3 |
-| `help.exe` | 40 | 8 | 143 | 3 |
-| `hostname.exe` | 40 | 8 | 19 | 3 |
-| `ls.exe` | 443 | 48 | 704 | 28 |
-| `node.exe` | 196 | 32 | 2101 | 7 |
-| `path.exe` | 212 | 24 | 4113 | 14 |
-| `ping.exe` | 569 | 64 | 987 | 30 |
-| `pwd.exe` | 103 | 16 | 266 | 8 |
-| `set.exe` | 71 | 16 | 27 | 4 |
-| `ver.exe` | 40 | 8 | 53 | 3 |
-| `where.exe` | 217 | 16 | 4180 | 14 |
-| `whoami.exe` | 40 | 8 | 20 | 3 |
-| `whois.exe` | 376 | 24 | 360 | 25 |
+| Image          | .text byte | IAT byte | .data byte | Relocation |
+| -------------- | ---------: | -------: | ---------: | ---------: |
+| `cat.exe`      |        305 |       48 |       4155 |         13 |
+| `cd.exe`       |         81 |       16 |         48 |          4 |
+| `chdir.exe`    |         81 |       16 |         48 |          4 |
+| `clear.exe`    |        101 |       24 |          4 |          4 |
+| `cls.exe`      |        101 |       24 |          4 |          4 |
+| `cmd.exe`      |        534 |       64 |       4592 |         28 |
+| `dir.exe`      |        443 |       48 |        704 |         28 |
+| `echo.exe`     |        169 |       16 |          8 |          9 |
+| `exit.exe`     |         40 |        8 |          4 |          3 |
+| `hello.exe`    |         40 |        8 |         42 |          3 |
+| `help.exe`     |         40 |        8 |        143 |          3 |
+| `hostname.exe` |         40 |        8 |         19 |          3 |
+| `ls.exe`       |        443 |       48 |        704 |         28 |
+| `node.exe`     |        196 |       32 |       2101 |          7 |
+| `path.exe`     |        212 |       24 |       4113 |         14 |
+| `ping.exe`     |        569 |       64 |        987 |         30 |
+| `pwd.exe`      |        103 |       16 |        266 |          8 |
+| `set.exe`      |         71 |       16 |         27 |          4 |
+| `ver.exe`      |         40 |        8 |         53 |          3 |
+| `where.exe`    |        217 |       16 |       4180 |         14 |
+| `whoami.exe`   |         40 |        8 |         20 |          3 |
+| `whois.exe`    |        376 |       24 |        360 |         25 |
 
 ## Simüle DLL image'ları
 
@@ -62,17 +62,17 @@ DLL compiler'ı henüz ayrı data section'ları üretmediği için `.rdata`,
 `.data` ve `.bss` başlıkları
 mevcut artifact'larda açıkça `empty` görünür.
 
-| DLL | Map edilen .text byte | IAT byte | Export |
-| --- | ---: | ---: | ---: |
-| `kernel32.dll` | 102400 | 0 | 99 |
-| `ntdll.dll` | 4096 | 0 | 1 |
-| `msvcrt.dll` | 28672 | 72 | 26 |
-| `user32.dll` | 36864 | 0 | 35 |
-| `gdi32.dll` | 8192 | 0 | 8 |
-| `advapi32.dll` | 4096 | 0 | 3 |
-| `psapi.dll` | 4096 | 0 | 1 |
-| `ws2_32.dll` | 16384 | 0 | 15 |
-| `node.dll` | 4096 | 0 | 3 |
+| DLL            | Map edilen .text byte | IAT byte | Export |
+| -------------- | --------------------: | -------: | -----: |
+| `kernel32.dll` |                102400 |        0 |     99 |
+| `ntdll.dll`    |                  4096 |        0 |      1 |
+| `msvcrt.dll`   |                 28672 |       72 |     26 |
+| `user32.dll`   |                 36864 |        0 |     35 |
+| `gdi32.dll`    |                  8192 |        0 |      8 |
+| `advapi32.dll` |                  4096 |        0 |      3 |
+| `psapi.dll`    |                  4096 |        0 |      1 |
+| `ws2_32.dll`   |                 16384 |        0 |     15 |
+| `node.dll`     |                  4096 |        0 |      3 |
 
 Toplam 22 executable image, 9 DLL bellek
 image'ı ve 191 üretilmiş export bulunuyor.

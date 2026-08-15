@@ -11,10 +11,7 @@
   "dataBytes": 27,
   "entryOffset": 0,
   "relocationCount": 4,
-  "imports": [
-    "msvcrt.dll!_putenv",
-    "msvcrt.dll!printf"
-  ],
+  "imports": ["msvcrt.dll!_putenv", "msvcrt.dll!printf"],
   "hashes": {
     "imageSha256": "e25c383f170650316722109b7a70aa5ddb807e485da8aa916c776725324bc72d",
     "compilerTextSha256": "7777f3fbc59d26cbe39c5752cd8ca13a63361979ec2761d2a3184f364b122f6d",

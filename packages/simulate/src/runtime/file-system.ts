@@ -41,17 +41,16 @@ export interface HostRuntime {
 }
 
 function autoDetectHostRuntime(): HostRuntime | undefined {
-  const hostProcess = (globalThis as typeof globalThis & { process?: HostProcess })
-    .process;
+  const hostProcess = (
+    globalThis as typeof globalThis & { process?: HostProcess }
+  ).process;
   const getBuiltinModule = hostProcess?.getBuiltinModule;
   if (!hostProcess || !getBuiltinModule) return undefined;
 
   const fileSystem = getBuiltinModule.call(hostProcess, 'node:fs') as
-    | HostFileSystemModule
-    | undefined;
+    HostFileSystemModule | undefined;
   const path = getBuiltinModule.call(hostProcess, 'node:path') as
-    | HostPathModule
-    | undefined;
+    HostPathModule | undefined;
   if (!fileSystem || !path) return undefined;
 
   return { fileSystem, path, process: hostProcess };
@@ -250,7 +249,10 @@ export class Win32FileSystem {
     this.requireHostRuntime().fileSystem.writeFileSync(path, data);
   }
 
-  private hostRmSync(path: string, options: { recursive: true; force?: boolean }): void {
+  private hostRmSync(
+    path: string,
+    options: { recursive: true; force?: boolean },
+  ): void {
     this.requireHostRuntime().fileSystem.rmSync(path, options);
   }
 
@@ -388,12 +390,15 @@ export class Win32FileSystem {
 
   /** Resolves an already-`normalize()`d simulated path to the real host path
    * it's bound to, or `undefined` if it isn't under any bound prefix. */
-  private resolveBind(normalizedPath: string): FolderBind & { realTargetPath: string } | undefined {
+  private resolveBind(
+    normalizedPath: string,
+  ): (FolderBind & { realTargetPath: string }) | undefined {
     let best: FolderBind | undefined;
     const candidate = normalizedPath.toLowerCase();
     for (const bind of this.binds) {
       const prefix = bind.simulatedPrefix.toLowerCase();
-      if (candidate !== prefix && !candidate.startsWith(`${prefix}\\`)) continue;
+      if (candidate !== prefix && !candidate.startsWith(`${prefix}\\`))
+        continue;
       if (!best || bind.simulatedPrefix.length > best.simulatedPrefix.length) {
         best = bind;
       }
@@ -405,7 +410,10 @@ export class Win32FileSystem {
       .filter(Boolean);
     return {
       ...best,
-      realTargetPath: this.resolveHostSegments(best.realHostPath, relativeSegments),
+      realTargetPath: this.resolveHostSegments(
+        best.realHostPath,
+        relativeSegments,
+      ),
     };
   }
 
@@ -423,7 +431,9 @@ export class Win32FileSystem {
         : normalizedPath.slice(normalizedPath.lastIndexOf('\\') + 1),
       path: normalizedPath,
       createdAt: stat.birthtime,
-      data: stat.isDirectory() ? new Uint8Array(0) : this.hostReadFileSync(realTargetPath),
+      data: stat.isDirectory()
+        ? new Uint8Array(0)
+        : this.hostReadFileSync(realTargetPath),
     };
   }
 
@@ -472,7 +482,9 @@ export class Win32FileSystem {
     const normalized = this.normalize(path);
     const bind = this.resolveBind(normalized);
     if (bind) {
-      this.hostMkdirSync(this.hostDirname(bind.realTargetPath), { recursive: true });
+      this.hostMkdirSync(this.hostDirname(bind.realTargetPath), {
+        recursive: true,
+      });
       this.hostWriteFileSync(bind.realTargetPath, data);
       const written = this.entryFromRealPath(normalized, bind.realTargetPath);
       if (!written) {
@@ -534,10 +546,14 @@ export class Win32FileSystem {
         ? this.hostReadFileSync(bind.realTargetPath)
         : new Uint8Array(0);
       const start = Math.max(0, offset);
-      const next = new Uint8Array(Math.max(existing.length, start + data.length));
+      const next = new Uint8Array(
+        Math.max(existing.length, start + data.length),
+      );
       next.set(existing);
       next.set(data, start);
-      this.hostMkdirSync(this.hostDirname(bind.realTargetPath), { recursive: true });
+      this.hostMkdirSync(this.hostDirname(bind.realTargetPath), {
+        recursive: true,
+      });
       this.hostWriteFileSync(bind.realTargetPath, next);
       return data.length;
     }
@@ -620,7 +636,11 @@ export class Win32FileSystem {
    * `target`'s parent directory doesn't exist, matching `writeFile`'s
    * existing contract.
    */
-  public rename(source: string, target: string, currentDirectory = 'C:\\'): boolean {
+  public rename(
+    source: string,
+    target: string,
+    currentDirectory = 'C:\\',
+  ): boolean {
     const normalizedSource = this.normalize(source, currentDirectory);
     const normalizedTarget = this.normalize(target, currentDirectory);
     const sourceBind = this.resolveBind(normalizedSource);
@@ -633,7 +653,9 @@ export class Win32FileSystem {
       }
       if (!this.hostExistsSync(sourceBind.realTargetPath)) return false;
       if (this.hostExistsSync(targetBind.realTargetPath)) return false;
-      this.hostMkdirSync(this.hostDirname(targetBind.realTargetPath), { recursive: true });
+      this.hostMkdirSync(this.hostDirname(targetBind.realTargetPath), {
+        recursive: true,
+      });
       this.hostRenameSync(sourceBind.realTargetPath, targetBind.realTargetPath);
       return true;
     }

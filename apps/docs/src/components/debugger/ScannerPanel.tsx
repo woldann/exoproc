@@ -1,10 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import type { FirstScanCompare, NextScanCompare, ScanValueType } from '../../shell/common/channels';
+import type {
+  FirstScanCompare,
+  NextScanCompare,
+  ScanValueType,
+} from '../../shell/common/channels';
 import { GHOST_BUTTON_CLASS, INPUT_CLASS } from './chrome';
 import { hex } from './format';
-import { formatScanValue, isFixedWidthType, nextScanNeedsValue } from './useScannerSession';
+import {
+  formatScanValue,
+  isFixedWidthType,
+  nextScanNeedsValue,
+} from './useScannerSession';
 import type { ScannerSession } from './useScannerSession';
 import type { DebugSession } from './useDebugSession';
 
@@ -34,7 +42,8 @@ const NEXT_COMPARE_LABEL: Record<NextScanCompare, string> = {
   'smaller-than': 'Şundan küçük',
 };
 
-const LABEL_CLASS = 'text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase';
+const LABEL_CLASS =
+  'text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase';
 const HEAD_CLASS = 'px-2 py-1 text-left font-semibold text-[#858585]';
 const CELL_CLASS = 'px-2 py-1 align-middle';
 
@@ -51,13 +60,13 @@ export function ScannerPanel({
   const [watchDraft, setWatchDraft] = useState('');
 
   const { report } = scanner;
-  const valueNeeded =
-    !scanner.scanned
-      ? scanner.firstCompare === 'exact'
-      : nextScanNeedsValue(scanner.nextCompare);
+  const valueNeeded = !scanner.scanned
+    ? scanner.firstCompare === 'exact'
+    : nextScanNeedsValue(scanner.nextCompare);
 
   const commitResult = async (address: bigint) => {
-    if (await scanner.editResult(address, resultDraft)) setEditingResult(undefined);
+    if (await scanner.editResult(address, resultDraft))
+      setEditingResult(undefined);
   };
 
   return (
@@ -109,7 +118,10 @@ export function ScannerPanel({
             >
               <option value="exact">{FIRST_COMPARE_LABEL.exact}</option>
               {/* An unknown-value scan has no needle, so it needs a fixed width. */}
-              <option value="unknown" disabled={!isFixedWidthType(scanner.valueType)}>
+              <option
+                value="unknown"
+                disabled={!isFixedWidthType(scanner.valueType)}
+              >
                 {FIRST_COMPARE_LABEL.unknown}
               </option>
             </select>
@@ -121,11 +133,13 @@ export function ScannerPanel({
               }
               className={INPUT_CLASS}
             >
-              {(Object.keys(NEXT_COMPARE_LABEL) as NextScanCompare[]).map((compare) => (
-                <option key={compare} value={compare}>
-                  {NEXT_COMPARE_LABEL[compare]}
-                </option>
-              ))}
+              {(Object.keys(NEXT_COMPARE_LABEL) as NextScanCompare[]).map(
+                (compare) => (
+                  <option key={compare} value={compare}>
+                    {NEXT_COMPARE_LABEL[compare]}
+                  </option>
+                ),
+              )}
             </select>
           )}
         </label>
@@ -167,15 +181,27 @@ export function ScannerPanel({
 
         <div className="ml-auto flex items-center gap-1.5">
           {!scanner.scanned ? (
-            <button type="button" onClick={scanner.firstScan} className={GHOST_BUTTON_CLASS}>
+            <button
+              type="button"
+              onClick={scanner.firstScan}
+              className={GHOST_BUTTON_CLASS}
+            >
               İlk tarama
             </button>
           ) : (
             <>
-              <button type="button" onClick={scanner.nextScan} className={GHOST_BUTTON_CLASS}>
+              <button
+                type="button"
+                onClick={scanner.nextScan}
+                className={GHOST_BUTTON_CLASS}
+              >
                 Sonraki tarama
               </button>
-              <button type="button" onClick={scanner.newScan} className={GHOST_BUTTON_CLASS}>
+              <button
+                type="button"
+                onClick={scanner.newScan}
+                className={GHOST_BUTTON_CLASS}
+              >
                 Yeni tarama
               </button>
             </>
@@ -204,7 +230,11 @@ export function ScannerPanel({
                     ? ` · ilk ${report.results.length.toLocaleString('tr-TR')} tanesi listeleniyor`
                     : ''}
                 </span>
-                {report?.total === 0 && <span>· daraltmayı geri almak için &quot;Yeni tarama&quot;</span>}
+                {report?.total === 0 && (
+                  <span>
+                    · daraltmayı geri almak için &quot;Yeni tarama&quot;
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -222,14 +252,21 @@ export function ScannerPanel({
                 </thead>
                 <tbody>
                   {report.results.map((result) => (
-                    <tr key={result.address.toString()} className="border-t border-[#2d2d2d]">
-                      <td className={`${CELL_CLASS} text-[#9cdcfe]`}>{hex(result.address)}</td>
+                    <tr
+                      key={result.address.toString()}
+                      className="border-t border-[#2d2d2d]"
+                    >
+                      <td className={`${CELL_CLASS} text-[#9cdcfe]`}>
+                        {hex(result.address)}
+                      </td>
                       <td className={CELL_CLASS}>
                         {editingResult === result.address ? (
                           <input
                             autoFocus
                             value={resultDraft}
-                            onChange={(event) => setResultDraft(event.target.value)}
+                            onChange={(event) =>
+                              setResultDraft(event.target.value)
+                            }
                             onBlur={() => commitResult(result.address)}
                             onKeyDown={(event) => {
                               if (event.key === 'Enter') {
@@ -243,13 +280,17 @@ export function ScannerPanel({
                             className={`${INPUT_CLASS} w-24`}
                           />
                         ) : (
-                          <span className="text-[#ce9178]">{formatScanValue(result.value)}</span>
+                          <span className="text-[#ce9178]">
+                            {formatScanValue(result.value)}
+                          </span>
                         )}
                       </td>
                       <td className={`${CELL_CLASS} text-[#858585]`}>
                         {formatScanValue(result.previousValue)}
                       </td>
-                      <td className={`${CELL_CLASS} text-right whitespace-nowrap`}>
+                      <td
+                        className={`${CELL_CLASS} text-right whitespace-nowrap`}
+                      >
                         <button
                           type="button"
                           onClick={() => scanner.gotoAddress(result.address)}
@@ -290,15 +331,17 @@ export function ScannerPanel({
           <div className="flex shrink-0 items-center gap-2 px-3 py-1 font-mono text-[0.68rem] text-[#858585]">
             <span>Adres listesi · {scanner.watch.length}</span>
             {scanner.frozenCount > 0 && (
-              <span className="text-[#4ec9b0]">· {scanner.frozenCount} donduruldu</span>
+              <span className="text-[#4ec9b0]">
+                · {scanner.frozenCount} donduruldu
+              </span>
             )}
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto">
             {scanner.watch.length === 0 ? (
               <p className="px-3 py-2 font-mono text-[0.68rem] text-[#858585]">
-                Sonuç tablosundan &quot;Ekle&quot; ile adres sabitleyin. Dondurulan adres her
-                thread durağında aynı değere geri yazılır.
+                Sonuç tablosundan &quot;Ekle&quot; ile adres sabitleyin.
+                Dondurulan adres her thread durağında aynı değere geri yazılır.
               </p>
             ) : (
               <table className="w-full border-collapse font-mono text-[0.7rem]">
@@ -317,21 +360,31 @@ export function ScannerPanel({
                     const frozen = scanner.isFrozen(entry.address);
                     return (
                       <tr key={entry.id} className="border-t border-[#2d2d2d]">
-                        <td className={`${CELL_CLASS} text-[#9cdcfe]`}>{hex(entry.address)}</td>
-                        <td className={`${CELL_CLASS} text-[#858585]`}>{entry.type}</td>
+                        <td className={`${CELL_CLASS} text-[#9cdcfe]`}>
+                          {hex(entry.address)}
+                        </td>
+                        <td className={`${CELL_CLASS} text-[#858585]`}>
+                          {entry.type}
+                        </td>
                         <td className={CELL_CLASS}>
                           {editingWatch === entry.id ? (
                             <input
                               autoFocus
                               value={watchDraft}
-                              onChange={(event) => setWatchDraft(event.target.value)}
+                              onChange={(event) =>
+                                setWatchDraft(event.target.value)
+                              }
                               onBlur={async () => {
-                                if (await scanner.editWatch(entry, watchDraft)) setEditingWatch(undefined);
+                                if (await scanner.editWatch(entry, watchDraft))
+                                  setEditingWatch(undefined);
                               }}
                               onKeyDown={async (event) => {
                                 if (event.key === 'Enter') {
                                   event.preventDefault();
-                                  if (await scanner.editWatch(entry, watchDraft)) setEditingWatch(undefined);
+                                  if (
+                                    await scanner.editWatch(entry, watchDraft)
+                                  )
+                                    setEditingWatch(undefined);
                                 } else if (event.key === 'Escape') {
                                   event.preventDefault();
                                   setEditingWatch(undefined);
@@ -351,7 +404,9 @@ export function ScannerPanel({
                               title="Değeri düzenle"
                             >
                               {live.error ? (
-                                <span className="text-[#f5b5b5]">okunamadı</span>
+                                <span className="text-[#f5b5b5]">
+                                  okunamadı
+                                </span>
                               ) : live.value === undefined ? (
                                 <span className="text-[#858585]">…</span>
                               ) : (
@@ -369,7 +424,9 @@ export function ScannerPanel({
                             aria-label={`${hex(entry.address)} adresini dondur`}
                           />
                         </td>
-                        <td className={`${CELL_CLASS} text-right whitespace-nowrap`}>
+                        <td
+                          className={`${CELL_CLASS} text-right whitespace-nowrap`}
+                        >
                           <button
                             type="button"
                             onClick={() => scanner.gotoAddress(entry.address)}

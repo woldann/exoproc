@@ -92,7 +92,10 @@ export class PhysicalPagePool {
 
   /** Snapshot every live physical page's bytes, keyed by PFN. The zero page (PFN 0) is never included -- it's a well-known singleton, recreated by the constructor. */
   public snapshotPages(): readonly PhysicalPageSnapshot[] {
-    return [...this.pages.values()].map((page) => ({ pfn: page.pfn, data: page.data.slice() }));
+    return [...this.pages.values()].map((page) => ({
+      pfn: page.pfn,
+      data: page.data.slice(),
+    }));
   }
 
   /**
@@ -329,8 +332,13 @@ export interface CoWPageEntrySnapshot {
 }
 
 /** References physical pages by PFN rather than inlining their bytes -- the pool itself is snapshotted once, separately (`PhysicalPagePool.snapshotPages`), so sharing between mappings survives a round trip instead of being flattened into independent copies. */
-export function snapshotCoWMapping(cow: CoWMapping): readonly CoWPageEntrySnapshot[] {
-  return cow.pageTable.map((pte) => ({ pfn: pte.physicalPage.pfn, cow: pte.cow }));
+export function snapshotCoWMapping(
+  cow: CoWMapping,
+): readonly CoWPageEntrySnapshot[] {
+  return cow.pageTable.map((pte) => ({
+    pfn: pte.physicalPage.pfn,
+    cow: pte.cow,
+  }));
 }
 
 /**
@@ -349,7 +357,10 @@ export function restoreCoWMapping(
   const cow = new CoWMapping(pool, pageCount);
   for (const entry of entries) {
     const page = pool.getPage(entry.pfn);
-    if (!page) throw new Error(`vm-snapshot: dangling physical page reference (pfn ${entry.pfn}).`);
+    if (!page)
+      throw new Error(
+        `vm-snapshot: dangling physical page reference (pfn ${entry.pfn}).`,
+      );
     if (page !== pool.zeroPage) pool.retain(page);
     cow.pageTable.push({ physicalPage: page, cow: entry.cow });
   }

@@ -40,6 +40,8 @@ export const FFIType = new Proxy(FFI_TYPES, {
     if (typeof property === 'symbol' || Reflect.has(target, property)) {
       return Reflect.get(target, property, receiver);
     }
-    throw new Error(`Host bun:ffi binding does not implement ${String(property)}`);
+    throw new Error(
+      `Host bun:ffi binding does not implement ${String(property)}`,
+    );
   },
 });

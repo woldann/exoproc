@@ -11,9 +11,7 @@
   "dataBytes": 53,
   "entryOffset": 0,
   "relocationCount": 3,
-  "imports": [
-    "msvcrt.dll!printf"
-  ],
+  "imports": ["msvcrt.dll!printf"],
   "hashes": {
     "imageSha256": "ea5b72dd8e4e92cc7c895366a23646ba6fda49aabd21a610c6a96f01d6c7e493",
     "compilerTextSha256": "46a125522762cce3c26204713b09b830c63c367d19bbbfd214f2f9b4d744f296",

@@ -22,9 +22,7 @@ if (
   throw new Error(`Test scope must be inside ${TESTS_ROOT}`);
 }
 
-async function findTestEntrypoints(
-  directory = SOURCE_ROOT,
-): Promise<string[]> {
+async function findTestEntrypoints(directory = SOURCE_ROOT): Promise<string[]> {
   const entries: string[] = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.name === 'dist') continue;
@@ -48,15 +46,14 @@ function prepareTestSource(
       (_specifier, quote: string, packageDirectory: string) => {
         const packageName = packageNames.get(packageDirectory);
         if (!packageName) {
-          throw new Error(`No package name found for packages/${packageDirectory}`);
+          throw new Error(
+            `No package name found for packages/${packageDirectory}`,
+          );
         }
         return `${quote}${packageName}${quote}`;
       },
     )
-    .replace(
-      /(['"])\.\.\/\.\.\/packages\//g,
-      '$1../../../packages/',
-    );
+    .replace(/(['"])\.\.\/\.\.\/packages\//g, '$1../../../packages/');
 }
 
 async function buildSimulationTest(
@@ -121,7 +118,10 @@ async function loadPackageNames(): Promise<ReadonlyMap<string, string>> {
   for (const entry of await readdir(PACKAGES_ROOT, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     const manifest = JSON.parse(
-      await readFile(path.join(PACKAGES_ROOT, entry.name, 'package.json'), 'utf8'),
+      await readFile(
+        path.join(PACKAGES_ROOT, entry.name, 'package.json'),
+        'utf8',
+      ),
     ) as { name?: string };
     if (manifest.name) packageNames.set(entry.name, manifest.name);
   }

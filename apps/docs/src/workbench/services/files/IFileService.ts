@@ -42,11 +42,19 @@ export interface IFileService {
   readFile(path: string): Promise<Uint8Array>;
   /** Decodes as UTF-8 and strips a leading BOM, matching the pre-shell `ExplorerService.readFileText`. */
   readFileText(path: string): Promise<string>;
-  writeFile(path: string, content: Uint8Array, options?: WriteFileOptions): Promise<void>;
+  writeFile(
+    path: string,
+    content: Uint8Array,
+    options?: WriteFileOptions,
+  ): Promise<void>;
   writeFileText(path: string, text: string): Promise<void>;
   createDirectory(path: string): Promise<void>;
   delete(path: string, options?: DeleteOptions): Promise<void>;
-  rename(source: string, target: string, options?: RenameOptions): Promise<void>;
+  rename(
+    source: string,
+    target: string,
+    options?: RenameOptions,
+  ): Promise<void>;
 }
 
 export const IFileService = createDecorator<IFileService>('fileService');
@@ -77,13 +85,17 @@ export class FileService implements IFileService {
     return this.workspaceInfo;
   }
 
-  public async bindWorkspace(source: WorkspaceSource): Promise<WorkspaceInfoDto> {
+  public async bindWorkspace(
+    source: WorkspaceSource,
+  ): Promise<WorkspaceInfoDto> {
     const info = await this.api.workspace.bind(source);
     this.workspaceInfo = info;
     return info;
   }
 
-  public browseSimulateTree(path: string): Promise<readonly DirectoryEntryDto[]> {
+  public browseSimulateTree(
+    path: string,
+  ): Promise<readonly DirectoryEntryDto[]> {
     return this.api.workspace.browseSimulateTree(path);
   }
 
@@ -139,7 +151,11 @@ export class FileService implements IFileService {
     return this.api.fs.delete(path, options);
   }
 
-  public rename(source: string, target: string, options?: RenameOptions): Promise<void> {
+  public rename(
+    source: string,
+    target: string,
+    options?: RenameOptions,
+  ): Promise<void> {
     return this.api.fs.rename(source, target, options);
   }
 }

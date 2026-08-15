@@ -1,7 +1,10 @@
 'use client';
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { ServiceCollection, type ServiceIdentifier } from '../common/instantiation';
+import {
+  ServiceCollection,
+  type ServiceIdentifier,
+} from '../common/instantiation';
 
 /**
  * React adapter for `ServiceCollection`: `ServicesProvider` builds the

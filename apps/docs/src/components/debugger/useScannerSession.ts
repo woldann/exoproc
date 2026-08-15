@@ -22,9 +22,17 @@ import type { DebugSession } from './useDebugSession';
 export const SCAN_PAGE_SIZE = 256;
 
 /** Value types that can carry an "unknown initial value" first scan. */
-const FIXED_WIDTH_TYPES: readonly ScanValueType[] = ['i8', 'i16', 'i32', 'i64', 'f32', 'f64'];
+const FIXED_WIDTH_TYPES: readonly ScanValueType[] = [
+  'i8',
+  'i16',
+  'i32',
+  'i64',
+  'f32',
+  'f64',
+];
 
-export const isFixedWidthType = (type: ScanValueType) => FIXED_WIDTH_TYPES.includes(type);
+export const isFixedWidthType = (type: ScanValueType) =>
+  FIXED_WIDTH_TYPES.includes(type);
 
 const FIXED_VALUE_SIZE: Readonly<Record<string, number>> = {
   i8: 1,
@@ -36,14 +44,23 @@ const FIXED_VALUE_SIZE: Readonly<Record<string, number>> = {
 };
 
 /** Next-scan compares that need a value typed into the box. */
-const VALUED_COMPARES: readonly NextScanCompare[] = ['exact', 'bigger-than', 'smaller-than'];
+const VALUED_COMPARES: readonly NextScanCompare[] = [
+  'exact',
+  'bigger-than',
+  'smaller-than',
+];
 
-export const nextScanNeedsValue = (compare: NextScanCompare) => VALUED_COMPARES.includes(compare);
+export const nextScanNeedsValue = (compare: NextScanCompare) =>
+  VALUED_COMPARES.includes(compare);
 
-const EMPTY_WATCH_VALUES = new Map<number, { value?: ScanValue; error?: string }>();
+const EMPTY_WATCH_VALUES = new Map<
+  number,
+  { value?: ScanValue; error?: string }
+>();
 const EMPTY_FROZEN = new Set<string>();
 
-type ParseOutcome = { ok: true; value: ScanValue } | { ok: false; error: string };
+type ParseOutcome =
+  { ok: true; value: ScanValue } | { ok: false; error: string };
 
 /**
  * Turns the value box into the typed input the scanner expects. Every failure
@@ -69,7 +86,10 @@ export function parseScanValue(type: ScanValueType, raw: string): ParseOutcome {
     }
     const bytes = new Uint8Array(digits.length / 2);
     for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = Number.parseInt(digits.slice(index * 2, index * 2 + 2), 16);
+      bytes[index] = Number.parseInt(
+        digits.slice(index * 2, index * 2 + 2),
+        16,
+      );
     }
     return { ok: true, value: bytes };
   }
@@ -77,7 +97,10 @@ export function parseScanValue(type: ScanValueType, raw: string): ParseOutcome {
   if (type === 'f32' || type === 'f64') {
     const numeric = Number(text.replace(',', '.'));
     if (!Number.isFinite(numeric)) {
-      return { ok: false, error: `"${text}" geçerli bir ondalıklı sayı değil.` };
+      return {
+        ok: false,
+        error: `"${text}" geçerli bir ondalıklı sayı değil.`,
+      };
     }
     return { ok: true, value: numeric };
   }
@@ -102,7 +125,9 @@ export function formatScanValue(value: ScanValue): string {
     return value.toPrecision(9).replace(/0+$/, '').replace(/\.$/, '');
   }
   if (typeof value === 'string') return value;
-  return Array.from(value, (byte) => byte.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+  return Array.from(value, (byte) =>
+    byte.toString(16).toUpperCase().padStart(2, '0'),
+  ).join(' ');
 }
 
 /**
@@ -156,7 +181,9 @@ export function useScannerSession({ pid, session }: UseScannerSessionOptions) {
   const [watch, setWatch] = useState<ScanWatchEntry[]>([]);
   const [fetchedReport, setFetchedReport] = useState<ScanReportDto>();
   const [reportError, setReportError] = useState<string>();
-  const [watchValues, setWatchValues] = useState<Map<number, { value?: ScanValue; error?: string }>>(new Map());
+  const [watchValues, setWatchValues] = useState<
+    Map<number, { value?: ScanValue; error?: string }>
+  >(new Map());
   const [frozen, setFrozen] = useState<Set<string>>(new Set());
   const [frozenCount, setFrozenCount] = useState(0);
   const watchIdRef = useRef(0);
@@ -207,23 +234,43 @@ export function useScannerSession({ pid, session }: UseScannerSessionOptions) {
   const refreshWatch = async () => {
     const [values, frozenAddresses, count] = await Promise.all([
       Promise.all(
-        watch.map(async (entry): Promise<readonly [number, { value?: ScanValue; error?: string }]> => {
-          try {
-            const value = await api.scan.readTypedValue(pid, entry.address, entry.size, entry.type, entry.encoding);
-            return [entry.id, { value }];
-          } catch (cause) {
-            return [entry.id, { error: describeError(cause) }];
-          }
-        }),
+        watch.map(
+          async (
+            entry,
+          ): Promise<
+            readonly [number, { value?: ScanValue; error?: string }]
+          > => {
+            try {
+              const value = await api.scan.readTypedValue(
+                pid,
+                entry.address,
+                entry.size,
+                entry.type,
+                entry.encoding,
+              );
+              return [entry.id, { value }];
+            } catch (cause) {
+              return [entry.id, { error: describeError(cause) }];
+            }
+          },
+        ),
       ),
       Promise.all(
-        watch.map(async (entry) => [entry.address.toString(), await api.scan.isFrozen(pid, entry.address)] as const),
+        watch.map(
+          async (entry) =>
+            [
+              entry.address.toString(),
+              await api.scan.isFrozen(pid, entry.address),
+            ] as const,
+        ),
       ),
       api.scan.frozenCount(pid),
     ]);
     return {
       values: new Map(values),
-      frozen: new Set(frozenAddresses.filter(([, isFrozen]) => isFrozen).map(([key]) => key)),
+      frozen: new Set(
+        frozenAddresses.filter(([, isFrozen]) => isFrozen).map(([key]) => key),
+      ),
       count,
     };
   };
@@ -250,7 +297,8 @@ export function useScannerSession({ pid, session }: UseScannerSessionOptions) {
   // An empty watch list has nothing to read/freeze -- exposed as empty
   // directly rather than via a `setState` round trip through the effect
   // above, which only ever runs for a non-empty list.
-  const exposedWatchValues = watch.length === 0 ? EMPTY_WATCH_VALUES : watchValues;
+  const exposedWatchValues =
+    watch.length === 0 ? EMPTY_WATCH_VALUES : watchValues;
   const exposedFrozen = watch.length === 0 ? EMPTY_FROZEN : frozen;
 
   /** Changing the value type invalidates every candidate, as in Cheat Engine. */
@@ -282,7 +330,9 @@ export function useScannerSession({ pid, session }: UseScannerSessionOptions) {
       }
       value = parsed.value;
     } else if (!isFixedWidthType(valueType)) {
-      setError(`"Bilinmeyen değer" taraması sabit genişlikli bir tip ister; "${valueType}" ile kullanılamaz.`);
+      setError(
+        `"Bilinmeyen değer" taraması sabit genişlikli bir tip ister; "${valueType}" ile kullanılamaz.`,
+      );
       return;
     }
 
@@ -362,7 +412,9 @@ export function useScannerSession({ pid, session }: UseScannerSessionOptions) {
       size,
     };
     setWatch((previous) =>
-      previous.some((row) => row.address === address && row.type === entry.type) ? previous : [...previous, entry],
+      previous.some((row) => row.address === address && row.type === entry.type)
+        ? previous
+        : [...previous, entry],
     );
   };
 
@@ -375,17 +427,28 @@ export function useScannerSession({ pid, session }: UseScannerSessionOptions) {
   };
 
   /** Cached read for one watch row, refreshed by `refreshWatch`. */
-  const readWatch = (entry: ScanWatchEntry): { value?: ScanValue; error?: string } =>
+  const readWatch = (
+    entry: ScanWatchEntry,
+  ): { value?: ScanValue; error?: string } =>
     exposedWatchValues.get(entry.id) ?? {};
 
-  const editWatch = async (entry: ScanWatchEntry, raw: string): Promise<boolean> => {
+  const editWatch = async (
+    entry: ScanWatchEntry,
+    raw: string,
+  ): Promise<boolean> => {
     const parsed = parseScanValue(entry.type, raw);
     if (!parsed.ok) {
       setError(parsed.error);
       return false;
     }
     try {
-      const bytes = await api.scan.writeTypedValue(pid, entry.address, entry.type, parsed.value, entry.encoding);
+      const bytes = await api.scan.writeTypedValue(
+        pid,
+        entry.address,
+        entry.type,
+        parsed.value,
+        entry.encoding,
+      );
       // A frozen row must freeze at the *new* value, not snap back to the old.
       if (await api.scan.isFrozen(pid, entry.address)) {
         await api.scan.freeze(pid, entry.address, bytes);
@@ -409,8 +472,20 @@ export function useScannerSession({ pid, session }: UseScannerSessionOptions) {
       if (await api.scan.isFrozen(pid, entry.address)) {
         await api.scan.unfreeze(pid, entry.address);
       } else {
-        const value = await api.scan.readTypedValue(pid, entry.address, entry.size, entry.type, entry.encoding);
-        const bytes = await api.scan.writeTypedValue(pid, entry.address, entry.type, value, entry.encoding);
+        const value = await api.scan.readTypedValue(
+          pid,
+          entry.address,
+          entry.size,
+          entry.type,
+          entry.encoding,
+        );
+        const bytes = await api.scan.writeTypedValue(
+          pid,
+          entry.address,
+          entry.type,
+          value,
+          entry.encoding,
+        );
         await api.scan.freeze(pid, entry.address, bytes);
       }
       setError(undefined);

@@ -1,7 +1,10 @@
 import { WIN32_WORKSPACE_PATH } from '@exoproc/simulate';
 import { toWindowsPath } from '../src/shell/main/fs/workspace-paths';
 import { getMachine } from '../src/shell/main/modules/machine';
-import { runNodeEval, runNodeScript } from '../src/shell/main/modules/node-runner';
+import {
+  runNodeEval,
+  runNodeScript,
+} from '../src/shell/main/modules/node-runner';
 
 /**
  * Exercises the real module graph resolver against `machine.fileSystem`
@@ -30,7 +33,9 @@ let failures = 0;
 function check(label: string, actual: unknown, expected: unknown) {
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
   if (!ok) failures += 1;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${label}${ok ? '' : `  got=${JSON.stringify(actual)} want=${JSON.stringify(expected)}`}`);
+  console.log(
+    `${ok ? 'ok  ' : 'FAIL'} ${label}${ok ? '' : `  got=${JSON.stringify(actual)} want=${JSON.stringify(expected)}`}`,
+  );
 }
 
 // ------------------------------------------------------- relative imports
@@ -63,7 +68,9 @@ function check(label: string, actual: unknown, expected: unknown) {
   );
 
   const lines: string[] = [];
-  const result = await runNodeScript('/use-package.js', (text) => lines.push(text));
+  const result = await runNodeScript('/use-package.js', (text) =>
+    lines.push(text),
+  );
   check('package import exit code', result.exitCode, 0);
   check('package import output', lines.join('').trim(), 'HELLO!');
 }
@@ -76,27 +83,42 @@ function check(label: string, actual: unknown, expected: unknown) {
     `import { value } from './deep/value.js';\nconsole.log(value * 2);`,
   );
   const lines: string[] = [];
-  const result = await runNodeScript('/lib/consumer.js', (text) => lines.push(text));
+  const result = await runNodeScript('/lib/consumer.js', (text) =>
+    lines.push(text),
+  );
   check('nested relative exit code', result.exitCode, 0);
   check('nested relative output', lines.join('').trim(), '84');
 }
 
 // ------------------------------------------------------- missing module
 {
-  write('/broken.js', `import { x } from './does-not-exist.js';\nconsole.log(x);`);
+  write(
+    '/broken.js',
+    `import { x } from './does-not-exist.js';\nconsole.log(x);`,
+  );
   const lines: string[] = [];
   const result = await runNodeScript('/broken.js', (text) => lines.push(text));
   check('missing module exit code', result.exitCode, 1);
-  check('missing module reports error', lines.join('').includes('bulunamadı'), true);
+  check(
+    'missing module reports error',
+    lines.join('').includes('bulunamadı'),
+    true,
+  );
 }
 
 // ------------------------------------------------------- unsupported bare
 {
   write('/uses-npm.js', `import path from 'node:path';\nconsole.log(path);`);
   const lines: string[] = [];
-  const result = await runNodeScript('/uses-npm.js', (text) => lines.push(text));
+  const result = await runNodeScript('/uses-npm.js', (text) =>
+    lines.push(text),
+  );
   check('npm import exit code', result.exitCode, 1);
-  check('npm import reports error', lines.join('').includes('Modül çözümlenemedi'), true);
+  check(
+    'npm import reports error',
+    lines.join('').includes('Modül çözümlenemedi'),
+    true,
+  );
 }
 
 // ------------------------------------------------------------- circular
@@ -106,7 +128,11 @@ function check(label: string, actual: unknown, expected: unknown) {
   const lines: string[] = [];
   const result = await runNodeScript('/a.js', (text) => lines.push(text));
   check('circular import exit code', result.exitCode, 1);
-  check('circular import reports error', lines.join('').includes('Dairesel'), true);
+  check(
+    'circular import reports error',
+    lines.join('').includes('Dairesel'),
+    true,
+  );
 }
 
 // ------------------------------------------------------- runtime error
@@ -115,7 +141,11 @@ function check(label: string, actual: unknown, expected: unknown) {
   const lines: string[] = [];
   const result = await runNodeScript('/throws.js', (text) => lines.push(text));
   check('runtime error exit code', result.exitCode, 1);
-  check('runtime error message surfaces', lines.join('').includes('boom'), true);
+  check(
+    'runtime error message surfaces',
+    lines.join('').includes('boom'),
+    true,
+  );
 }
 
 // -------------------------------------------------- console.error/warn
@@ -125,7 +155,9 @@ function check(label: string, actual: unknown, expected: unknown) {
     `console.log('a'); console.warn('b'); console.error('c');`,
   );
   const lines: string[] = [];
-  const result = await runNodeScript('/multi-console.js', (text) => lines.push(text));
+  const result = await runNodeScript('/multi-console.js', (text) =>
+    lines.push(text),
+  );
   check('multi console exit code', result.exitCode, 0);
   check('multi console captured all three', lines.join(''), 'a\r\nb\r\nc\r\n');
 }
@@ -141,7 +173,11 @@ function check(label: string, actual: unknown, expected: unknown) {
   check('node:fs eval output', lines.join('').trim(), 'via node:fs');
   check(
     'node:fs write landed on machine.fileSystem',
-    new TextDecoder().decode(machine.fileSystem.readFile(toWindowsPath('/node-fs-check.txt', WIN32_WORKSPACE_PATH))),
+    new TextDecoder().decode(
+      machine.fileSystem.readFile(
+        toWindowsPath('/node-fs-check.txt', WIN32_WORKSPACE_PATH),
+      ),
+    ),
     'via node:fs',
   );
 }

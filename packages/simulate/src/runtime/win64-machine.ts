@@ -11,10 +11,7 @@ import {
   createDefaultWin32Environment,
   Win32Environment,
 } from './environment.js';
-import {
-  WIN32_WORKSPACE_PATH,
-  Win32FileSystem,
-} from './file-system.js';
+import { WIN32_WORKSPACE_PATH, Win32FileSystem } from './file-system.js';
 import { Win32ProgramRegistry, type Win32ProgramSpawn } from './programs.js';
 import { Scheduler } from './scheduler.js';
 import {
@@ -331,7 +328,10 @@ export class Win64Thread {
             memoryRead: this.lastStep.memoryRead,
             watchpointHit: this.lastStep.watchpointHit,
             error: this.lastStep.error
-              ? { name: this.lastStep.error.name, message: this.lastStep.error.message }
+              ? {
+                  name: this.lastStep.error.name,
+                  message: this.lastStep.error.message,
+                }
               : undefined,
           }
         : undefined,
@@ -347,7 +347,10 @@ export class Win64Thread {
    * the caller (`Win64Machine.restore`) does that, mirroring how
    * `Win64Process.createThread` is the only other place that happens.
    */
-  public static restore(process: Win64Process, snapshot: Win64ThreadSnapshot): Win64Thread {
+  public static restore(
+    process: Win64Process,
+    snapshot: Win64ThreadSnapshot,
+  ): Win64Thread {
     const thread = new Win64Thread(
       snapshot.tid,
       snapshot.name,
@@ -358,7 +361,8 @@ export class Win64Thread {
     );
     thread.state = snapshot.state;
     thread.suspendCount = snapshot.suspendCount;
-    for (const breakpoint of snapshot.breakpoints) thread.cpu.breakpoints.add(breakpoint);
+    for (const breakpoint of snapshot.breakpoints)
+      thread.cpu.breakpoints.add(breakpoint);
     for (const [address, watchpoint] of snapshot.watchpoints) {
       thread.cpu.watchpoints.set(address, watchpoint);
     }
@@ -371,7 +375,9 @@ export class Win64Thread {
           memoryRead: snapshot.lastStep.memoryRead,
           watchpointHit: snapshot.lastStep.watchpointHit,
           error: snapshot.lastStep.error
-            ? Object.assign(new Error(snapshot.lastStep.error.message), { name: snapshot.lastStep.error.name })
+            ? Object.assign(new Error(snapshot.lastStep.error.message), {
+                name: snapshot.lastStep.error.name,
+              })
             : undefined,
         }
       : undefined;
@@ -730,7 +736,10 @@ export class Win64Process {
       path: this.path,
       imageBase: this.imageBase,
       heapBase: this.heapBase,
-      modules: this.modules.map((module) => ({ ...module, exports: new Map(module.exports) })),
+      modules: this.modules.map((module) => ({
+        ...module,
+        exports: new Map(module.exports),
+      })),
       arguments: [...this.arguments],
       mainArguments: this.mainArguments,
       lastError: this.lastError,
@@ -742,7 +751,10 @@ export class Win64Process {
       allocationSequence: this.allocationSequence,
       invocationSequence: this.invocationSequence,
       standardHandles: { ...this.standardHandles },
-      handles: [...this.handles.entries()].map(([value, handle]) => [value, { ...handle }]),
+      handles: [...this.handles.entries()].map(([value, handle]) => [
+        value,
+        { ...handle },
+      ]),
       environment: this.environment.entries(),
       session: { ...this.session },
       console: this.console.snapshotState(),
@@ -754,7 +766,12 @@ export class Win64Process {
   /** Restores every plain-data field this snapshot carries except memory/threads (see `snapshotState`'s doc comment for why those are applied separately by the caller). */
   public restoreState(snapshot: Win64ProcessSnapshot): void {
     this.modules.length = 0;
-    this.modules.push(...snapshot.modules.map((module) => ({ ...module, exports: new Map(module.exports) })));
+    this.modules.push(
+      ...snapshot.modules.map((module) => ({
+        ...module,
+        exports: new Map(module.exports),
+      })),
+    );
     this.arguments = [...snapshot.arguments];
     this.mainArguments = snapshot.mainArguments;
     this.lastError = snapshot.lastError;
@@ -767,7 +784,8 @@ export class Win64Process {
     this.invocationSequence = snapshot.invocationSequence;
     Object.assign(this.standardHandles, snapshot.standardHandles);
     this.handles.clear();
-    for (const [value, handle] of snapshot.handles) this.handles.set(value, { ...handle });
+    for (const [value, handle] of snapshot.handles)
+      this.handles.set(value, { ...handle });
   }
 
   private marshalArgument(
@@ -1225,7 +1243,11 @@ export class Win64Machine {
    * `nextKernelObjectId` internally) precisely so a restore can pass back
    * the snapshot's original id instead of minting a new one.
    */
-  private buildHeap(process: Win64Process, capacity: number, regionMappingId: string): Win64Heap {
+  private buildHeap(
+    process: Win64Process,
+    capacity: number,
+    regionMappingId: string,
+  ): Win64Heap {
     return new Win64Heap(
       0n,
       capacity,
@@ -1381,8 +1403,7 @@ export class Win64Machine {
         console: processConsole,
         environment: this.environment.clone(),
         session: {
-          currentDirectory:
-            options.currentDirectory ?? WIN32_WORKSPACE_PATH,
+          currentDirectory: options.currentDirectory ?? WIN32_WORKSPACE_PATH,
         },
       },
       path,
@@ -1505,7 +1526,9 @@ export class Win64Machine {
       physicalPages: this.physicalPagePool.snapshotPages(),
       fileSystem: this.fileSystem.snapshotState(),
       processes: this.getProcesses().map((process) => process.snapshotState()),
-      kernelObjects: [...this.kernelObjects.values()].map((object) => this.snapshotKernelObject(object)),
+      kernelObjects: [...this.kernelObjects.values()].map((object) =>
+        this.snapshotKernelObject(object),
+      ),
       scheduler: this.scheduler.snapshotState(),
       screen: this.screen.snapshotState(),
       nextPid: this.nextPid,
@@ -1549,14 +1572,22 @@ export class Win64Machine {
         {
           pid: processSnapshot.pid,
           console: Win32Console.restore(processSnapshot.console),
-          environment: new Win32Environment(Object.fromEntries(processSnapshot.environment)),
+          environment: new Win32Environment(
+            Object.fromEntries(processSnapshot.environment),
+          ),
           session: { ...processSnapshot.session },
           initializeStandardHandles: false,
         },
       );
-      process.memory.restoreMappings(machine.physicalPagePool, processSnapshot.memory);
+      process.memory.restoreMappings(
+        machine.physicalPagePool,
+        processSnapshot.memory,
+      );
       for (const threadSnapshot of processSnapshot.threads) {
-        process.threads.set(threadSnapshot.tid, Win64Thread.restore(process, threadSnapshot));
+        process.threads.set(
+          threadSnapshot.tid,
+          Win64Thread.restore(process, threadSnapshot),
+        );
       }
       process.restoreState(processSnapshot);
     }
@@ -1576,7 +1607,8 @@ export class Win64Machine {
     machine.events.length = 0;
     machine.events.push(...snapshot.events);
     machine.frozenValues.clear();
-    for (const [key, value] of snapshot.frozenValues) machine.frozenValues.set(key, value);
+    for (const [key, value] of snapshot.frozenValues)
+      machine.frozenValues.set(key, value);
 
     return machine;
   }
@@ -1620,11 +1652,15 @@ export class Win64Machine {
     return warnings;
   }
 
-  private snapshotKernelObject(object: Win64KernelObject): Win64KernelObjectSnapshot {
+  private snapshotKernelObject(
+    object: Win64KernelObject,
+  ): Win64KernelObjectSnapshot {
     if (object.kind === 'heap') {
       const ownerPid = this.heapOwners.get(object.id);
       if (ownerPid === undefined) {
-        throw new Error(`vm-snapshot: heap kernel object ${object.id} has no tracked owner (every createHeap() call must register one).`);
+        throw new Error(
+          `vm-snapshot: heap kernel object ${object.id} has no tracked owner (every createHeap() call must register one).`,
+        );
       }
       const snapshot: Win64HeapObjectSnapshot = {
         id: object.id,
@@ -1662,12 +1698,22 @@ export class Win64Machine {
     if (snapshot.kind === 'heap') {
       const owner = this.getProcess(snapshot.ownerPid);
       if (!owner) {
-        console.warn(`vm-snapshot: heap kernel object ${snapshot.id} references missing owner PID ${snapshot.ownerPid}; skipped.`);
+        console.warn(
+          `vm-snapshot: heap kernel object ${snapshot.id} references missing owner PID ${snapshot.ownerPid}; skipped.`,
+        );
         return;
       }
-      const heap = this.buildHeap(owner, snapshot.capacity, snapshot.regionMappingId);
+      const heap = this.buildHeap(
+        owner,
+        snapshot.capacity,
+        snapshot.regionMappingId,
+      );
       heap.restoreState(snapshot);
-      this.kernelObjects.set(snapshot.id, { id: snapshot.id, kind: 'heap', heap });
+      this.kernelObjects.set(snapshot.id, {
+        id: snapshot.id,
+        kind: 'heap',
+        heap,
+      });
       this.heapOwners.set(snapshot.id, snapshot.ownerPid);
       return;
     }
@@ -1694,11 +1740,14 @@ export class Win64Machine {
   }
 
   /** `machine.screen` and every process's own `console` are the only `Win32Console` instances that can exist -- matched by object identity, not duck-typing. */
-  private classifyDevice(device: Win32InputDevice | Win32OutputDevice): Win64DeviceRefSnapshot {
+  private classifyDevice(
+    device: Win32InputDevice | Win32OutputDevice,
+  ): Win64DeviceRefSnapshot {
     if (device instanceof Win32Console) {
       if (device === this.screen) return { kind: 'console', owner: 'screen' };
       for (const process of this.processes.values()) {
-        if (process.console === device) return { kind: 'console', owner: 'process', pid: process.pid };
+        if (process.console === device)
+          return { kind: 'console', owner: 'process', pid: process.pid };
       }
       return { kind: 'unsupported', className: 'Win32Console' };
     }
@@ -1719,8 +1768,14 @@ export class Win64Machine {
    * doesn't implement `Win32InputDevice`; `classifyDevice` could only have
    * produced that tag from an actual output device).
    */
-  private resolveDeviceRef(ref: Win64DeviceRefSnapshot, expectedKind: 'input'): Win32InputDevice;
-  private resolveDeviceRef(ref: Win64DeviceRefSnapshot, expectedKind: 'output'): Win32OutputDevice;
+  private resolveDeviceRef(
+    ref: Win64DeviceRefSnapshot,
+    expectedKind: 'input',
+  ): Win32InputDevice;
+  private resolveDeviceRef(
+    ref: Win64DeviceRefSnapshot,
+    expectedKind: 'output',
+  ): Win32OutputDevice;
   private resolveDeviceRef(
     ref: Win64DeviceRefSnapshot,
     expectedKind: 'input' | 'output',
@@ -1735,12 +1790,16 @@ export class Win64Machine {
         return capture;
       }
       case 'null':
-        return expectedKind === 'input' ? new Win32NullInput() : new Win32NullOutput();
+        return expectedKind === 'input'
+          ? new Win32NullInput()
+          : new Win32NullOutput();
       case 'unsupported':
         console.warn(
           `vm-snapshot: a "${ref.className}" ${expectedKind} device cannot be restored (host-injected devices beyond the engine's built-ins aren't serializable); substituting a null device.`,
         );
-        return expectedKind === 'input' ? new Win32NullInput() : new Win32NullOutput();
+        return expectedKind === 'input'
+          ? new Win32NullInput()
+          : new Win32NullOutput();
     }
   }
 

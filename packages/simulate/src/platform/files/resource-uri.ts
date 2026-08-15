@@ -58,7 +58,9 @@ export class ResourceUri {
   }
 
   public get fsPath(): string {
-    const path = /^\/[A-Za-z]:/.test(this.path) ? this.path.slice(1) : this.path;
+    const path = /^\/[A-Za-z]:/.test(this.path)
+      ? this.path.slice(1)
+      : this.path;
     const windowsPath = path.replace(/\//g, '\\');
     return this.authority ? `\\\\${this.authority}${windowsPath}` : windowsPath;
   }
@@ -89,5 +91,7 @@ export function resourceBasename(resource: ResourceUri): string {
 
 export function resourceDirname(resource: ResourceUri): ResourceUri {
   const separator = resource.path.lastIndexOf('/');
-  return resource.with({ path: separator <= 0 ? '/' : resource.path.slice(0, separator) });
+  return resource.with({
+    path: separator <= 0 ? '/' : resource.path.slice(0, separator),
+  });
 }

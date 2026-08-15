@@ -377,9 +377,7 @@ describe('@exoproc/simulate host process control', () => {
     assert.equal(spawned.process.exitCode, 0);
     assert.match(spawned.process.console.screenText, /EXOPROC\\Serkan/);
     assert.equal(
-      machine.spawnProgram(
-        'C:\\Users\\Serkan\\Workspace\\not-installed.exe',
-      ),
+      machine.spawnProgram('C:\\Users\\Serkan\\Workspace\\not-installed.exe'),
       undefined,
     );
   });

@@ -30,9 +30,8 @@ export interface IStatusbarService {
   readonly onDidChange: Event<void>;
 }
 
-export const IStatusbarService = createDecorator<IStatusbarService>(
-  'statusbarService',
-);
+export const IStatusbarService =
+  createDecorator<IStatusbarService>('statusbarService');
 
 export class StatusbarService implements IStatusbarService {
   private readonly entries = new Map<string, StatusbarEntry>();

@@ -24,7 +24,10 @@ void restore;
 try {
   process.machine.fileSystem.bindFolder('C:\\SimBind', distDirectory);
 
-  const content = readFileSync('C:\\SimBind\\worker\\lifecycle.js', 'utf8') as string;
+  const content = readFileSync(
+    'C:\\SimBind\\worker\\lifecycle.js',
+    'utf8',
+  ) as string;
 
   postMessage({
     ok: true,
@@ -34,7 +37,10 @@ try {
 } catch (error) {
   postMessage({
     ok: false,
-    error: error instanceof Error ? `${error.message}\n${error.stack}` : String(error),
+    error:
+      error instanceof Error
+        ? `${error.message}\n${error.stack}`
+        : String(error),
   });
 } finally {
   finalizeWorkerProcess(process, 0);

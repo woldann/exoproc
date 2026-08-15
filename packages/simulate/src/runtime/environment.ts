@@ -1,7 +1,4 @@
-import {
-  WIN32_WORKSPACE_PATH,
-  type Win32FileSystem,
-} from './file-system.js';
+import { WIN32_WORKSPACE_PATH, type Win32FileSystem } from './file-system.js';
 
 export interface ExecutableResolution {
   readonly path: string;

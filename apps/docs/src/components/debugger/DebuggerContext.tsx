@@ -25,7 +25,9 @@ export interface DebuggerContextValue {
   onSelectAddress: (address: bigint) => void;
 }
 
-const DebuggerContext = createContext<DebuggerContextValue | undefined>(undefined);
+const DebuggerContext = createContext<DebuggerContextValue | undefined>(
+  undefined,
+);
 
 export const DebuggerContextProvider = DebuggerContext.Provider;
 

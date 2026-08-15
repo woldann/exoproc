@@ -20,7 +20,10 @@
  */
 
 import { startIpc, signalReady } from './ipc';
-import { bootExoprocIdeProcess, registerJsHostPrograms } from './modules/js-host-programs';
+import {
+  bootExoprocIdeProcess,
+  registerJsHostPrograms,
+} from './modules/js-host-programs';
 import { getMachine } from './modules/machine';
 
 // Imported for its side effect: fails the build if the wire contract and

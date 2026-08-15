@@ -34,7 +34,11 @@ describe('finalizeWorkerProcess', () => {
       },
       { stdio: machine.createNullStdio() },
     );
-    const waiterHandle = waiterProcess.attachObject(processHandleObjectId, 0, false);
+    const waiterHandle = waiterProcess.attachObject(
+      processHandleObjectId,
+      0,
+      false,
+    );
 
     assert.equal(process.exitCode, undefined);
     assert.equal(

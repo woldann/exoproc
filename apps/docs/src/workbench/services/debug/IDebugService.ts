@@ -36,7 +36,9 @@ export const IDebugService = createDecorator<IDebugService>('debugService');
 
 export class DebugService implements IDebugService {
   private session: DebugSessionSummary | undefined;
-  private readonly changeEmitter = new Emitter<DebugSessionSummary | undefined>();
+  private readonly changeEmitter = new Emitter<
+    DebugSessionSummary | undefined
+  >();
 
   public readonly onDidChangeSession = this.changeEmitter.event;
 

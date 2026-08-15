@@ -35,7 +35,10 @@ export class Win32FileSystemProvider implements FileSystemProvider, Disposable {
   }
 
   public async stat(resource: ResourceUri): Promise<FileStat> {
-    const entry = this.fileSystem.getEntry(this.toPath(resource), this.currentDirectory);
+    const entry = this.fileSystem.getEntry(
+      this.toPath(resource),
+      this.currentDirectory,
+    );
     if (!entry) {
       throw createFileSystemProviderError(
         `File does not exist: ${this.toPath(resource)}`,
@@ -51,16 +54,24 @@ export class Win32FileSystemProvider implements FileSystemProvider, Disposable {
     };
   }
 
-  public async readDirectory(resource: ResourceUri): Promise<readonly DirectoryEntry[]> {
+  public async readDirectory(
+    resource: ResourceUri,
+  ): Promise<readonly DirectoryEntry[]> {
     try {
       return this.fileSystem
         .readDirectory(this.toPath(resource), this.currentDirectory)
-        .map((entry) => [
-          entry.name,
-          entry.kind === 'directory' ? FileType.Directory : FileType.File,
-        ] as const);
+        .map(
+          (entry) =>
+            [
+              entry.name,
+              entry.kind === 'directory' ? FileType.Directory : FileType.File,
+            ] as const,
+        );
     } catch (error) {
-      throw this.toProviderError(error, FileSystemProviderErrorCode.FileNotADirectory);
+      throw this.toProviderError(
+        error,
+        FileSystemProviderErrorCode.FileNotADirectory,
+      );
     }
   }
 
@@ -73,7 +84,10 @@ export class Win32FileSystemProvider implements FileSystemProvider, Disposable {
         this.currentDirectory,
       );
     } catch (error) {
-      throw this.toProviderError(error, FileSystemProviderErrorCode.FileNotFound);
+      throw this.toProviderError(
+        error,
+        FileSystemProviderErrorCode.FileNotFound,
+      );
     }
   }
 
@@ -105,7 +119,10 @@ export class Win32FileSystemProvider implements FileSystemProvider, Disposable {
 
     this.fileSystem.writeFile(path, content);
     this.changeEmitter.fire([
-      { type: existing ? FileChangeType.Updated : FileChangeType.Added, resource },
+      {
+        type: existing ? FileChangeType.Updated : FileChangeType.Added,
+        resource,
+      },
     ]);
   }
 

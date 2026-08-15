@@ -181,7 +181,8 @@ describe('worker cc() resolver modules', () => {
       );
       assert.equal(process.memory.readU32(context), 2);
     } finally {
-      if (process.machine.fileSystem.getEntry(sourcePath)) unlinkSync(sourcePath);
+      if (process.machine.fileSystem.getEntry(sourcePath))
+        unlinkSync(sourcePath);
       restore();
     }
   });

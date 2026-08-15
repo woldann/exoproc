@@ -814,7 +814,7 @@ class FunctionCompiler {
    * `compileShift()`) are implemented; `&`/`^`/`>>` throw a clear error
    * instead of silently producing a wrong answer. */
   private compileBitOr(): CType {
-    let leftType = this.compileEquality();
+    const leftType = this.compileEquality();
     while (this.peek().text === '|') {
       this.consume();
       this.code.push('rax');
@@ -883,7 +883,7 @@ class FunctionCompiler {
    * this lowers to repeated `add reg, reg` (self-doubling) instead of
    * needing a real `shl` CPU opcode. */
   private compileShift(): CType {
-    let leftType = this.compileAdditive();
+    const leftType = this.compileAdditive();
     for (;;) {
       const op = this.peek().text;
       if (op !== '<<' && op !== '>>') break;
@@ -905,7 +905,7 @@ class FunctionCompiler {
   }
 
   private compileAdditive(): CType {
-    let leftType = this.compileMultiplicative();
+    const leftType = this.compileMultiplicative();
     for (;;) {
       const op = this.peek().text;
       if (op !== '+' && op !== '-') break;
@@ -924,7 +924,7 @@ class FunctionCompiler {
   }
 
   private compileMultiplicative(): CType {
-    let leftType = this.compileCast();
+    const leftType = this.compileCast();
     for (;;) {
       const op = this.peek().text;
       if (op !== '*' && op !== '/' && op !== '%') break;

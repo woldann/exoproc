@@ -71,7 +71,11 @@ export async function runNodeScript(
   scriptArgument: string,
   write: (text: string) => void,
 ): Promise<NodeRunResult> {
-  return runModuleGraph(normalizeScriptArgument(scriptArgument), undefined, write);
+  return runModuleGraph(
+    normalizeScriptArgument(scriptArgument),
+    undefined,
+    write,
+  );
 }
 
 /** `node -e <code>`: `code` becomes the entry module's own source, no file read involved. */
@@ -114,7 +118,9 @@ async function runModuleGraph(
       const raw = sources.get(path);
       if (raw === undefined) continue; // a package.json main path with no queued source
       const rewritten =
-        path === NODE_FS_ENTRY_PATH ? raw : rewriteSpecifiers(raw, path, packages, blobUrls);
+        path === NODE_FS_ENTRY_PATH
+          ? raw
+          : rewriteSpecifiers(raw, path, packages, blobUrls);
       const blob = new Blob([rewritten], { type: 'text/javascript' });
       blobUrls.set(path, URL.createObjectURL(blob));
     }
@@ -122,7 +128,9 @@ async function runModuleGraph(
     const entryUrl = blobUrls.get(entryPath);
     if (!entryUrl) throw new Error(`${entryPath} çözümlenemedi.`);
 
-    await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ entryUrl);
+    await import(
+      /* webpackIgnore: true */ /* turbopackIgnore: true */ entryUrl
+    );
     return { exitCode: 0 };
   } catch (cause) {
     write(`${describeError(cause)}\r\n`);
@@ -164,8 +172,12 @@ function resolveWorkspacePackages(): ReadonlyMap<string, string> {
         readonly main?: string;
       };
       if (typeof manifest.name !== 'string') continue;
-      const main = typeof manifest.main === 'string' ? manifest.main : 'dist/index.js';
-      map.set(manifest.name, `/packages/${entry.name}/${main}`.replace(/\/+/g, '/'));
+      const main =
+        typeof manifest.main === 'string' ? manifest.main : 'dist/index.js';
+      map.set(
+        manifest.name,
+        `/packages/${entry.name}/${main}`.replace(/\/+/g, '/'),
+      );
     } catch {
       // Malformed or missing package.json -- skip it, don't fail the whole run.
     }
@@ -234,7 +246,9 @@ function loadModuleGraph(
         source = NODE_FS_MODULE_SOURCE;
       } else {
         try {
-          source = new TextDecoder().decode(fileSystem.readFile(windowsPath(path)));
+          source = new TextDecoder().decode(
+            fileSystem.readFile(windowsPath(path)),
+          );
         } catch {
           throw new Error(`Dosya bulunamadı: ${path}`);
         }
@@ -286,11 +300,18 @@ function rewriteSpecifiers(
   packages: ReadonlyMap<string, string>,
   blobUrls: ReadonlyMap<string, string>,
 ): string {
-  const replace = (_match: string, quote: string, specifier: string, offset: number): string => {
+  const replace = (
+    _match: string,
+    quote: string,
+    specifier: string,
+    offset: number,
+  ): string => {
     const resolved = resolveSpecifier(specifier, fromPath, packages);
     const blobUrl = blobUrls.get(resolved);
     if (!blobUrl) {
-      throw new Error(`İç hata: ${resolved} için blob URL henüz oluşturulmadı.`);
+      throw new Error(
+        `İç hata: ${resolved} için blob URL henüz oluşturulmadı.`,
+      );
     }
     // Re-derive the original matched text's prefix (everything up to the
     // quote) so `import x from '...'`, `export * from '...'`, and bare
@@ -342,7 +363,9 @@ function formatConsoleArgument(value: unknown): string {
 }
 
 function describeError(cause: unknown): string {
-  return cause instanceof Error ? (cause.stack ?? cause.message) : String(cause);
+  return cause instanceof Error
+    ? (cause.stack ?? cause.message)
+    : String(cause);
 }
 
 /**
@@ -361,7 +384,11 @@ interface NodeFsBridge {
   existsSync(path: string): boolean;
   mkdirSync(path: string): void;
   readdirSync(path: string): string[];
-  statSync(path: string): { readonly size: number; isFile(): boolean; isDirectory(): boolean };
+  statSync(path: string): {
+    readonly size: number;
+    isFile(): boolean;
+    isDirectory(): boolean;
+  };
   unlinkSync(path: string): void;
   renameSync(source: string, target: string): void;
 }
@@ -378,24 +405,28 @@ function installFsBridge(): () => void {
     appendFileSync: (path, data) => {
       const fileSystem = getMachine().fileSystem;
       const targetPath = windowsPath(path);
-      const previous = fileSystem.getEntry(targetPath)?.kind === 'file'
-        ? fileSystem.readFile(targetPath)
-        : new Uint8Array(0);
+      const previous =
+        fileSystem.getEntry(targetPath)?.kind === 'file'
+          ? fileSystem.readFile(targetPath)
+          : new Uint8Array(0);
       const appended = toBytes(data);
       const combined = new Uint8Array(previous.length + appended.length);
       combined.set(previous);
       combined.set(appended, previous.length);
       fileSystem.writeFile(targetPath, combined);
     },
-    existsSync: (path) => getMachine().fileSystem.getEntry(windowsPath(path)) !== undefined,
-    mkdirSync: (path) => getMachine().fileSystem.createDirectory(windowsPath(path)),
+    existsSync: (path) =>
+      getMachine().fileSystem.getEntry(windowsPath(path)) !== undefined,
+    mkdirSync: (path) =>
+      getMachine().fileSystem.createDirectory(windowsPath(path)),
     readdirSync: (path) =>
       getMachine()
         .fileSystem.readDirectory(windowsPath(path))
         .map((entry) => entry.name),
     statSync: (path) => {
       const entry = getMachine().fileSystem.getEntry(windowsPath(path));
-      if (!entry) throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
+      if (!entry)
+        throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
       return {
         size: entry.data.length,
         isFile: () => entry.kind === 'file',
@@ -408,7 +439,10 @@ function installFsBridge(): () => void {
     renameSync: (source, target) => {
       const fileSystem = getMachine().fileSystem;
       const windowsSource = windowsPath(source);
-      fileSystem.writeFile(windowsPath(target), fileSystem.readFile(windowsSource));
+      fileSystem.writeFile(
+        windowsPath(target),
+        fileSystem.readFile(windowsSource),
+      );
       fileSystem.deleteFile(windowsSource);
     },
   };

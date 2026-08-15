@@ -463,7 +463,10 @@ export class Win64AddressSpace {
               base: mapping.base,
               size: mapping.size,
               protection: mapping.protection,
-              cow: { pageCount: mapping.cow.pageCount, entries: snapshotCoWMapping(mapping.cow) },
+              cow: {
+                pageCount: mapping.cow.pageCount,
+                entries: snapshotCoWMapping(mapping.cow),
+              },
             }
           : {
               id: mapping.id,
@@ -479,7 +482,10 @@ export class Win64AddressSpace {
   }
 
   /** Replaces every mapping (discarding whatever the constructor pre-created) with the snapshot's, rebuilding CoW page tables against the already-restored `pool` so shared physical pages stay shared. */
-  public restoreMappings(pool: PhysicalPagePool, snapshot: AddressSpaceSnapshot): void {
+  public restoreMappings(
+    pool: PhysicalPagePool,
+    snapshot: AddressSpaceSnapshot,
+  ): void {
     for (const mapping of this.mappings) {
       mapping.cow?.dispose();
     }
@@ -494,7 +500,11 @@ export class Win64AddressSpace {
               size: mapping.size,
               protection: mapping.protection,
               data: new Uint8Array(mapping.size), // dummy for type compat, matches mapCoW's own convention
-              cow: restoreCoWMapping(pool, mapping.cow.pageCount, mapping.cow.entries),
+              cow: restoreCoWMapping(
+                pool,
+                mapping.cow.pageCount,
+                mapping.cow.entries,
+              ),
             }
           : {
               id: mapping.id,
@@ -506,7 +516,9 @@ export class Win64AddressSpace {
             },
       );
     }
-    this.mappings.sort((left, right) => (left.base < right.base ? -1 : left.base > right.base ? 1 : 0));
+    this.mappings.sort((left, right) =>
+      left.base < right.base ? -1 : left.base > right.base ? 1 : 0,
+    );
     this.nextAllocationBase = snapshot.nextAllocationBase;
   }
 }

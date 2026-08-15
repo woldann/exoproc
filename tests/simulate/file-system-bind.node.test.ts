@@ -1,6 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Win32FileSystem } from '../../packages/simulate/dist/runtime/file-system.js';
@@ -15,13 +22,19 @@ describe('Win32FileSystem folder binds', () => {
   it('reads a real host file through a bound simulated path', () => {
     const hostDir = mkdtempSync(path.join(tmpdir(), 'exoproc-sim-bind-'));
     try {
-      writeFileSync(path.join(hostDir, 'hello.txt'), 'hello from the real host\n');
+      writeFileSync(
+        path.join(hostDir, 'hello.txt'),
+        'hello from the real host\n',
+      );
 
       const fileSystem = new Win32FileSystem();
       fileSystem.bindFolder('C:\\HostBind', hostDir);
 
       const bytes = fileSystem.readFile('C:\\HostBind\\hello.txt');
-      assert.equal(new TextDecoder().decode(bytes), 'hello from the real host\n');
+      assert.equal(
+        new TextDecoder().decode(bytes),
+        'hello from the real host\n',
+      );
 
       const entry = fileSystem.getEntry('C:\\HostBind\\hello.txt');
       assert.ok(entry);
@@ -96,10 +109,10 @@ describe('Win32FileSystem folder binds', () => {
 
       const entries = fileSystem.readDirectory('C:\\HostBind');
       assert.equal(entries.length, 2);
-      assert.deepEqual(
-        entries.map((entry) => entry.name).sort(),
-        ['a.txt', 'b.txt'],
-      );
+      assert.deepEqual(entries.map((entry) => entry.name).sort(), [
+        'a.txt',
+        'b.txt',
+      ]);
     } finally {
       rmSync(hostDir, { recursive: true, force: true });
     }
@@ -115,7 +128,10 @@ describe('Win32FileSystem folder binds', () => {
       fileSystem.bindFolder('C:\\HostBind', hostDir);
 
       assert.equal(fileSystem.deleteFile('C:\\HostBind\\delete-me.txt'), true);
-      assert.equal(fileSystem.getEntry('C:\\HostBind\\delete-me.txt'), undefined);
+      assert.equal(
+        fileSystem.getEntry('C:\\HostBind\\delete-me.txt'),
+        undefined,
+      );
     } finally {
       rmSync(hostDir, { recursive: true, force: true });
     }
@@ -131,10 +147,7 @@ describe('Win32FileSystem folder binds', () => {
       fileSystem.bindFolder('C:\\HostBind', hostDir);
 
       assert.equal(fileSystem.deleteDirectory('C:\\HostBind\\nested'), true);
-      assert.equal(
-        existsSync(path.join(hostDir, 'nested')),
-        false,
-      );
+      assert.equal(existsSync(path.join(hostDir, 'nested')), false);
       assert.equal(fileSystem.getEntry('C:\\HostBind\\nested'), undefined);
     } finally {
       rmSync(hostDir, { recursive: true, force: true });

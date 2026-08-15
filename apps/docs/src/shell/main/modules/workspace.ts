@@ -37,7 +37,8 @@ import { getMachine } from './machine';
  * re-points there -- both just write into the same ordinary filesystem.
  */
 
-const DEFAULT_SOURCE_LABEL = 'oturum içi (yalnızca snapshot alınırsa kalıcı olur)';
+const DEFAULT_SOURCE_LABEL =
+  'oturum içi (yalnızca snapshot alınırsa kalıcı olur)';
 
 let info: WorkspaceInfoDto | undefined;
 let currentRoot = WIN32_WORKSPACE_PATH;
@@ -65,7 +66,11 @@ function rootNameFromPath(path: string): string {
 
 function setRoot(path: string, sourceLabel: string): void {
   currentRoot = path;
-  info = { rootName: rootNameFromPath(path) || path, rootPath: path, sourceLabel };
+  info = {
+    rootName: rootNameFromPath(path) || path,
+    rootPath: path,
+    sourceLabel,
+  };
   ipc.send(WorkspaceChannel.onDidChangeRoot, info);
 }
 
@@ -92,7 +97,8 @@ async function importZip(name: string, bytes: Uint8Array): Promise<string> {
     if (!relative) continue;
     const targetPath = `${targetRoot}\\${relative}`;
     const parent = targetPath.slice(0, targetPath.lastIndexOf('\\'));
-    if (parent && !fileSystem.isDirectory(parent)) fileSystem.createDirectory(parent);
+    if (parent && !fileSystem.isDirectory(parent))
+      fileSystem.createDirectory(parent);
     fileSystem.writeFile(targetPath, entry.data);
   }
   return targetRoot;
@@ -121,10 +127,12 @@ export function registerWorkspaceHandlers(): void {
 
   ipc.handle(WorkspaceChannel.getInfo, () => info);
 
-  ipc.handle(WorkspaceChannel.browseSimulateTree, (path: string): readonly DirectoryEntryDto[] =>
-    getMachine()
-      .fileSystem.readDirectory(path)
-      .map((entry): DirectoryEntryDto => [entry.name, entry.kind]),
+  ipc.handle(
+    WorkspaceChannel.browseSimulateTree,
+    (path: string): readonly DirectoryEntryDto[] =>
+      getMachine()
+        .fileSystem.readDirectory(path)
+        .map((entry): DirectoryEntryDto => [entry.name, entry.kind]),
   );
 
   ipc.handle(WorkspaceChannel.createSimulateDirectory, (path: string) => {
@@ -135,14 +143,22 @@ export function registerWorkspaceHandlers(): void {
     const fileSystem = getMachine().fileSystem;
     const entry = fileSystem.getEntry(path);
     if (!entry) throw new Error(`"${path}" bulunamadı.`);
-    const deleted = entry.kind === 'directory' ? fileSystem.deleteDirectory(path) : fileSystem.deleteFile(path);
+    const deleted =
+      entry.kind === 'directory'
+        ? fileSystem.deleteDirectory(path)
+        : fileSystem.deleteFile(path);
     if (!deleted) throw new Error(`"${path}" silinemedi.`);
   });
 
-  ipc.handle(WorkspaceChannel.renameSimulateEntry, (source: string, target: string) => {
-    const fileSystem = getMachine().fileSystem;
-    if (!fileSystem.rename(source, target)) {
-      throw new Error(`"${source}" -> "${target}" yeniden adlandırılamadı (kaynak yok ya da hedef zaten var).`);
-    }
-  });
+  ipc.handle(
+    WorkspaceChannel.renameSimulateEntry,
+    (source: string, target: string) => {
+      const fileSystem = getMachine().fileSystem;
+      if (!fileSystem.rename(source, target)) {
+        throw new Error(
+          `"${source}" -> "${target}" yeniden adlandırılamadı (kaynak yok ya da hedef zaten var).`,
+        );
+      }
+    },
+  );
 }

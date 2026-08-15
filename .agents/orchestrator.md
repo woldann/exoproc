@@ -110,7 +110,6 @@ User: "simulate the EB FE park logic in nhook"
 - **Public API changes**: If simulate-agent changes a public export (`src/index.ts`), it **must** hand off to frontend-agent. The orchestrator must not miss this handoff.
 - **Cloudflare deploy**: Before running `cf:deploy`, frontend-agent verifies locally with `cf:build`; the orchestrator does not enforce this order — it just relays the deploy log to the user.
 
-
 ## Example dispatches (quick reference)
 
 | User request                                      | Dispatch                                                                                  |

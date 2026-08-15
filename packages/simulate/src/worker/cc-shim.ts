@@ -12,7 +12,10 @@ import {
   TypeTable,
   type CType,
 } from './c-subset-compiler.js';
-import { compileFunctionBody, type CExternFunction } from './c-subset-codegen.js';
+import {
+  compileFunctionBody,
+  type CExternFunction,
+} from './c-subset-codegen.js';
 
 export interface WorkerCCFunctionDefinition {
   readonly args?: readonly (string | number)[];
@@ -37,7 +40,9 @@ let sequence = 0;
 
 function normalizeLibraryName(name: string): string {
   const leaf = name.replace(/\//g, '\\').split('\\').pop() ?? name;
-  return leaf.toLowerCase().endsWith('.dll') ? leaf.toLowerCase() : `${leaf.toLowerCase()}.dll`;
+  return leaf.toLowerCase().endsWith('.dll')
+    ? leaf.toLowerCase()
+    : `${leaf.toLowerCase()}.dll`;
 }
 
 /**
@@ -53,13 +58,13 @@ export function cc(options: WorkerCCOptions): WorkerCCLibrary {
     candidate.toLowerCase().endsWith('.c'),
   );
   if (!sourcePath) {
-    throw new Error(
-      'exoproc worker cc() shim requires a .c source path',
-    );
+    throw new Error('exoproc worker cc() shim requires a .c source path');
   }
   const source = readFileSync(sourcePath, 'utf8');
   if (typeof source !== 'string') {
-    throw new Error(`exoproc worker cc() shim could not read ${sourcePath} as text`);
+    throw new Error(
+      `exoproc worker cc() shim could not read ${sourcePath} as text`,
+    );
   }
 
   const requestedNames = Object.keys(options.symbols);
@@ -217,7 +222,9 @@ function extractFunctionParameterNames(text: string, name: string): string[] {
 
     const identifiers = declarator.match(/[A-Za-z_]\w*/g) ?? [];
     const candidate = identifiers.at(-1);
-    return candidate && !typeKeywords.has(candidate) ? candidate : `arg${index}`;
+    return candidate && !typeKeywords.has(candidate)
+      ? candidate
+      : `arg${index}`;
   });
 }
 
@@ -226,7 +233,9 @@ function extractFunctionBody(text: string, name: string): string {
   const headerPattern = new RegExp(`(^|[^\\w])${escaped}\\s*\\(`);
   const match = headerPattern.exec(text);
   if (!match) {
-    throw new Error(`exoproc C subset compiler could not locate function "${name}" in the generated source`);
+    throw new Error(
+      `exoproc C subset compiler could not locate function "${name}" in the generated source`,
+    );
   }
   let cursor = match.index + match[0].length;
   let parenDepth = 1;
@@ -237,7 +246,9 @@ function extractFunctionBody(text: string, name: string): string {
   }
   while (cursor < text.length && text[cursor] !== '{') cursor += 1;
   if (text[cursor] !== '{') {
-    throw new Error(`exoproc C subset compiler expected "{" for function "${name}"`);
+    throw new Error(
+      `exoproc C subset compiler expected "{" for function "${name}"`,
+    );
   }
   cursor += 1;
   const start = cursor;
@@ -320,7 +331,8 @@ function compileFunctionModule(
   // pointer and length metadata. Requiring both companions avoids mistaking a
   // real function whose name ends in `_ptr` or `_len` for metadata.
   const realNames = requestedNames.filter(
-    (name) => `${name}_ptr` in options.symbols && `${name}_len` in options.symbols,
+    (name) =>
+      `${name}_ptr` in options.symbols && `${name}_len` in options.symbols,
   );
 
   const headerText = resolveIncludesRecursively(source, 0);
@@ -346,7 +358,10 @@ function compileFunctionModule(
       }
     }
     if (address !== undefined) {
-      externs.set(declaration.name, { address, returns: declaration.returnType });
+      externs.set(declaration.name, {
+        address,
+        returns: declaration.returnType,
+      });
     }
   }
 
@@ -381,13 +396,19 @@ function compileFunctionModule(
 
   const moduleName = `exoproc-cc-${sequence++}.dll`;
   const program = builder.finish(moduleName, codeExports);
-  const loadedModule = process.machine.programs.loadIntoProcess(process, moduleName, program);
+  const loadedModule = process.machine.programs.loadIntoProcess(
+    process,
+    moduleName,
+    program,
+  );
 
   const symbols: Record<string, (...args: unknown[]) => unknown> = {};
   for (const name of realNames) {
     const address = loadedModule.exports.get(name);
     if (address === undefined) {
-      throw new Error(`exoproc worker cc() shim failed to export ${name} from ${moduleName}`);
+      throw new Error(
+        `exoproc worker cc() shim failed to export ${name} from ${moduleName}`,
+      );
     }
     const definition = options.symbols[name];
     if (!definition) {

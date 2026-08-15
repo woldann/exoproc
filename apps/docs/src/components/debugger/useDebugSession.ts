@@ -135,11 +135,16 @@ export function useDebugSession({
     text: `Debugger TID ${tid} üzerine bağlanıyor...`,
     tone: 'info',
   });
-  const [lastMemoryWrite, setLastMemoryWrite] = useState<{ address: bigint; size: number }>();
+  const [lastMemoryWrite, setLastMemoryWrite] = useState<{
+    address: bigint;
+    size: number;
+  }>();
   const [trace, setTrace] = useState<InstructionDto[]>([]);
   /** When set, the disassembly is anchored to this address instead of following RIP. */
   const [anchor, setAnchor] = useState<bigint>();
-  const [memoryMappingId, setMemoryMappingId] = useState(initialMemoryMappingId);
+  const [memoryMappingId, setMemoryMappingId] = useState(
+    initialMemoryMappingId,
+  );
   const [memoryBase, setMemoryBase] = useState(initialMemoryAddress);
   const [memoryLength, setMemoryLength] = useState(initialMemoryLength);
 
@@ -165,7 +170,10 @@ export function useDebugSession({
     setReady(false);
     setProcess(undefined);
     setThread(undefined);
-    setMessage({ text: `Debugger TID ${tid} üzerine bağlanıyor...`, tone: 'info' });
+    setMessage({
+      text: `Debugger TID ${tid} üzerine bağlanıyor...`,
+      tone: 'info',
+    });
   }
 
   useEffect(() => {
@@ -207,7 +215,9 @@ export function useDebugSession({
    * ================================================================ */
   const commitOutcome = (outcome: RunOutcomeDto) => {
     if (outcome.trace.length > 0) {
-      setTrace((previous) => [...previous, ...outcome.trace].slice(-TRACE_LIMIT));
+      setTrace((previous) =>
+        [...previous, ...outcome.trace].slice(-TRACE_LIMIT),
+      );
     }
     if (outcome.executed > 0) {
       setLastMemoryWrite(outcome.lastStep?.memoryWrite);
@@ -216,11 +226,16 @@ export function useDebugSession({
     bump();
   };
 
-  const reportOutcome = (outcome: RunOutcomeDto, ripAfter: bigint, targetText: string) => {
+  const reportOutcome = (
+    outcome: RunOutcomeDto,
+    ripAfter: bigint,
+    targetText: string,
+  ) => {
     switch (outcome.stop) {
       case 'terminated':
         if (outcome.executed === 0) info('Thread zaten sonlanmış.');
-        else info(`${outcome.executed} instruction yürütüldü; thread sonlandı.`);
+        else
+          info(`${outcome.executed} instruction yürütüldü; thread sonlandı.`);
         break;
       case 'error':
         failure(outcome.error ?? 'Bilinmeyen hata.');
@@ -266,7 +281,9 @@ export function useDebugSession({
     const snapshot = await api.debug.getThread(ref);
     if (snapshot) setThread(snapshot);
     if (step) {
-      setTrace((previous) => [...previous, step.instruction].slice(-TRACE_LIMIT));
+      setTrace((previous) =>
+        [...previous, step.instruction].slice(-TRACE_LIMIT),
+      );
       setLastMemoryWrite(step.memoryWrite);
       setAnchor(undefined);
     }
@@ -276,8 +293,10 @@ export function useDebugSession({
       return;
     }
     if (step.reason === 'fault') failure(step.error ?? 'CPU fault oluştu.');
-    else if (step.reason === 'breakpoint') info(`${operationOf(step.instruction)}: INT3 breakpoint yakalandı.`);
-    else if (step.reason === 'halted') info(`${operationOf(step.instruction)}: thread temiz biçimde sonlandı.`);
+    else if (step.reason === 'breakpoint')
+      info(`${operationOf(step.instruction)}: INT3 breakpoint yakalandı.`);
+    else if (step.reason === 'halted')
+      info(`${operationOf(step.instruction)}: thread temiz biçimde sonlandı.`);
     else success(`${operationOf(step.instruction)} yürütüldü.`);
   };
 
@@ -321,7 +340,11 @@ export function useDebugSession({
     const snapshot = await api.debug.getThread(ref);
     if (snapshot) setThread(snapshot);
     commitOutcome(outcome);
-    reportOutcome(outcome, snapshot?.registers.RIP ?? 0n, `${outcome.executed} instruction yürütüldü.`);
+    reportOutcome(
+      outcome,
+      snapshot?.registers.RIP ?? 0n,
+      `${outcome.executed} instruction yürütüldü.`,
+    );
   };
 
   const runToCursor = async (target: bigint) => {
@@ -334,10 +357,16 @@ export function useDebugSession({
     if (snapshot) setThread(snapshot);
     commitOutcome(outcome);
     if (outcome.stop === 'breakpoint' && snapshot?.registers.RIP === target) {
-      success(`İmleç adresine ulaşıldı: ${hex(target)} (${outcome.executed} instruction yürütüldü).`);
+      success(
+        `İmleç adresine ulaşıldı: ${hex(target)} (${outcome.executed} instruction yürütüldü).`,
+      );
       return;
     }
-    reportOutcome(outcome, snapshot?.registers.RIP ?? 0n, `İmleç adresine ulaşıldı: ${hex(target)}.`);
+    reportOutcome(
+      outcome,
+      snapshot?.registers.RIP ?? 0n,
+      `İmleç adresine ulaşıldı: ${hex(target)}.`,
+    );
   };
 
   const canRun = thread?.state !== 'terminated';
@@ -346,7 +375,8 @@ export function useDebugSession({
   const breakpoints = new Set(thread?.breakpoints ?? []);
 
   const toggleBreakpoint = async (address: bigint) => {
-    if (breakpoints.has(address)) await api.debug.removeBreakpoint(ref, address);
+    if (breakpoints.has(address))
+      await api.debug.removeBreakpoint(ref, address);
     else await api.debug.addBreakpoint(ref, address);
     const snapshot = await api.debug.getThread(ref);
     if (snapshot) setThread(snapshot);
@@ -361,7 +391,11 @@ export function useDebugSession({
   };
 
   const clearBreakpoints = async () => {
-    await Promise.all([...breakpoints].map((address) => api.debug.removeBreakpoint(ref, address)));
+    await Promise.all(
+      [...breakpoints].map((address) =>
+        api.debug.removeBreakpoint(ref, address),
+      ),
+    );
     const snapshot = await api.debug.getThread(ref);
     if (snapshot) setThread(snapshot);
     bump();
@@ -401,19 +435,25 @@ export function useDebugSession({
   let ripLine: number | undefined;
   for (let index = 0; index < disassembly.length; index += 1) {
     const instruction = disassembly[index]!;
-    disassemblyLines.push(`${instruction.mnemonic.padEnd(8)} ${instruction.operands}`);
+    disassemblyLines.push(
+      `${instruction.mnemonic.padEnd(8)} ${instruction.operands}`,
+    );
     lineToAddress.set(index + 1, instruction.address);
     byAddress.set(instruction.address.toString(), instruction);
-    if (thread && instruction.address === thread.registers.RIP) ripLine = index + 1;
+    if (thread && instruction.address === thread.registers.RIP)
+      ripLine = index + 1;
   }
   const monacoText = disassemblyLines.join('\n');
 
   const instructionAt = (address: bigint) => byAddress.get(address.toString());
 
   const gotoDisassembly = async (target: bigint | string): Promise<boolean> => {
-    const address = typeof target === 'bigint' ? target : parseIntegerInput(target);
+    const address =
+      typeof target === 'bigint' ? target : parseIntegerInput(target);
     if (address === undefined) {
-      failure(`"${String(target)}" geçerli bir adres değil (0x… / 1F4h / ondalık bekleniyor).`);
+      failure(
+        `"${String(target)}" geçerli bir adres değil (0x… / 1F4h / ondalık bekleniyor).`,
+      );
       return false;
     }
     const decoded = await api.debug.decode(ref, address);
@@ -423,7 +463,9 @@ export function useDebugSession({
     }
     setAnchor(address);
     bump();
-    info(`Disassembly ${hex(address)}${process ? ` (${resolveSymbol(process, address)})` : ''} adresine taşındı.`);
+    info(
+      `Disassembly ${hex(address)}${process ? ` (${resolveSymbol(process, address)})` : ''} adresine taşındı.`,
+    );
     return true;
   };
 
@@ -441,10 +483,15 @@ export function useDebugSession({
     changed: changedRegisters.has(name),
   }));
 
-  const writeRegister = async (name: RegisterName, raw: string): Promise<boolean> => {
+  const writeRegister = async (
+    name: RegisterName,
+    raw: string,
+  ): Promise<boolean> => {
     const parsed = parseIntegerInput(raw);
     if (parsed === undefined) {
-      failure(`"${raw}" geçerli bir 64-bit değer değil (0x… / 1F4h / ondalık bekleniyor).`);
+      failure(
+        `"${raw}" geçerli bir 64-bit değer değil (0x… / 1F4h / ondalık bekleniyor).`,
+      );
       return false;
     }
     const value = BigInt.asUintN(64, parsed);
@@ -472,12 +519,22 @@ export function useDebugSession({
       .getCallStack({ pid, tid })
       .then((addresses) => {
         if (cancelled) return;
-        setCallStackState(addresses.map((address) => ({ address, label: resolveSymbol(process, address) })));
+        setCallStackState(
+          addresses.map((address) => ({
+            address,
+            label: resolveSymbol(process, address),
+          })),
+        );
         setCallStackNote(undefined);
       })
       .catch((cause) => {
         if (cancelled) return;
-        setCallStackState([{ address: thread.registers.RIP, label: resolveSymbol(process, thread.registers.RIP) }]);
+        setCallStackState([
+          {
+            address: thread.registers.RIP,
+            label: resolveSymbol(process, thread.registers.RIP),
+          },
+        ]);
         setCallStackNote(describeError(cause));
       });
     return () => {
@@ -489,7 +546,9 @@ export function useDebugSession({
 
   /* ---------- memory ---------- */
   const mappings = process?.mappings ?? [];
-  const selectedMapping = mappings.find((mapping) => mapping.id === memoryMappingId);
+  const selectedMapping = mappings.find(
+    (mapping) => mapping.id === memoryMappingId,
+  );
 
   /* Sync-checkable failures (no mapping selected, bad address, address
    * outside the mapping) are computed inline, not via setState in an
@@ -498,7 +557,8 @@ export function useDebugSession({
   let memoryStart: bigint | undefined;
   let memoryReadLength = 0;
   if (!selectedMapping) {
-    memorySyncError = mappings.length === 0 ? undefined : 'Hiçbir mapping seçili değil.';
+    memorySyncError =
+      mappings.length === 0 ? undefined : 'Hiçbir mapping seçili değil.';
   } else {
     const parsedBase = parseIntegerInput(memoryBase);
     if (memoryBase.trim() && parsedBase === undefined) {
@@ -531,17 +591,20 @@ export function useDebugSession({
       .read(pid, start, memoryReadLength)
       .then((bytes) => {
         if (cancelled) return;
-        const rows = Array.from({ length: Math.ceil(bytes.length / 16) }, (_, rowIndex) => {
-          const offset = rowIndex * 16;
-          const row = bytes.slice(offset, offset + 16);
-          return {
-            address: start + BigInt(offset),
-            bytes: Array.from(row),
-            ascii: Array.from(row, (byte) => (byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : '.')).join(
-              '',
-            ),
-          };
-        });
+        const rows = Array.from(
+          { length: Math.ceil(bytes.length / 16) },
+          (_, rowIndex) => {
+            const offset = rowIndex * 16;
+            const row = bytes.slice(offset, offset + 16);
+            return {
+              address: start + BigInt(offset),
+              bytes: Array.from(row),
+              ascii: Array.from(row, (byte) =>
+                byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : '.',
+              ).join(''),
+            };
+          },
+        );
         setFetchedMemoryRows(rows);
         setFetchedMemoryError(undefined);
       })
@@ -567,7 +630,9 @@ export function useDebugSession({
   const gotoMemory = async (raw: string | bigint): Promise<boolean> => {
     const address = typeof raw === 'bigint' ? raw : parseIntegerInput(raw);
     if (address === undefined) {
-      failure(`"${String(raw)}" geçerli bir adres değil (0x… / 1F4h / ondalık bekleniyor).`);
+      failure(
+        `"${String(raw)}" geçerli bir adres değil (0x… / 1F4h / ondalık bekleniyor).`,
+      );
       return false;
     }
     const mapping = await api.memory.findMapping(pid, address);
@@ -578,11 +643,16 @@ export function useDebugSession({
     setMemoryMappingId(mapping.id);
     setMemoryBase(hex(address));
     bump();
-    info(`Memory ${hex(address)} · ${mapping.label} (${mapping.protection}) adresine taşındı.`);
+    info(
+      `Memory ${hex(address)} · ${mapping.label} (${mapping.protection}) adresine taşındı.`,
+    );
     return true;
   };
 
-  const writeMemoryBytes = async (address: bigint, bytes: Uint8Array): Promise<boolean> => {
+  const writeMemoryBytes = async (
+    address: bigint,
+    bytes: Uint8Array,
+  ): Promise<boolean> => {
     try {
       await api.memory.write(pid, address, bytes);
     } catch (error) {
@@ -592,11 +662,16 @@ export function useDebugSession({
     }
     setLastMemoryWrite({ address, size: bytes.length });
     bump();
-    success(`${hex(address)} adresine ${bytes.length} byte yazıldı: ${Array.from(bytes, byteHex).join(' ')}.`);
+    success(
+      `${hex(address)} adresine ${bytes.length} byte yazıldı: ${Array.from(bytes, byteHex).join(' ')}.`,
+    );
     return true;
   };
 
-  const writeMemoryByte = async (address: bigint, raw: string): Promise<boolean> => {
+  const writeMemoryByte = async (
+    address: bigint,
+    raw: string,
+  ): Promise<boolean> => {
     const byte = parseByteInput(raw);
     if (byte === undefined) {
       failure(`"${raw}" geçerli bir byte değeri değil (00–FF bekleniyor).`);
@@ -612,12 +687,16 @@ export function useDebugSession({
   ): Promise<boolean> => {
     const address = parseIntegerInput(addressRaw);
     if (address === undefined) {
-      failure(`"${addressRaw}" geçerli bir adres değil (0x… / 1F4h / ondalık bekleniyor).`);
+      failure(
+        `"${addressRaw}" geçerli bir adres değil (0x… / 1F4h / ondalık bekleniyor).`,
+      );
       return false;
     }
     const value = parseIntegerInput(valueRaw);
     if (value === undefined) {
-      failure(`"${valueRaw}" geçerli bir değer değil (0x… / 1F4h / ondalık bekleniyor).`);
+      failure(
+        `"${valueRaw}" geçerli bir değer değil (0x… / 1F4h / ondalık bekleniyor).`,
+      );
       return false;
     }
     const limit = 1n << BigInt(width * 8);

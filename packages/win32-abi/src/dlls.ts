@@ -43,4 +43,3 @@ export const Win32Api = {
   ws2_32: createWin32FunctionReferences(Ws2_32Dll),
   node: createWin32FunctionReferences(NodeDll),
 } as const;
-

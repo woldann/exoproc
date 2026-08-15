@@ -1,15 +1,13 @@
 'use client';
 
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { useService } from '@/platform/instantiation/browser/instantiationService';
-import { ITerminalService, type ITerminalSession } from '@/workbench/services/terminal/ITerminalService';
+import {
+  ITerminalService,
+  type ITerminalSession,
+} from '@/workbench/services/terminal/ITerminalService';
 
 export interface IdeTerminalHandle {
   /** Sends a command line to the shell exactly as if the user typed it. */
@@ -122,7 +120,9 @@ export const IdeTerminalPanel = forwardRef<IdeTerminalHandle>(
           term?.write(data);
         });
 
-        writeSubscription = createdSession.onDidWrite((chunk) => term?.write(chunk));
+        writeSubscription = createdSession.onDidWrite((chunk) =>
+          term?.write(chunk),
+        );
         closeSubscription = createdSession.onDidClose(() => {
           term?.write('\r\n[oturum kapandı]\r\n');
         });

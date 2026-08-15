@@ -26,7 +26,9 @@ export function registerSnapshotHandlers(): void {
     const machine = getMachine();
     const warnings = machine.getSnapshotWarnings();
     const blob = machine.snapshot();
-    const meta: SnapshotMetaDto = await (await store()).create(name, blob, warnings);
+    const meta: SnapshotMetaDto = await (
+      await store()
+    ).create(name, blob, warnings);
     ipc.send(SnapshotChannel.onDidChangeList, undefined);
     return meta;
   });
@@ -37,7 +39,9 @@ export function registerSnapshotHandlers(): void {
     // Detach live cmd.exe sessions from the about-to-be-discarded machine
     // BEFORE the swap -- see `closeAllTerminalSessions`'s own doc comment.
     closeAllTerminalSessions();
-    const restored = Win64Machine.restore(blob, { enableNodeHostBridge: false });
+    const restored = Win64Machine.restore(blob, {
+      enableNodeHostBridge: false,
+    });
     replaceMachine(restored);
     reattachAfterRestore(restored);
     notifyProcessesChanged();

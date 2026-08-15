@@ -879,7 +879,7 @@ function formatDllDisassembly(
       `; address=0x${hex(globals.address)} size=${
         globals.bytes.length
       } protection=rw -- ${dll.name}'s private "globals" page, CoW-backed like`,
-      '; an EXE\'s own .data: zero-initialized/shared until DllMain writes it.',
+      "; an EXE's own .data: zero-initialized/shared until DllMain writes it.",
       `crt_heap_handle: dq 0x${hex(heapHandle, 16)} ; +0x0000 (set by DllMain via HeapCreate)`,
       `; remaining ${globals.bytes.length - 8} bytes are zero`,
     );
@@ -1186,7 +1186,14 @@ async function inspectDll(
     writeFile(join(DLL_ROOT, `${dll.name}.iat.bin`), iat),
     writeFile(
       join(DLL_ROOT, `${dll.name}.dis`),
-      formatDllDisassembly(dll, module, codeEntries, process, dllMainCode, globals),
+      formatDllDisassembly(
+        dll,
+        module,
+        codeEntries,
+        process,
+        dllMainCode,
+        globals,
+      ),
     ),
     writeFile(
       join(DLL_ROOT, `${dll.name}.asm`),

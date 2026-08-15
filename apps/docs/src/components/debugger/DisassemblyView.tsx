@@ -3,14 +3,22 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef } from 'react';
 import type { OnMount } from '@monaco-editor/react';
-import { GHOST_BUTTON_CLASS, INPUT_CLASS, PanelTab, TargetIcon } from './chrome';
+import {
+  GHOST_BUTTON_CLASS,
+  INPUT_CLASS,
+  PanelTab,
+  TargetIcon,
+} from './chrome';
 import { LINE_HEIGHT, byteHex, hex } from './format';
 import { defineDebuggerTheme, registerNasmLanguage } from './nasm';
 import type { DebugSession } from './useDebugSession';
 
-const MonacoEditor = dynamic(() => import('@monaco-editor/react').then((mod) => mod.Editor), {
-  ssr: false,
-});
+const MonacoEditor = dynamic(
+  () => import('@monaco-editor/react').then((mod) => mod.Editor),
+  {
+    ssr: false,
+  },
+);
 
 type Editor = Parameters<OnMount>[0];
 type Monaco = Parameters<OnMount>[1];
@@ -21,7 +29,11 @@ export interface DisassemblyViewProps {
   onSelectAddress: (address: bigint) => void;
 }
 
-export function DisassemblyView({ session, selectedAddress, onSelectAddress }: DisassemblyViewProps) {
+export function DisassemblyView({
+  session,
+  selectedAddress,
+  onSelectAddress,
+}: DisassemblyViewProps) {
   const {
     disassembly,
     disassemblyError,
@@ -39,7 +51,9 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
 
   const editorRef = useRef<Editor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
-  const decorationsRef = useRef<ReturnType<Editor['createDecorationsCollection']> | null>(null);
+  const decorationsRef = useRef<ReturnType<
+    Editor['createDecorationsCollection']
+  > | null>(null);
   const byteViewerRef = useRef<HTMLDivElement>(null);
   const syncingRef = useRef(false);
   const gotoInputRef = useRef<HTMLInputElement>(null);
@@ -48,7 +62,14 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
    * Monaco actions are registered once on mount, so they must not close over
    * this render's handlers -- they read the live ones through this ref.
    */
-  const commandsRef = useRef({ lineToAddress, toggleBreakpoint, runToCursor, gotoDisassembly, instructionAt, onSelectAddress });
+  const commandsRef = useRef({
+    lineToAddress,
+    toggleBreakpoint,
+    runToCursor,
+    gotoDisassembly,
+    instructionAt,
+    onSelectAddress,
+  });
   useEffect(() => {
     commandsRef.current = {
       lineToAddress,
@@ -71,14 +92,15 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
     syncingRef.current = false;
   }, []);
 
-  const handleByteViewerScroll: React.UIEventHandler<HTMLDivElement> = useCallback((event) => {
-    if (syncingRef.current) return;
-    const editor = editorRef.current;
-    if (!editor) return;
-    syncingRef.current = true;
-    editor.setScrollTop((event.target as HTMLDivElement).scrollTop);
-    syncingRef.current = false;
-  }, []);
+  const handleByteViewerScroll: React.UIEventHandler<HTMLDivElement> =
+    useCallback((event) => {
+      if (syncingRef.current) return;
+      const editor = editorRef.current;
+      if (!editor) return;
+      syncingRef.current = true;
+      editor.setScrollTop((event.target as HTMLDivElement).scrollTop);
+      syncingRef.current = false;
+    }, []);
 
   /* ---------- decorations ---------- */
   const updateDecorations = useCallback(() => {
@@ -86,7 +108,8 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
-    const decorations: Parameters<Editor['createDecorationsCollection']>[0] = [];
+    const decorations: Parameters<Editor['createDecorationsCollection']>[0] =
+      [];
 
     if (ripLine !== undefined) {
       decorations.push({
@@ -110,7 +133,11 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
           },
         });
       }
-      if (selectedAddress !== undefined && address === selectedAddress && lineNumber !== ripLine) {
+      if (
+        selectedAddress !== undefined &&
+        address === selectedAddress &&
+        lineNumber !== ripLine
+      ) {
         decorations.push({
           range: new monaco.Range(lineNumber, 1, lineNumber, 1),
           options: { isWholeLine: true, className: 'debugger-cursor-line' },
@@ -147,8 +174,10 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
         const address = commandsRef.current.lineToAddress.get(lineNumber);
         if (address === undefined) return;
         if (
-          event.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
-          event.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
+          event.target.type ===
+            monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
+          event.target.type ===
+            monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
         ) {
           commandsRef.current.toggleBreakpoint(address);
           return;
@@ -157,7 +186,9 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
       });
 
       /** `addAction`'s callback hands back an `ICodeEditor`, not the standalone editor. */
-      const addressAtCursor = (target: { getPosition(): { lineNumber: number } | null }) => {
+      const addressAtCursor = (target: {
+        getPosition(): { lineNumber: number } | null;
+      }) => {
         const lineNumber = target.getPosition()?.lineNumber;
         if (lineNumber === undefined) return undefined;
         return commandsRef.current.lineToAddress.get(lineNumber);
@@ -183,7 +214,8 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
         contextMenuOrder: 2,
         run: (target) => {
           const address = addressAtCursor(target);
-          if (address !== undefined) commandsRef.current.toggleBreakpoint(address);
+          if (address !== undefined)
+            commandsRef.current.toggleBreakpoint(address);
         },
       });
 
@@ -195,8 +227,10 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
         run: (target) => {
           const address = addressAtCursor(target);
           if (address === undefined) return;
-          const branchTarget = commandsRef.current.instructionAt(address)?.branchTarget;
-          if (branchTarget !== undefined) commandsRef.current.gotoDisassembly(branchTarget);
+          const branchTarget =
+            commandsRef.current.instructionAt(address)?.branchTarget;
+          if (branchTarget !== undefined)
+            commandsRef.current.gotoDisassembly(branchTarget);
         },
       });
 
@@ -230,7 +264,11 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
           }}
           className={`${INPUT_CLASS} w-44`}
         />
-        <button type="button" onClick={submitGoto} className={GHOST_BUTTON_CLASS}>
+        <button
+          type="button"
+          onClick={submitGoto}
+          className={GHOST_BUTTON_CLASS}
+        >
           Git
         </button>
         <button
@@ -284,12 +322,23 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
                   type="button"
                   onClick={() => onSelectAddress(instruction.address)}
                   className={`flex w-full cursor-pointer whitespace-nowrap px-2 text-left ${
-                    isRip ? 'bg-[rgba(255,200,50,0.12)]' : isSelected ? 'bg-[rgba(0,122,204,0.12)]' : ''
+                    isRip
+                      ? 'bg-[rgba(255,200,50,0.12)]'
+                      : isSelected
+                        ? 'bg-[rgba(0,122,204,0.12)]'
+                        : ''
                   } ${isBreakpoint && !isRip ? 'bg-red-500/5' : ''}`}
-                  style={{ height: LINE_HEIGHT, lineHeight: `${LINE_HEIGHT}px` }}
+                  style={{
+                    height: LINE_HEIGHT,
+                    lineHeight: `${LINE_HEIGHT}px`,
+                  }}
                 >
-                  <code className="mr-3 text-[#858585]">{hex(instruction.address)}</code>
-                  <code className="text-[#cccccc]">{Array.from(instruction.bytes, byteHex).join(' ')}</code>
+                  <code className="mr-3 text-[#858585]">
+                    {hex(instruction.address)}
+                  </code>
+                  <code className="text-[#cccccc]">
+                    {Array.from(instruction.bytes, byteHex).join(' ')}
+                  </code>
                 </button>
               );
             })}
@@ -317,7 +366,8 @@ export function DisassemblyView({ session, selectedAddress, onSelectAddress }: D
                 minimap: { enabled: false },
                 fontSize: 12,
                 lineHeight: LINE_HEIGHT,
-                fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+                fontFamily:
+                  "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
                 lineNumbers: 'off',
                 glyphMargin: true,
                 folding: false,

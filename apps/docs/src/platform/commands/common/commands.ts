@@ -52,7 +52,8 @@ export interface ICommandService {
   executeCommand<T = void>(id: string, ...args: readonly unknown[]): Promise<T>;
 }
 
-export const ICommandService = createDecorator<ICommandService>('commandService');
+export const ICommandService =
+  createDecorator<ICommandService>('commandService');
 
 export class CommandService implements ICommandService {
   public async executeCommand<T = void>(

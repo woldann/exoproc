@@ -52,7 +52,9 @@ async function dispatch(message: InvokeMessage): Promise<void> {
       kind: 'reply',
       id: message.id,
       error: serializeError(
-        new Error(`No handler registered for IPC channel "${message.channel}".`),
+        new Error(
+          `No handler registered for IPC channel "${message.channel}".`,
+        ),
       ),
     });
     return;

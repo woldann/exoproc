@@ -1,2 +1,5 @@
 export { FileTree, type FileTreeProps } from './FileTree';
-export { SimulateFolderPicker, type SimulateFolderPickerProps } from './SimulateFolderPicker';
+export {
+  SimulateFolderPicker,
+  type SimulateFolderPickerProps,
+} from './SimulateFolderPicker';

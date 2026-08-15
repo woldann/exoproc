@@ -8,7 +8,11 @@ import {
 } from '../../common/channels';
 import { ipc } from '../ipc';
 import { requireProcess, requireThread } from './machine';
-import { toInstructionDto, toStepResultDto, toThreadSnapshotDto } from './snapshot';
+import {
+  toInstructionDto,
+  toStepResultDto,
+  toThreadSnapshotDto,
+} from './snapshot';
 
 /**
  * Execution control for a single thread.
@@ -84,9 +88,12 @@ function runEngine(thread: Win64Thread, options: RunOptions): RunOutcome {
       collected.splice(0, collected.length - TRACE_LIMIT);
     }
 
-    if (result.reason === 'breakpoint') return { executed, last, trace: collected, stop: 'int3' };
-    if (result.reason === 'fault') return { executed, last, trace: collected, stop: 'fault' };
-    if (result.reason === 'halted') return { executed, last, trace: collected, stop: 'halted' };
+    if (result.reason === 'breakpoint')
+      return { executed, last, trace: collected, stop: 'int3' };
+    if (result.reason === 'fault')
+      return { executed, last, trace: collected, stop: 'fault' };
+    if (result.reason === 'halted')
+      return { executed, last, trace: collected, stop: 'halted' };
     if (options.shouldStop?.(result)) {
       return { executed, last, trace: collected, stop: 'target' };
     }
@@ -103,13 +110,16 @@ function toOutcomeDto(outcome: RunOutcome): RunOutcomeDto {
     lastStep: outcome.last && toStepResultDto(outcome.last),
     trace: outcome.trace.slice(-TRACE_LIMIT).map(toInstructionDto),
     stop: outcome.stop,
-    error: outcome.error !== undefined ? describeError(outcome.error) : undefined,
+    error:
+      outcome.error !== undefined ? describeError(outcome.error) : undefined,
   };
 }
 
 function describeError(error: unknown): string {
   if (error instanceof Error) {
-    return error.name && error.name !== 'Error' ? `${error.name}: ${error.message}` : error.message;
+    return error.name && error.name !== 'Error'
+      ? `${error.name}: ${error.message}`
+      : error.message;
   }
   return String(error);
 }
@@ -162,7 +172,11 @@ export function registerDebugHandlers(): void {
     }
 
     if (current.mnemonic !== 'call') {
-      const outcome = runEngine(thread, { maxSteps: 1, honorBreakpoints: false, shouldStop: () => true });
+      const outcome = runEngine(thread, {
+        maxSteps: 1,
+        honorBreakpoints: false,
+        shouldStop: () => true,
+      });
       publish(ref.pid, ref.tid);
       return toOutcomeDto(outcome);
     }
@@ -176,7 +190,8 @@ export function registerDebugHandlers(): void {
       maxSteps: MAX_CONTINUE_STEPS,
       honorBreakpoints: true,
       shouldStop: () =>
-        thread.registers.RIP === returnAddress && thread.registers.RSP >= rspBefore,
+        thread.registers.RIP === returnAddress &&
+        thread.registers.RSP >= rspBefore,
     });
     publish(ref.pid, ref.tid);
     return toOutcomeDto(outcome);
@@ -217,25 +232,34 @@ export function registerDebugHandlers(): void {
 
   ipc.handle(DebugChannel.continueRun, (ref: DebugThreadRef) => {
     const thread = requireThread(ref.pid, ref.tid);
-    const outcome = runEngine(thread, { maxSteps: MAX_CONTINUE_STEPS, honorBreakpoints: true });
+    const outcome = runEngine(thread, {
+      maxSteps: MAX_CONTINUE_STEPS,
+      honorBreakpoints: true,
+    });
     publish(ref.pid, ref.tid);
     return toOutcomeDto(outcome);
   });
 
-  ipc.handle(DebugChannel.runToCursor, (ref: DebugThreadRef, target: bigint) => {
-    const thread = requireThread(ref.pid, ref.tid);
-    if (thread.state === 'terminated') {
+  ipc.handle(
+    DebugChannel.runToCursor,
+    (ref: DebugThreadRef, target: bigint) => {
+      const thread = requireThread(ref.pid, ref.tid);
+      if (thread.state === 'terminated') {
+        publish(ref.pid, ref.tid);
+        return toOutcomeDto({ executed: 0, trace: [], stop: 'terminated' });
+      }
+
+      const hadBreakpoint = thread.cpu.hasBreakpoint(target);
+      if (!hadBreakpoint) thread.cpu.addBreakpoint(target);
+      const outcome = runEngine(thread, {
+        maxSteps: MAX_CONTINUE_STEPS,
+        honorBreakpoints: true,
+      });
+      if (!hadBreakpoint) thread.cpu.removeBreakpoint(target);
       publish(ref.pid, ref.tid);
-      return toOutcomeDto({ executed: 0, trace: [], stop: 'terminated' });
-    }
-
-    const hadBreakpoint = thread.cpu.hasBreakpoint(target);
-    if (!hadBreakpoint) thread.cpu.addBreakpoint(target);
-    const outcome = runEngine(thread, { maxSteps: MAX_CONTINUE_STEPS, honorBreakpoints: true });
-    if (!hadBreakpoint) thread.cpu.removeBreakpoint(target);
-    publish(ref.pid, ref.tid);
-    return toOutcomeDto(outcome);
-  });
+      return toOutcomeDto(outcome);
+    },
+  );
 
   ipc.handle(DebugChannel.getCallStack, (ref: DebugThreadRef) => {
     const process = requireProcess(ref.pid);
@@ -258,7 +282,10 @@ export function registerDebugHandlers(): void {
       }
       if (value !== 0n && value !== thread.registers.RIP) {
         const executable = mappings.find(
-          (m) => m.protection.includes('x') && value >= m.base && value < m.base + BigInt(m.size),
+          (m) =>
+            m.protection.includes('x') &&
+            value >= m.base &&
+            value < m.base + BigInt(m.size),
         );
         if (executable) frames.push(value);
       }
@@ -276,10 +303,13 @@ export function registerDebugHandlers(): void {
     },
   );
 
-  ipc.handle(DebugChannel.addBreakpoint, (ref: DebugThreadRef, address: bigint) => {
-    requireThread(ref.pid, ref.tid).cpu.addBreakpoint(address);
-    publish(ref.pid, ref.tid);
-  });
+  ipc.handle(
+    DebugChannel.addBreakpoint,
+    (ref: DebugThreadRef, address: bigint) => {
+      requireThread(ref.pid, ref.tid).cpu.addBreakpoint(address);
+      publish(ref.pid, ref.tid);
+    },
+  );
 
   ipc.handle(
     DebugChannel.removeBreakpoint,

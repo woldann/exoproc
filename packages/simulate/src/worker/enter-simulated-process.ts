@@ -39,8 +39,6 @@ export interface EnterSimulatedProcessHandle {
   restore(): void;
 }
 
-
-
 /**
  * Bootstraps code that uses the simulator's process and FFI facilities:
  * create (or reuse) a `Win64Machine`, register a `Win64Process` for the

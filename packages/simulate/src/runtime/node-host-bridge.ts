@@ -69,15 +69,12 @@ interface HostChildProcess {
   ): HostSpawnedProcess;
 }
 
-
-
 const hostEnvironment: Readonly<Record<string, string>> = Object.fromEntries(
   Object.entries(process.env).filter(
     (entry): entry is [string, string] => typeof entry[1] === 'string',
   ),
 );
-const hostNodeExecutable =
-  hostEnvironment.NODE_EXEC_PATH ?? process.execPath;
+const hostNodeExecutable = hostEnvironment.NODE_EXEC_PATH ?? process.execPath;
 
 const hostFsCache: { value?: HostFs } = {};
 
@@ -120,8 +117,7 @@ async function hostChildProcess(): Promise<HostChildProcess> {
 }
 
 const CHILD_RESPONSE_PREFIX = '__EXOPROC_NODE_RESPONSE__';
-const nodeHostDebugEnabled =
-  hostEnvironment.EXOPROC_SIMULATE_DEBUG === '1';
+const nodeHostDebugEnabled = hostEnvironment.EXOPROC_SIMULATE_DEBUG === '1';
 
 function nodeHostDebug(message: string): void {
   if (nodeHostDebugEnabled) console.error(`[node-host] ${message}`);
@@ -142,10 +138,14 @@ async function createHostExecutorProcess(
   );
   const requestPath = p.join(requestDirectory, 'request.json');
   fs.writeFileSync(requestPath, JSON.stringify(request), 'utf8');
-  const child = childProcess.spawn(hostNodeExecutable, [filename, requestPath], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: hostEnvironment,
-  });
+  const child = childProcess.spawn(
+    hostNodeExecutable,
+    [filename, requestPath],
+    {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: hostEnvironment,
+    },
+  );
   const messageListeners: Array<(response: WorkerResponse) => void> = [];
   const errorListeners: Array<(error: Error) => void> = [];
   let stdoutBuffer = '';
@@ -187,9 +187,7 @@ async function createHostExecutorProcess(
   const worker: HostExecutorProcess = {
     on: (event, listener) => {
       if (event === 'message') {
-        messageListeners.push(
-          listener as (response: WorkerResponse) => void,
-        );
+        messageListeners.push(listener as (response: WorkerResponse) => void);
       } else if (event === 'error') {
         const errorListener = listener as (error: Error) => void;
         errorListeners.push(errorListener);
@@ -606,8 +604,9 @@ export class NodeHostBridge {
   private readonly pendingObjectIds = new Set<number>();
   private readonly workerDirectory: string | undefined;
   private initPromise: Promise<void> | null = null;
-  private workspaceAliasesPromise: Promise<Readonly<Record<string, string>>> | null =
-    null;
+  private workspaceAliasesPromise: Promise<
+    Readonly<Record<string, string>>
+  > | null = null;
 
   public constructor(
     machine: Win64Machine,
@@ -883,7 +882,8 @@ export class NodeHostBridge {
         );
         const entry = process.machine.fileSystem.getEntry(normalized);
         if (entry && entry.kind === 'file') {
-          const hostPath = process.machine.fileSystem.resolveHostPath(normalized);
+          const hostPath =
+            process.machine.fileSystem.resolveHostPath(normalized);
           if (hostPath) {
             scriptPath = hostPath;
           } else {
@@ -1098,9 +1098,8 @@ export class NodeHostBridge {
           hostPath(),
           hostUrl(),
         ]);
-        const workspaceRoot = this.machine.fileSystem.resolveHostPath(
-          WIN32_WORKSPACE_PATH,
-        );
+        const workspaceRoot =
+          this.machine.fileSystem.resolveHostPath(WIN32_WORKSPACE_PATH);
         if (!workspaceRoot) {
           throw new Error(
             `${WIN32_WORKSPACE_PATH} must be bound to the repository root`,
@@ -1221,7 +1220,6 @@ export class NodeHostBridge {
         });
       }
     });
-
   }
 
   private async prepareRequest(
@@ -1258,7 +1256,6 @@ export class NodeHostBridge {
     request: NodeExecutionRequest,
   ): Promise<NodeExecutionResult> {
     return new Promise((resolve, reject) => {
-
       this.ensureInitialized()
         .then(async () => {
           const preparedRequest = await this.prepareRequest(request);
@@ -1282,7 +1279,10 @@ export class NodeHostBridge {
             inputType: preparedRequest.inputType ?? 'module',
             env: preparedRequest.env ?? {},
           };
-          const worker = await createHostExecutorProcess(workerScriptPath, payload);
+          const worker = await createHostExecutorProcess(
+            workerScriptPath,
+            payload,
+          );
           this.activeExecutors.add(worker);
           worker.on('message', (response: WorkerResponse) => {
             if (response.id !== id) return;
@@ -1312,7 +1312,6 @@ export class NodeHostBridge {
               });
             }
           });
-
         })
         .catch((error: Error) => reject(error));
     });

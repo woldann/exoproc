@@ -55,7 +55,8 @@ describe('classifyResolverTargets', () => {
 
   it('rejects a resolver missing from the source', () => {
     assert.throws(
-      () => classifyResolverTargets(buildResolverSource(new Set()), ['Absent_ptr']),
+      () =>
+        classifyResolverTargets(buildResolverSource(new Set()), ['Absent_ptr']),
       /cannot find resolver definition/,
     );
   });

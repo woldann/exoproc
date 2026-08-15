@@ -32,7 +32,9 @@ const registry = new Map<string, ServiceIdentifier<unknown>>();
 export function createDecorator<T>(id: string): ServiceIdentifier<T> {
   const existing = registry.get(id);
   if (existing) return existing as ServiceIdentifier<T>;
-  const identifier: ServiceIdentifier<T> = { serviceId: id } as ServiceIdentifier<T>;
+  const identifier: ServiceIdentifier<T> = {
+    serviceId: id,
+  } as ServiceIdentifier<T>;
   registry.set(id, identifier);
   return identifier;
 }

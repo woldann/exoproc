@@ -167,10 +167,15 @@ export class Scheduler {
   }
 
   public snapshotState(): SchedulerSnapshot {
-    const ref = (thread: Win64Thread): readonly [pid: number, tid: number] => [thread.process.pid, thread.tid];
+    const ref = (thread: Win64Thread): readonly [pid: number, tid: number] => [
+      thread.process.pid,
+      thread.tid,
+    ];
     return {
       ready: this.ready.map(ref),
-      objectWaiters: [...this.objectWaiters.entries()].map(([objectId, waiters]) => [objectId, [...waiters].map(ref)]),
+      objectWaiters: [...this.objectWaiters.entries()].map(
+        ([objectId, waiters]) => [objectId, [...waiters].map(ref)],
+      ),
       timerWaiters: this.timerWaiters.map((waiter) => ({
         pid: waiter.thread.process.pid,
         tid: waiter.thread.tid,
@@ -191,7 +196,10 @@ export class Scheduler {
 
     const link = (pid: number, tid: number): Win64Thread | undefined => {
       const thread = resolve(pid, tid);
-      if (!thread) console.warn(`vm-snapshot: dangling scheduler thread reference (${pid}:${tid}).`);
+      if (!thread)
+        console.warn(
+          `vm-snapshot: dangling scheduler thread reference (${pid}:${tid}).`,
+        );
       return thread;
     };
 
@@ -209,7 +217,8 @@ export class Scheduler {
     }
     for (const waiter of snapshot.timerWaiters) {
       const thread = link(waiter.pid, waiter.tid);
-      if (thread) this.timerWaiters.push({ thread, fireAtTick: waiter.fireAtTick });
+      if (thread)
+        this.timerWaiters.push({ thread, fireAtTick: waiter.fireAtTick });
     }
     this.clockTicks = snapshot.clockTicks;
   }
@@ -217,7 +226,14 @@ export class Scheduler {
 
 export interface SchedulerSnapshot {
   readonly ready: readonly (readonly [pid: number, tid: number])[];
-  readonly objectWaiters: readonly (readonly [objectId: number, waiters: readonly (readonly [pid: number, tid: number])[]])[];
-  readonly timerWaiters: readonly { readonly pid: number; readonly tid: number; readonly fireAtTick: number }[];
+  readonly objectWaiters: readonly (readonly [
+    objectId: number,
+    waiters: readonly (readonly [pid: number, tid: number])[],
+  ])[];
+  readonly timerWaiters: readonly {
+    readonly pid: number;
+    readonly tid: number;
+    readonly fireAtTick: number;
+  }[];
   readonly clockTicks: number;
 }

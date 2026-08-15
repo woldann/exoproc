@@ -63,7 +63,8 @@ export interface IKeybindingService {
   attach(): Disposable;
 }
 
-export const IKeybindingService = createDecorator<IKeybindingService>('keybindingService');
+export const IKeybindingService =
+  createDecorator<IKeybindingService>('keybindingService');
 
 export class KeybindingService implements IKeybindingService {
   public constructor(private readonly commands: ICommandService) {}

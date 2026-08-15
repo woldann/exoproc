@@ -1,4 +1,9 @@
-import type { Win64Machine, Win64Process, Win64Thread, X64Registers } from '@exoproc/simulate';
+import type {
+  Win64Machine,
+  Win64Process,
+  Win64Thread,
+  X64Registers,
+} from '@exoproc/simulate';
 
 /**
  * Generic dispatch machinery for `node.dll!createJSProcess`/
@@ -53,7 +58,10 @@ export type JsHostCallback = (
 const callbacks = new Map<string, JsHostCallback>();
 
 /** Case-insensitive, matching Windows image-name lookup elsewhere in the engine. */
-export function registerJsHostProgram(imageName: string, callback: JsHostCallback): void {
+export function registerJsHostProgram(
+  imageName: string,
+  callback: JsHostCallback,
+): void {
   callbacks.set(imageName.toLowerCase(), callback);
 }
 
@@ -65,14 +73,21 @@ export function registerNodeSyscalls(machine: Win64Machine): void {
   const results = new Map<number, PendingResult>();
 
   machine.registerHandler('node.dll', 'createJSProcess', () => {
-    const objectId = machine.createKernelObject({ kind: 'nodeInvocation', signaled: false });
+    const objectId = machine.createKernelObject({
+      kind: 'nodeInvocation',
+      signaled: false,
+    });
     return BigInt(objectId);
   });
 
   machine.registerHandler(
     'node.dll',
     'enterJSProcess',
-    (process: Win64Process, thread: Win64Thread, registers: X64Registers): bigint => {
+    (
+      process: Win64Process,
+      thread: Win64Thread,
+      registers: X64Registers,
+    ): bigint => {
       const objectId = Number(registers.RCX);
       const argc = Number(registers.RDX & 0xffffffffn);
       const argvPointer = registers.R8;
@@ -86,7 +101,9 @@ export function registerNodeSyscalls(machine: Win64Machine): void {
       const callback = callbacks.get(process.image.toLowerCase());
       if (!callback) {
         process.console.write(
-          new TextEncoder().encode(`node: "${process.image}" için kayıtlı bir JS işleyici yok.\r\n`),
+          new TextEncoder().encode(
+            `node: "${process.image}" için kayıtlı bir JS işleyici yok.\r\n`,
+          ),
         );
         return 1n;
       }
@@ -94,8 +111,11 @@ export function registerNodeSyscalls(machine: Win64Machine): void {
       callback(process, argc, argvPointer)
         .then((result) => complete(machine, results, objectId, result.exitCode))
         .catch((cause: unknown) => {
-          const message = cause instanceof Error ? cause.message : String(cause);
-          process.console.write(new TextEncoder().encode(`${process.image}: ${message}\r\n`));
+          const message =
+            cause instanceof Error ? cause.message : String(cause);
+          process.console.write(
+            new TextEncoder().encode(`${process.image}: ${message}\r\n`),
+          );
           complete(machine, results, objectId, 1);
         });
 
@@ -109,7 +129,11 @@ export function registerNodeSyscalls(machine: Win64Machine): void {
   machine.registerHandler(
     'node.dll',
     'terminateJSProcess',
-    (_process: Win64Process, _thread: Win64Thread, registers: X64Registers): bigint => {
+    (
+      _process: Win64Process,
+      _thread: Win64Thread,
+      registers: X64Registers,
+    ): bigint => {
       const objectId = Number(registers.RCX);
       const object = machine.getKernelObject(objectId);
       if (object && object.kind === 'nodeInvocation') object.signaled = true;
@@ -132,7 +156,11 @@ function complete(
 }
 
 /** `argvPointer` is a guest array of `argc` pointers, each a null-terminated string. */
-export function readArgv(process: Win64Process, argvPointer: bigint, argc: number): string[] {
+export function readArgv(
+  process: Win64Process,
+  argvPointer: bigint,
+  argc: number,
+): string[] {
   const args: string[] = [];
   for (let index = 0; index < argc; index += 1) {
     const pointer = process.memory.readU64(argvPointer + BigInt(index) * 8n);

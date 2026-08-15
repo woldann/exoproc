@@ -507,7 +507,9 @@ export function cc(options: CCOptions) {
     }
     if (address === undefined) {
       symbols[requestedName] = () => {
-        throw new Error(`bun:ffi cc browser shim cannot resolve ${requestedName}`);
+        throw new Error(
+          `bun:ffi cc browser shim cannot resolve ${requestedName}`,
+        );
       };
     } else {
       symbols[requestedName] = callableAt(process, address, definition);

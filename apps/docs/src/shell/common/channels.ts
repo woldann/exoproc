@@ -42,21 +42,32 @@ export interface AppApi {
 /* ------------------------------------------------------------ cpu core */
 
 export type RegisterName =
-  | 'RAX' | 'RBX' | 'RCX' | 'RDX'
-  | 'RSI' | 'RDI' | 'RSP' | 'RBP'
+  | 'RAX'
+  | 'RBX'
+  | 'RCX'
+  | 'RDX'
+  | 'RSI'
+  | 'RDI'
+  | 'RSP'
+  | 'RBP'
   | 'RIP'
-  | 'R8'  | 'R9'  | 'R10' | 'R11'
-  | 'R12' | 'R13' | 'R14' | 'R15'
+  | 'R8'
+  | 'R9'
+  | 'R10'
+  | 'R11'
+  | 'R12'
+  | 'R13'
+  | 'R14'
+  | 'R15'
   | 'RFLAGS';
 
 export type RegisterFile = Readonly<Record<RegisterName, bigint>>;
 
 export type ThreadState =
-  | 'ready' | 'running' | 'waiting'
-  | 'stopped' | 'terminated' | 'faulted';
+  'ready' | 'running' | 'waiting' | 'stopped' | 'terminated' | 'faulted';
 
 export type StopReason =
-  | 'step' | 'breakpoint' | 'watchpoint' | 'halted' | 'fault';
+  'step' | 'breakpoint' | 'watchpoint' | 'halted' | 'fault';
 
 export type MemoryProtection = 'r' | 'rw' | 'rx' | 'rwx';
 
@@ -237,7 +248,11 @@ export interface DebugApi {
   /** RIP followed by up to 16 executable return addresses found walking the stack. */
   getCallStack(ref: DebugThreadRef): Promise<readonly bigint[]>;
   /** The debugger's one write into CPU register state -- a `SetThreadContext`-style edit. */
-  writeRegister(ref: DebugThreadRef, name: RegisterName, value: bigint): Promise<void>;
+  writeRegister(
+    ref: DebugThreadRef,
+    name: RegisterName,
+    value: bigint,
+  ): Promise<void>;
   addBreakpoint(ref: DebugThreadRef, address: bigint): Promise<void>;
   removeBreakpoint(ref: DebugThreadRef, address: bigint): Promise<void>;
   disassemble(
@@ -245,8 +260,13 @@ export interface DebugApi {
     address: bigint,
     count: number,
   ): Promise<readonly InstructionDto[]>;
-  decode(ref: DebugThreadRef, address: bigint): Promise<InstructionDto | undefined>;
-  onDidChangeThread(listener: (snapshot: ThreadSnapshotDto) => void): () => void;
+  decode(
+    ref: DebugThreadRef,
+    address: bigint,
+  ): Promise<InstructionDto | undefined>;
+  onDidChangeThread(
+    listener: (snapshot: ThreadSnapshotDto) => void,
+  ): () => void;
 }
 
 /* -------------------------------------------------------------- memory */
@@ -274,9 +294,7 @@ export interface MemoryApi {
 /* ---------------------------------------------------------------- scan */
 
 export type ScanValueType =
-  | 'i8' | 'i16' | 'i32' | 'i64'
-  | 'f32' | 'f64'
-  | 'bytes' | 'string';
+  'i8' | 'i16' | 'i32' | 'i64' | 'f32' | 'f64' | 'bytes' | 'string';
 
 export type ScanStringEncoding = 'ascii' | 'utf16';
 
@@ -459,8 +477,14 @@ export interface FsApi {
   ): Promise<void>;
   createDirectory(path: string): Promise<void>;
   delete(path: string, options?: DeleteOptions): Promise<void>;
-  rename(source: string, target: string, options?: RenameOptions): Promise<void>;
-  onDidChangeFile(listener: (changes: readonly FileChangeDto[]) => void): () => void;
+  rename(
+    source: string,
+    target: string,
+    options?: RenameOptions,
+  ): Promise<void>;
+  onDidChangeFile(
+    listener: (changes: readonly FileChangeDto[]) => void,
+  ): () => void;
 }
 
 /* --------------------------------------------------------------- workspace */
@@ -629,4 +653,3 @@ export interface SnapshotApi {
   remove(id: string): Promise<void>;
   onDidChangeList(listener: () => void): () => void;
 }
-

@@ -20,7 +20,6 @@
       "types": "./dist/worker/index.d.ts",
       "import": "./dist/worker/index.js"
     },
-
     "./files": {
       "types": "./dist/platform/files/index.d.ts",
       "import": "./dist/platform/files/index.js"

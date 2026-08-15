@@ -1,4 +1,8 @@
-import type { InstructionDto, ProcessSnapshotDto, RegisterName } from '../../shell/common/channels';
+import type {
+  InstructionDto,
+  ProcessSnapshotDto,
+  RegisterName,
+} from '../../shell/common/channels';
 
 /** Safety cap for Continue / Step Out / Run-to-cursor -- not a UX limit, just a runaway guard. */
 export const MAX_CONTINUE_STEPS = 50_000;
@@ -12,15 +16,31 @@ export const TRACE_LIMIT = 512;
 export const LINE_HEIGHT = 18;
 
 export const REGISTER_ORDER: readonly RegisterName[] = [
-  'RIP', 'RSP', 'RBP', 'RAX', 'RBX', 'RCX', 'RDX',
-  'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15',
-  'RSI', 'RDI', 'RFLAGS',
+  'RIP',
+  'RSP',
+  'RBP',
+  'RAX',
+  'RBX',
+  'RCX',
+  'RDX',
+  'R8',
+  'R9',
+  'R10',
+  'R11',
+  'R12',
+  'R13',
+  'R14',
+  'R15',
+  'RSI',
+  'RDI',
+  'RFLAGS',
 ];
 
 export const hex = (value: bigint, width = 16) =>
   `0x${value.toString(16).toUpperCase().padStart(width, '0')}`;
 
-export const byteHex = (value: number) => value.toString(16).toUpperCase().padStart(2, '0');
+export const byteHex = (value: number) =>
+  value.toString(16).toUpperCase().padStart(2, '0');
 
 export const operationOf = (instruction: InstructionDto) =>
   [instruction.mnemonic, instruction.operands].filter(Boolean).join(' ');
@@ -71,7 +91,10 @@ export function encodeLittleEndian(value: bigint, width: number): Uint8Array {
  * image is not in `process.modules`, so addresses inside its own mapped
  * sections are labelled from `process.image` + `process.imageBase`.
  */
-export function resolveSymbol(process: ProcessSnapshotDto, address: bigint): string {
+export function resolveSymbol(
+  process: ProcessSnapshotDto,
+  address: bigint,
+): string {
   for (const mod of process.modules) {
     if (address >= mod.base && address < mod.base + BigInt(mod.size)) {
       for (const [name, exportAddress] of mod.exports) {
@@ -92,7 +115,9 @@ export function resolveSymbol(process: ProcessSnapshotDto, address: bigint): str
 /** Never swallow a fault: keep the runtime's own name + message. */
 export function describeError(error: unknown): string {
   if (error instanceof Error) {
-    return error.name && error.name !== 'Error' ? `${error.name}: ${error.message}` : error.message;
+    return error.name && error.name !== 'Error'
+      ? `${error.name}: ${error.message}`
+      : error.message;
   }
   return String(error);
 }

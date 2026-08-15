@@ -80,12 +80,10 @@
     "dotenv": "^16.6.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
-
     "globals": "^14.0.0",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
-
     "typescript": "~5.5.4",
     "typescript-eslint": "^7.0.2",
     "unzipper": "^0.12.3",

@@ -35,7 +35,9 @@ describe('Win64Machine snapshot/restore', () => {
     process.lastError = 5;
 
     const snapshot = machine.snapshot();
-    const restored = Win64Machine.restore(snapshot, { enableNodeHostBridge: false });
+    const restored = Win64Machine.restore(snapshot, {
+      enableNodeHostBridge: false,
+    });
 
     const restoredProcess = restored.getProcess(process.pid);
     assert.ok(restoredProcess);
@@ -86,13 +88,22 @@ describe('Win64Machine snapshot/restore', () => {
     );
     assert.ok(mappingA.cow);
     const clone = CoWMapping.cloneAsCoW(mappingA.cow, pool);
-    const mappingB = processB.memory.mapWithCoW('shared-region', 'shared region', 0n, 0x1000, 'rw', clone);
+    const mappingB = processB.memory.mapWithCoW(
+      'shared-region',
+      'shared region',
+      0n,
+      0x1000,
+      'rw',
+      clone,
+    );
 
     const originalPfn = mappingA.cow.pageTable[0]!.physicalPage.pfn;
     assert.equal(mappingB.cow!.pageTable[0]!.physicalPage.pfn, originalPfn);
 
     const snapshot = machine.snapshot();
-    const restored = Win64Machine.restore(snapshot, { enableNodeHostBridge: false });
+    const restored = Win64Machine.restore(snapshot, {
+      enableNodeHostBridge: false,
+    });
     const restoredA = restored.getProcess(processA.pid)!;
     const restoredB = restored.getProcess(processB.pid)!;
     const restoredMappingA = restoredA.memory.getMapping('shared-region')!;
@@ -102,16 +113,31 @@ describe('Win64Machine snapshot/restore', () => {
 
     // (a) True object-identity sharing, not incidentally-equal copies.
     const restoredPage = restoredMappingA.cow!.pageTable[0]!.physicalPage;
-    assert.equal(restoredMappingB.cow!.pageTable[0]!.physicalPage, restoredPage);
+    assert.equal(
+      restoredMappingB.cow!.pageTable[0]!.physicalPage,
+      restoredPage,
+    );
     assert.equal(restoredPage.pfn, originalPfn);
-    assert.deepEqual(restoredA.memory.read(baseA, 4), Uint8Array.from([9, 9, 9, 9]));
-    assert.deepEqual(restoredB.memory.read(baseB, 4), Uint8Array.from([9, 9, 9, 9]));
+    assert.deepEqual(
+      restoredA.memory.read(baseA, 4),
+      Uint8Array.from([9, 9, 9, 9]),
+    );
+    assert.deepEqual(
+      restoredB.memory.read(baseB, 4),
+      Uint8Array.from([9, 9, 9, 9]),
+    );
 
     // (b) Writing through one restored mapping triggers a private copy
     // without disturbing the other process's page.
     restoredA.memory.write(baseA, Uint8Array.from([1, 2, 3, 4]));
-    assert.deepEqual(restoredA.memory.read(baseA, 4), Uint8Array.from([1, 2, 3, 4]));
-    assert.deepEqual(restoredB.memory.read(baseB, 4), Uint8Array.from([9, 9, 9, 9]));
+    assert.deepEqual(
+      restoredA.memory.read(baseA, 4),
+      Uint8Array.from([1, 2, 3, 4]),
+    );
+    assert.deepEqual(
+      restoredB.memory.read(baseB, 4),
+      Uint8Array.from([9, 9, 9, 9]),
+    );
     assert.notEqual(
       restoredMappingA.cow!.pageTable[0]!.physicalPage.pfn,
       restoredMappingB.cow!.pageTable[0]!.physicalPage.pfn,
@@ -121,28 +147,48 @@ describe('Win64Machine snapshot/restore', () => {
     // (the literal double-free/leak scenario this design guards against).
     const sharedPfn = restoredMappingB.cow!.pageTable[0]!.physicalPage.pfn;
     restoredA.memory.unmap('shared-region');
-    assert.ok(restored.physicalPagePool.getPage(sharedPfn), 'page must survive while B still references it');
+    assert.ok(
+      restored.physicalPagePool.getPage(sharedPfn),
+      'page must survive while B still references it',
+    );
     restoredB.memory.unmap('shared-region');
-    assert.equal(restored.physicalPagePool.getPage(sharedPfn), undefined, 'page must be freed once the last reference is gone');
+    assert.equal(
+      restored.physicalPagePool.getPage(sharedPfn),
+      undefined,
+      'page must be freed once the last reference is gone',
+    );
   });
 
   it('re-links scheduler wait state to the restored thread graph', () => {
     const machine = new Win64Machine({ enableNodeHostBridge: false });
     const process = makeProcess(machine);
     const thread = process.createThread('waiter', process.imageBase + 0x1000n);
-    const objectId = machine.createKernelObject({ kind: 'nodeInvocation', signaled: false });
+    const objectId = machine.createKernelObject({
+      kind: 'nodeInvocation',
+      signaled: false,
+    });
     thread.state = 'waiting';
     machine.scheduler.blockOnObject(thread, objectId);
 
     const snapshot = machine.snapshot();
-    const restored = Win64Machine.restore(snapshot, { enableNodeHostBridge: false });
-    const restoredThread = restored.getProcess(process.pid)!.getThread(thread.tid)!;
+    const restored = Win64Machine.restore(snapshot, {
+      enableNodeHostBridge: false,
+    });
+    const restoredThread = restored
+      .getProcess(process.pid)!
+      .getThread(thread.tid)!;
 
     assert.equal(restoredThread.state, 'waiting');
-    assert.equal(restored.scheduler.findWaitedObjectId(restoredThread), objectId);
+    assert.equal(
+      restored.scheduler.findWaitedObjectId(restoredThread),
+      objectId,
+    );
 
     restored.scheduler.signalObject(objectId);
-    assert.equal(restored.scheduler.findWaitedObjectId(restoredThread), undefined);
+    assert.equal(
+      restored.scheduler.findWaitedObjectId(restoredThread),
+      undefined,
+    );
   });
 
   it('round-trips a real heap allocation via the actual GetProcessHeap/HeapAlloc syscalls', () => {
@@ -170,11 +216,16 @@ describe('Win64Machine snapshot/restore', () => {
     process.memory.write(pointer, Uint8Array.from([7, 7, 7, 7]));
 
     const snapshot = machine.snapshot();
-    const restored = Win64Machine.restore(snapshot, { enableNodeHostBridge: false });
+    const restored = Win64Machine.restore(snapshot, {
+      enableNodeHostBridge: false,
+    });
     const restoredProcess = restored.getProcess(process.pid)!;
     const restoredThread = restoredProcess.getThread(thread.tid)!;
 
-    assert.deepEqual(restoredProcess.memory.read(pointer, 4), Uint8Array.from([7, 7, 7, 7]));
+    assert.deepEqual(
+      restoredProcess.memory.read(pointer, 4),
+      Uint8Array.from([7, 7, 7, 7]),
+    );
 
     // Free through the restored heap -- proves `pageAllocator`/`pageDeallocator`
     // closures were correctly rebound to the restored process, not left
@@ -198,21 +249,32 @@ describe('Win64Machine snapshot/restore', () => {
     // *does* have a `node:fs`/`node:path` available -- using the
     // workspace path here would silently write real files onto disk.
     const machine = new Win64Machine({ enableNodeHostBridge: false });
-    machine.fileSystem.writeTextFile('C:\\Users\\Serkan\\Documents\\before.txt', 'kept');
+    machine.fileSystem.writeTextFile(
+      'C:\\Users\\Serkan\\Documents\\before.txt',
+      'kept',
+    );
 
     const snapshot = machine.snapshot();
 
     // Written after the snapshot -- must not leak into the restored machine,
     // and must survive on the still-live original (independent instances).
-    machine.fileSystem.writeTextFile('C:\\Users\\Serkan\\Documents\\after.txt', 'not kept');
+    machine.fileSystem.writeTextFile(
+      'C:\\Users\\Serkan\\Documents\\after.txt',
+      'not kept',
+    );
 
-    const restored = Win64Machine.restore(snapshot, { enableNodeHostBridge: false });
+    const restored = Win64Machine.restore(snapshot, {
+      enableNodeHostBridge: false,
+    });
 
     assert.deepEqual(
       restored.fileSystem.readFile('C:\\Users\\Serkan\\Documents\\before.txt'),
       new TextEncoder().encode('kept'),
     );
-    assert.equal(restored.fileSystem.getEntry('C:\\Users\\Serkan\\Documents\\after.txt'), undefined);
+    assert.equal(
+      restored.fileSystem.getEntry('C:\\Users\\Serkan\\Documents\\after.txt'),
+      undefined,
+    );
     assert.deepEqual(
       machine.fileSystem.readFile('C:\\Users\\Serkan\\Documents\\after.txt'),
       new TextEncoder().encode('not kept'),
@@ -221,7 +283,9 @@ describe('Win64Machine snapshot/restore', () => {
     // Mutating the restored filesystem must never reach back into the
     // original -- same independence guarantee as memory/registers.
     restored.fileSystem.deleteFile('C:\\Users\\Serkan\\Documents\\before.txt');
-    assert.ok(machine.fileSystem.getEntry('C:\\Users\\Serkan\\Documents\\before.txt'));
+    assert.ok(
+      machine.fileSystem.getEntry('C:\\Users\\Serkan\\Documents\\before.txt'),
+    );
   });
 
   it('flags a live nodeInvocation wait and registered dynamic syscalls, never blocking', () => {
@@ -231,7 +295,10 @@ describe('Win64Machine snapshot/restore', () => {
     const machine = new Win64Machine({ enableNodeHostBridge: false });
     const process = makeProcess(machine);
     const thread = process.createThread('waiter', process.imageBase + 0x1000n);
-    const objectId = machine.createKernelObject({ kind: 'nodeInvocation', signaled: false });
+    const objectId = machine.createKernelObject({
+      kind: 'nodeInvocation',
+      signaled: false,
+    });
     thread.state = 'waiting';
     machine.scheduler.blockOnObject(thread, objectId);
 

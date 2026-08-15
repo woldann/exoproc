@@ -53,7 +53,8 @@ export function readFileSync(
     undefined,
     process.currentDirectory,
   );
-  const requested = typeof encoding === 'string' ? encoding : encoding?.encoding;
+  const requested =
+    typeof encoding === 'string' ? encoding : encoding?.encoding;
   // The compiler pipeline only requests UTF-8. Any other requested encoding
   // still decodes as UTF-8 rather than silently ignoring the request.
   if (requested) {
@@ -64,18 +65,26 @@ export function readFileSync(
 
 export function unlinkSync(path: PathLike): void {
   const process = getBoundWin64Process();
-  process.machine.fileSystem.deleteFile(resolvePath(path), process.currentDirectory);
+  process.machine.fileSystem.deleteFile(
+    resolvePath(path),
+    process.currentDirectory,
+  );
 }
 
 export function existsSync(path: PathLike): boolean {
   const process = getBoundWin64Process();
   return (
-    process.machine.fileSystem.getEntry(resolvePath(path), process.currentDirectory) !==
-    undefined
+    process.machine.fileSystem.getEntry(
+      resolvePath(path),
+      process.currentDirectory,
+    ) !== undefined
   );
 }
 
-export function mkdirSync(path: PathLike, _options?: unknown): string | undefined {
+export function mkdirSync(
+  path: PathLike,
+  _options?: unknown,
+): string | undefined {
   const process = getBoundWin64Process();
   process.machine.fileSystem.createDirectory(resolvePath(path));
   return undefined;
@@ -87,7 +96,8 @@ function fileStats(path: PathLike) {
     resolvePath(path),
     process.currentDirectory,
   );
-  if (!entry) throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
+  if (!entry)
+    throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
   return {
     size: entry.data.length,
     birthtime: entry.createdAt,
@@ -105,11 +115,13 @@ export const lstatSync = fileStats;
 export function readdirSync(
   path: PathLike,
   options?: { readonly withFileTypes?: boolean },
-): string[] | Array<{
-  readonly name: string;
-  isFile(): boolean;
-  isDirectory(): boolean;
-}> {
+):
+  | string[]
+  | Array<{
+      readonly name: string;
+      isFile(): boolean;
+      isDirectory(): boolean;
+    }> {
   const process = getBoundWin64Process();
   const entries = process.machine.fileSystem.readDirectory(
     resolvePath(path),
@@ -130,7 +142,10 @@ export function renameSync(source: PathLike, destination: PathLike): void {
   process.machine.fileSystem.deleteFile(resolvePath(source));
 }
 
-export function appendFileSync(path: PathLike, data: string | ArrayBufferView): void {
+export function appendFileSync(
+  path: PathLike,
+  data: string | ArrayBufferView,
+): void {
   const process = getBoundWin64Process();
   const resolved = resolvePath(path);
   const previous = existsSync(resolved)
@@ -195,7 +210,10 @@ export function createWriteStream(
 
 export const F_OK = 0;
 
-export function exists(path: PathLike, callback: (present: boolean) => void): void {
+export function exists(
+  path: PathLike,
+  callback: (present: boolean) => void,
+): void {
   queueMicrotask(() => callback(existsSync(path)));
 }
 
@@ -212,7 +230,10 @@ export function stat(
   });
 }
 
-export function unlink(path: PathLike, callback: (error?: Error | null) => void): void {
+export function unlink(
+  path: PathLike,
+  callback: (error?: Error | null) => void,
+): void {
   queueMicrotask(() => {
     try {
       unlinkSync(path);
@@ -238,7 +259,10 @@ export function rename(
   });
 }
 
-export function access(path: PathLike, callback: (error?: Error | null) => void): void {
+export function access(
+  path: PathLike,
+  callback: (error?: Error | null) => void,
+): void {
   queueMicrotask(() =>
     callback(existsSync(path) ? null : new Error(`ENOENT: ${path}`)),
   );

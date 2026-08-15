@@ -174,5 +174,8 @@ export interface Win64HeapStateSnapshot {
   readonly chunks: readonly Win64HeapChunk[];
   readonly bumpOffset: number;
   readonly pageSequence: number;
-  readonly pageMappings: readonly (readonly [offset: number, mappingId: string])[];
+  readonly pageMappings: readonly (readonly [
+    offset: number,
+    mappingId: string,
+  ])[];
 }

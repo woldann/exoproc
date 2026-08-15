@@ -87,7 +87,8 @@ export function registerFsHandlers(): void {
       // a not-yet-materialized nested path doesn't need a separate
       // `createDirectory` round trip first.
       const parent = targetPath.slice(0, targetPath.lastIndexOf('\\'));
-      if (parent && !fileSystem.isDirectory(parent)) fileSystem.createDirectory(parent);
+      if (parent && !fileSystem.isDirectory(parent))
+        fileSystem.createDirectory(parent);
       fileSystem.writeFile(targetPath, content);
       notifyChanged(path, 'updated');
     },
@@ -105,7 +106,9 @@ export function registerFsHandlers(): void {
     if (!entry) throw new Error(`Dosya bulunamadı: ${path}`);
     if (entry.kind === 'directory') {
       if (!options?.recursive) {
-        throw new Error(`"${path}" bir dizin -- silmek için recursive seçeneği gerekli.`);
+        throw new Error(
+          `"${path}" bir dizin -- silmek için recursive seçeneği gerekli.`,
+        );
       }
       if (!fileSystem.deleteDirectory(targetPath)) {
         throw new Error(`"${path}" silinemedi.`);
@@ -129,7 +132,9 @@ export function registerFsHandlers(): void {
       }
       if (entry.kind === 'directory') {
         if (!fileSystem.rename(windowsSource, windowsTarget)) {
-          throw new Error(`"${source}" -> "${target}" yeniden adlandırılamadı.`);
+          throw new Error(
+            `"${source}" -> "${target}" yeniden adlandırılamadı.`,
+          );
         }
       } else {
         fileSystem.writeFile(windowsTarget, fileSystem.readFile(windowsSource));

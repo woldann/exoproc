@@ -25,34 +25,45 @@ export interface ProcessShimHandle {
 export function installProcessShim(target: Win64Process): ProcessShimHandle {
   const pidDescriptor = Object.getOwnPropertyDescriptor(process, 'pid');
   const envDescriptor = Object.getOwnPropertyDescriptor(process, 'env');
-  const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+  const platformDescriptor = Object.getOwnPropertyDescriptor(
+    process,
+    'platform',
+  );
 
-  const environmentProxy = new Proxy(Object.create(null) as Record<string, string>, {
-    get(_target, property) {
-      if (typeof property !== 'string') return undefined;
-      return target.environment.get(property);
+  const environmentProxy = new Proxy(
+    Object.create(null) as Record<string, string>,
+    {
+      get(_target, property) {
+        if (typeof property !== 'string') return undefined;
+        return target.environment.get(property);
+      },
+      set(_target, property, value) {
+        if (typeof property !== 'string') return false;
+        target.environment.set(property, String(value));
+        return true;
+      },
+      has(_target, property) {
+        return (
+          typeof property === 'string' &&
+          target.environment.get(property) !== undefined
+        );
+      },
+      deleteProperty(_target, property) {
+        return (
+          typeof property === 'string' && target.environment.delete(property)
+        );
+      },
+      ownKeys() {
+        return target.environment.entries().map(([name]) => name);
+      },
+      getOwnPropertyDescriptor(_target, property) {
+        if (typeof property !== 'string') return undefined;
+        const value = target.environment.get(property);
+        if (value === undefined) return undefined;
+        return { value, writable: true, enumerable: true, configurable: true };
+      },
     },
-    set(_target, property, value) {
-      if (typeof property !== 'string') return false;
-      target.environment.set(property, String(value));
-      return true;
-    },
-    has(_target, property) {
-      return typeof property === 'string' && target.environment.get(property) !== undefined;
-    },
-    deleteProperty(_target, property) {
-      return typeof property === 'string' && target.environment.delete(property);
-    },
-    ownKeys() {
-      return target.environment.entries().map(([name]) => name);
-    },
-    getOwnPropertyDescriptor(_target, property) {
-      if (typeof property !== 'string') return undefined;
-      const value = target.environment.get(property);
-      if (value === undefined) return undefined;
-      return { value, writable: true, enumerable: true, configurable: true };
-    },
-  });
+  );
 
   Object.defineProperty(process, 'pid', {
     value: target.pid,

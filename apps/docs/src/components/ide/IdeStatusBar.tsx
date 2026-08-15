@@ -55,7 +55,9 @@ export function IdeStatusBar() {
       }`}
     >
       <span className="flex shrink-0 items-center gap-1.5">
-        <span className={`inline-block size-2 rounded-full ${session.stateDotClass}`} />
+        <span
+          className={`inline-block size-2 rounded-full ${session.stateDotClass}`}
+        />
         {session.stateLabel}
       </span>
       {session.suspendCount > 0 ? (
@@ -71,8 +73,8 @@ export function IdeStatusBar() {
         {session.messageText}
       </span>
       <span className="ml-auto shrink-0 whitespace-nowrap opacity-90">
-        RIP {session.rip} &middot; {session.image} &middot; PID {session.pid} &middot;
-        TID {session.tid}
+        RIP {session.rip} &middot; {session.image} &middot; PID {session.pid}{' '}
+        &middot; TID {session.tid}
       </span>
     </div>
   );
@@ -84,7 +86,10 @@ function StatusbarItem({
   readonly entry: { readonly text: string; readonly tooltip?: string };
 }) {
   return (
-    <span className="shrink-0 whitespace-nowrap opacity-90" title={entry.tooltip}>
+    <span
+      className="shrink-0 whitespace-nowrap opacity-90"
+      title={entry.tooltip}
+    >
       {entry.text}
     </span>
   );

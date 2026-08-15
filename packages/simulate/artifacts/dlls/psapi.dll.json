@@ -50,12 +50,7 @@
       "thunkBytes": 16,
       "syscallId": 28672,
       "binding": "syscall",
-      "args": [
-        12,
-        12,
-        12,
-        6
-      ],
+      "args": [12, 12, 12, 6],
       "returns": 5,
       "compilerBytes": "b8 00 70 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
       "linkedBytes": "b8 00 70 00 00 0f 05 c3 90 90 90 90 90 90 90 90",

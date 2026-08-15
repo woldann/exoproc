@@ -31,7 +31,9 @@ function u32(view: DataView, offset: number, value: number): void {
   view.setUint32(offset, value, true);
 }
 
-async function buildZip(entries: readonly ZipEntryInput[]): Promise<Uint8Array> {
+async function buildZip(
+  entries: readonly ZipEntryInput[],
+): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const localParts: Uint8Array[] = [];
   const centralParts: Uint8Array[] = [];
@@ -124,22 +126,38 @@ function check(label: string, actual: unknown, expected: unknown) {
   const e = JSON.stringify(expected);
   const ok = a === e;
   if (!ok) failures += 1;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${label}${ok ? '' : `  got=${a} want=${e}`}`);
+  console.log(
+    `${ok ? 'ok  ' : 'FAIL'} ${label}${ok ? '' : `  got=${a} want=${e}`}`,
+  );
 }
 
 // ------------------------------------------ top-level prefix stripping
 {
   const zip = await buildZip([
-    { name: 'demo-main/README.md', content: enc.encode('hello from readme, '.repeat(20)) },
-    { name: 'demo-main/src/main.ts', content: enc.encode('export const x = 1;\n'.repeat(10)) },
-    { name: 'demo-main/src/util.ts', content: enc.encode('stored content'), store: true },
+    {
+      name: 'demo-main/README.md',
+      content: enc.encode('hello from readme, '.repeat(20)),
+    },
+    {
+      name: 'demo-main/src/main.ts',
+      content: enc.encode('export const x = 1;\n'.repeat(10)),
+    },
+    {
+      name: 'demo-main/src/util.ts',
+      content: enc.encode('stored content'),
+      store: true,
+    },
     { name: 'demo-main/empty-dir/', content: new Uint8Array() },
   ]);
 
   const fs = new ZipFsProvider(zip);
 
   const root = (await fs.readDirectory(u('/'))).map(([n]) => n).sort();
-  check('prefix stripped from root listing', root, ['README.md', 'empty-dir', 'src']);
+  check('prefix stripped from root listing', root, [
+    'README.md',
+    'empty-dir',
+    'src',
+  ]);
 
   check(
     'deflated file decompresses correctly',
@@ -161,11 +179,19 @@ function check(label: string, actual: unknown, expected: unknown) {
   check('nested directory listing', src, ['main.ts', 'util.ts']);
 
   const emptyDirStat = await fs.stat(u('/empty-dir'));
-  check('explicit directory entry recognized', emptyDirStat.type, 2 /* FileType.Directory */);
+  check(
+    'explicit directory entry recognized',
+    emptyDirStat.type,
+    2 /* FileType.Directory */,
+  );
 
   const fileStat = await fs.stat(u('/README.md'));
   check('file stat reports readonly', fileStat.readonly, true);
-  check('file stat reports correct size', fileStat.size, enc.encode('hello from readme, '.repeat(20)).length);
+  check(
+    'file stat reports correct size',
+    fileStat.size,
+    enc.encode('hello from readme, '.repeat(20)).length,
+  );
 }
 
 // --------------------------------------------------- no common prefix
@@ -176,7 +202,10 @@ function check(label: string, actual: unknown, expected: unknown) {
   ]);
   const fs = new ZipFsProvider(zip);
   const root = (await fs.readDirectory(u('/'))).map(([n]) => n).sort();
-  check('no stripping when there is no shared top folder', root, ['a.txt', 'b.txt']);
+  check('no stripping when there is no shared top folder', root, [
+    'a.txt',
+    'b.txt',
+  ]);
 }
 
 // -------------------------------------------------------- readonly writes
@@ -185,7 +214,10 @@ function check(label: string, actual: unknown, expected: unknown) {
   const fs = new ZipFsProvider(zip);
   let rejected = false;
   try {
-    await fs.writeFile(u('/only.txt'), enc.encode('y'), { create: false, overwrite: true });
+    await fs.writeFile(u('/only.txt'), enc.encode('y'), {
+      create: false,
+      overwrite: true,
+    });
   } catch {
     rejected = true;
   }

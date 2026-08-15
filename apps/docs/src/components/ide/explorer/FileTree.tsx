@@ -40,7 +40,9 @@ export function FileTree({ service, selectedId, onOpenFile }: FileTreeProps) {
     try {
       await service.createFile(service.root, trimmed);
     } catch (cause) {
-      window.alert(cause instanceof Error ? cause.message : 'Dosya oluşturulamadı.');
+      window.alert(
+        cause instanceof Error ? cause.message : 'Dosya oluşturulamadı.',
+      );
     }
   };
 
@@ -109,7 +111,11 @@ function FileTreeItem({
   const deleteItem = async (event: MouseEvent) => {
     event.stopPropagation();
     const kind = item.isDirectory ? 'klasör' : 'dosya';
-    if (!window.confirm(`"${item.name}" ${kind}ı${item.isDirectory ? ' ve içindeki her şey' : ''} silinsin mi?`)) {
+    if (
+      !window.confirm(
+        `"${item.name}" ${kind}ı${item.isDirectory ? ' ve içindeki her şey' : ''} silinsin mi?`,
+      )
+    ) {
       return;
     }
     setDeleting(true);
@@ -302,18 +308,44 @@ function TreeIcon({
 }) {
   if (item.isDirectory) {
     const FolderIcon = expanded ? FolderOpen : Folder;
-    return <FolderIcon aria-hidden="true" className="size-3.5 shrink-0 text-[#dcb67a]" />;
+    return (
+      <FolderIcon
+        aria-hidden="true"
+        className="size-3.5 shrink-0 text-[#dcb67a]"
+      />
+    );
   }
 
-  const extension = item.name.slice(item.name.lastIndexOf('.') + 1).toLowerCase();
+  const extension = item.name
+    .slice(item.name.lastIndexOf('.') + 1)
+    .toLowerCase();
   if (extension === 'json') {
-    return <FileJson aria-hidden="true" className="size-3.5 shrink-0 text-[#e5c07b]" />;
+    return (
+      <FileJson
+        aria-hidden="true"
+        className="size-3.5 shrink-0 text-[#e5c07b]"
+      />
+    );
   }
-  if (['ts', 'tsx', 'js', 'jsx', 'c', 'cpp', 'h', 'hpp', 'rs'].includes(extension)) {
-    return <FileCode2 aria-hidden="true" className="size-3.5 shrink-0 text-[#75beff]" />;
+  if (
+    ['ts', 'tsx', 'js', 'jsx', 'c', 'cpp', 'h', 'hpp', 'rs'].includes(extension)
+  ) {
+    return (
+      <FileCode2
+        aria-hidden="true"
+        className="size-3.5 shrink-0 text-[#75beff]"
+      />
+    );
   }
   if (['md', 'mdx', 'txt'].includes(extension)) {
-    return <FileText aria-hidden="true" className="size-3.5 shrink-0 text-[#a9dc76]" />;
+    return (
+      <FileText
+        aria-hidden="true"
+        className="size-3.5 shrink-0 text-[#a9dc76]"
+      />
+    );
   }
-  return <File aria-hidden="true" className="size-3.5 shrink-0 text-[#c5c5c5]" />;
+  return (
+    <File aria-hidden="true" className="size-3.5 shrink-0 text-[#c5c5c5]" />
+  );
 }

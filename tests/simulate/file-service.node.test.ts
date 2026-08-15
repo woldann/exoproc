@@ -28,7 +28,10 @@ describe('platform file services', () => {
       resource.toString(),
       'file:///C:/Users/Serkan/Workspace/src/index.ts',
     );
-    assert.equal(ResourceUri.parse(resource.toString()).fsPath, resource.fsPath);
+    assert.equal(
+      ResourceUri.parse(resource.toString()).fsPath,
+      resource.fsPath,
+    );
   });
 
   it('routes lazy directory and file operations through the registered provider', async () => {

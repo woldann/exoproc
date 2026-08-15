@@ -14,7 +14,9 @@
 
 export function normalizePath(path: string): string {
   const withSlashes = path.replace(/\\/g, '/');
-  const withLeadingSlash = withSlashes.startsWith('/') ? withSlashes : `/${withSlashes}`;
+  const withLeadingSlash = withSlashes.startsWith('/')
+    ? withSlashes
+    : `/${withSlashes}`;
   const collapsed = withLeadingSlash.replace(/\/+/g, '/');
   return collapsed.length > 1 ? collapsed.replace(/\/$/, '') : collapsed;
 }

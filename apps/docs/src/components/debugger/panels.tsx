@@ -83,7 +83,8 @@ export function RegistersPanel({ session }: { session: DebugSession }) {
         })}
       </dl>
       <p className="m-0 px-3 py-1.5 text-[0.65rem] leading-relaxed text-[#858585]">
-        Değere tıklayıp yeni bir değer yazın (0x… / 1F4h / ondalık). Enter yazar, Esc iptal eder.
+        Değere tıklayıp yeni bir değer yazın (0x… / 1F4h / ondalık). Enter
+        yazar, Esc iptal eder.
       </p>
     </CollapsiblePanel>
   );
@@ -114,7 +115,9 @@ export function CallStackPanel({ session }: { session: DebugSession }) {
           </button>
         ))}
         {callStackNote && (
-          <p className="m-0 px-3 py-1.5 text-[0.65rem] leading-relaxed text-amber-400">{callStackNote}</p>
+          <p className="m-0 px-3 py-1.5 text-[0.65rem] leading-relaxed text-amber-400">
+            {callStackNote}
+          </p>
         )}
       </div>
     </CollapsiblePanel>
@@ -125,7 +128,8 @@ export function CallStackPanel({ session }: { session: DebugSession }) {
  * BREAKPOINTS
  * ================================================================ */
 export function BreakpointsPanel({ session }: { session: DebugSession }) {
-  const { breakpoints, removeBreakpoint, clearBreakpoints, gotoDisassembly } = session;
+  const { breakpoints, removeBreakpoint, clearBreakpoints, gotoDisassembly } =
+    session;
   return (
     <CollapsiblePanel
       title="BREAKPOINTS"
@@ -193,7 +197,8 @@ export function TracePanel({ session }: { session: DebugSession }) {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-[#2d2d2d] px-3 py-1.5">
         <span className="font-mono text-[0.65rem] text-[#858585]">
-          Yürütülen instruction geçmişi — en yenisi altta, son {trace.length} kayıt tutuluyor.
+          Yürütülen instruction geçmişi — en yenisi altta, son {trace.length}{' '}
+          kayıt tutuluyor.
         </span>
         <button
           type="button"
@@ -204,7 +209,10 @@ export function TracePanel({ session }: { session: DebugSession }) {
           Temizle
         </button>
       </div>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto px-3 py-1.5 font-mono text-xs">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-auto px-3 py-1.5 font-mono text-xs"
+      >
         {trace.length === 0 ? (
           <div className="text-[#858585]">
             Henüz hiçbir instruction yürütülmedi. Step Into ile başlayın.
@@ -220,8 +228,12 @@ export function TracePanel({ session }: { session: DebugSession }) {
             >
               <code className="text-[#5a5a5a] tabular-nums">{index + 1}</code>
               <code className="text-[#858585]">{hex(instruction.address)}</code>
-              <code className="text-[#6a9955]">{Array.from(instruction.bytes, byteHex).join(' ')}</code>
-              <code className="overflow-hidden text-ellipsis text-[#cccccc]">{operationOf(instruction)}</code>
+              <code className="text-[#6a9955]">
+                {Array.from(instruction.bytes, byteHex).join(' ')}
+              </code>
+              <code className="overflow-hidden text-ellipsis text-[#cccccc]">
+                {operationOf(instruction)}
+              </code>
             </button>
           ))
         )}
@@ -266,7 +278,8 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
       return;
     }
     if (editingByte === undefined) return;
-    if (await writeMemoryByte(editingByte, byteDraft)) setEditingByte(undefined);
+    if (await writeMemoryByte(editingByte, byteDraft))
+      setEditingByte(undefined);
   };
 
   const cancelByte = () => {
@@ -276,14 +289,17 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
 
   /** An empty address box targets whatever the hex view is currently showing. */
   const effectiveWriteAddress = writeAddress.trim() || memoryBase;
-  const submitWrite = () => writeMemoryValue(effectiveWriteAddress, writeValue, writeWidth);
+  const submitWrite = () =>
+    writeMemoryValue(effectiveWriteAddress, writeValue, writeWidth);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* View controls */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[#2d2d2d] px-3 py-1.5">
         <label className="flex items-center gap-1.5">
-          <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">Mapping</span>
+          <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">
+            Mapping
+          </span>
           <select
             value={memoryMappingId}
             onChange={(event) => selectMapping(event.target.value)}
@@ -297,7 +313,9 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
           </select>
         </label>
         <label className="flex items-center gap-1.5">
-          <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">Adres</span>
+          <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">
+            Adres
+          </span>
           <input
             value={memoryBase}
             spellCheck={false}
@@ -320,7 +338,9 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
           Adrese git
         </button>
         <label className="flex items-center gap-1.5">
-          <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">Byte</span>
+          <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">
+            Byte
+          </span>
           <input
             type="number"
             min={16}
@@ -338,7 +358,9 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
 
       {/* Typed write box */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[#2d2d2d] px-3 py-1.5">
-        <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">Yazma</span>
+        <span className="text-[0.65rem] font-semibold tracking-wide text-[#858585] uppercase">
+          Yazma
+        </span>
         <input
           value={writeAddress}
           spellCheck={false}
@@ -362,7 +384,9 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
         />
         <select
           value={writeWidth}
-          onChange={(event) => setWriteWidth(Number(event.target.value) as MemoryWriteWidth)}
+          onChange={(event) =>
+            setWriteWidth(Number(event.target.value) as MemoryWriteWidth)
+          }
           className="rounded border border-[#3c3c3c] bg-[#3c3c3c] px-1.5 py-1 text-xs text-[#cccccc]"
         >
           {WIDTHS.map((width) => (
@@ -371,11 +395,16 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
             </option>
           ))}
         </select>
-        <button type="button" onClick={submitWrite} className={GHOST_BUTTON_CLASS}>
+        <button
+          type="button"
+          onClick={submitWrite}
+          className={GHOST_BUTTON_CLASS}
+        >
           Yaz
         </button>
         <span className="text-[0.65rem] text-[#858585]">
-          Little-endian yazılır; yazılamayan bir mapping&apos;e deneme gerçek MemoryAccessFault üretir.
+          Little-endian yazılır; yazılamayan bir mapping&apos;e deneme gerçek
+          MemoryAccessFault üretir.
         </span>
       </div>
 
@@ -429,7 +458,9 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
                       setByteDraft(byteHex(byte));
                     }}
                     className={`cursor-pointer rounded-sm text-left hover:bg-[#3c3c3c] ${
-                      isWrittenByte(address) ? 'bg-amber-500/20 text-amber-400' : 'text-[#cccccc]'
+                      isWrittenByte(address)
+                        ? 'bg-amber-500/20 text-amber-400'
+                        : 'text-[#cccccc]'
                     }`}
                   >
                     <code>{byteHex(byte)}</code>
@@ -441,7 +472,9 @@ export function MemoryPanel({ session }: { session: DebugSession }) {
           </div>
         ))}
         {memoryRows.length === 0 && !memoryError && (
-          <div className="text-[#858585]">Seçilen adres bu mapping içinde değil.</div>
+          <div className="text-[#858585]">
+            Seçilen adres bu mapping içinde değil.
+          </div>
         )}
       </div>
     </div>

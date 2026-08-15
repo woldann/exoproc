@@ -43,9 +43,8 @@ export interface IExplorerService {
   readonly onDidChange: Event<void>;
 }
 
-export const IExplorerService = createDecorator<IExplorerService>(
-  'explorerService',
-);
+export const IExplorerService =
+  createDecorator<IExplorerService>('explorerService');
 
 function rootItem(name: string): ExplorerItem {
   return { id: '/', name, path: '/', isDirectory: true };
@@ -119,7 +118,10 @@ export class ExplorerService implements IExplorerService {
     return this.fileService.readFileText(file.path);
   }
 
-  public async createFile(directory: ExplorerItem, name: string): Promise<void> {
+  public async createFile(
+    directory: ExplorerItem,
+    name: string,
+  ): Promise<void> {
     const siblings = await this.resolveChildren(directory);
     if (siblings.some((entry) => entry.name === name)) {
       throw new Error(`"${name}" zaten mevcut.`);

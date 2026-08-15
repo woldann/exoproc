@@ -113,7 +113,12 @@ export function registerScanHandlers(): void {
       length: number,
       type: ScanValueType,
       encoding?: ScanStringEncoding,
-    ) => decodeScanValue(type, requireProcess(pid).memory.read(address, length), encoding),
+    ) =>
+      decodeScanValue(
+        type,
+        requireProcess(pid).memory.read(address, length),
+        encoding,
+      ),
   );
 
   ipc.handle(
@@ -147,7 +152,8 @@ export function registerScanHandlers(): void {
   ipc.handle(
     ScanChannel.frozenCount,
     (pid: number) =>
-      getMachine().getFrozenAddresses().filter((frozen) => frozen.pid === pid)
-        .length,
+      getMachine()
+        .getFrozenAddresses()
+        .filter((frozen) => frozen.pid === pid).length,
   );
 }

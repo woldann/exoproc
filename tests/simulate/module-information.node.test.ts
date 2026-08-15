@@ -90,10 +90,7 @@ describe('simulated PSAPI module metadata', () => {
         ),
         externalExports[2],
       );
-      assert.equal(
-        process.invoke(externalExports[1] as bigint, [3]).value,
-        1n,
-      );
+      assert.equal(process.invoke(externalExports[1] as bigint, [3]).value, 1n);
 
       const capstoneHandle = process.allocate(8);
       assert.equal(
@@ -104,8 +101,7 @@ describe('simulated PSAPI module metadata', () => {
       const handleValue = process.memory.readU64(capstoneHandle);
       assert.notEqual(handleValue, 0n);
       assert.equal(
-        process.invoke(externalExports[4] as bigint, [handleValue, 2, 3])
-          .value,
+        process.invoke(externalExports[4] as bigint, [handleValue, 2, 3]).value,
         0n,
       );
 

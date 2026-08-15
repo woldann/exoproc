@@ -41,7 +41,8 @@ export class EditorService implements IEditorService {
     OpenEditorInput | undefined
   >();
 
-  public readonly onDidActiveEditorChange = this.activeEditorChangeEmitter.event;
+  public readonly onDidActiveEditorChange =
+    this.activeEditorChangeEmitter.event;
 
   public constructor(private readonly fileService: IFileService) {}
 

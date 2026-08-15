@@ -4,10 +4,7 @@ import type { Win64HeapStateSnapshot } from './heap.js';
 import type { PhysicalPageSnapshot } from './physical-memory.js';
 import type { Win32ConsoleSnapshot } from './console.js';
 import type { SchedulerSnapshot } from './scheduler.js';
-import type {
-  Win32ProcessSession,
-  Win64FrozenValue,
-} from './win64-machine.js';
+import type { Win32ProcessSession, Win64FrozenValue } from './win64-machine.js';
 import type {
   DecodedInstruction,
   Win32MainArguments,
@@ -48,7 +45,10 @@ export interface Win64MachineSnapshot {
   readonly nextHandle: number;
   readonly nextKernelObjectId: number;
   readonly events: readonly string[];
-  readonly frozenValues: readonly (readonly [key: string, value: Win64FrozenValue])[];
+  readonly frozenValues: readonly (readonly [
+    key: string,
+    value: Win64FrozenValue,
+  ])[];
 }
 
 export interface CpuStepResultSnapshot {
@@ -76,7 +76,10 @@ export interface Win64ThreadSnapshot {
   readonly suspendCount: number;
   readonly registers: X64Registers;
   readonly breakpoints: readonly bigint[];
-  readonly watchpoints: readonly (readonly [address: bigint, watchpoint: X64Watchpoint])[];
+  readonly watchpoints: readonly (readonly [
+    address: bigint,
+    watchpoint: X64Watchpoint,
+  ])[];
   readonly lastStep?: CpuStepResultSnapshot;
 }
 
@@ -109,7 +112,11 @@ export interface Win64ProcessSnapshot {
 /** Identifies which built-in device backs an `input`/`output` kernel object, since the live device object itself (a class with methods) can't be serialized. Anything else (a host-injected device from `createInputCapability`/`createOutputCapability`) is `'unsupported'` -- see `Win64Machine.snapshot()`'s doc comment for this limitation. */
 export type Win64DeviceRefSnapshot =
   | { readonly kind: 'console'; readonly owner: 'screen' }
-  | { readonly kind: 'console'; readonly owner: 'process'; readonly pid: number }
+  | {
+      readonly kind: 'console';
+      readonly owner: 'process';
+      readonly pid: number;
+    }
   | { readonly kind: 'capture'; readonly bytes: Uint8Array }
   | { readonly kind: 'null' }
   | { readonly kind: 'unsupported'; readonly className: string };

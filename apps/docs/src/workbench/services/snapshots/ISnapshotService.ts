@@ -19,9 +19,8 @@ export interface ISnapshotService {
   readonly onDidChangeList: Event<void>;
 }
 
-export const ISnapshotService = createDecorator<ISnapshotService>(
-  'snapshotService',
-);
+export const ISnapshotService =
+  createDecorator<ISnapshotService>('snapshotService');
 
 export class SnapshotService implements ISnapshotService {
   private readonly changeEmitter = new Emitter<void>();
@@ -29,7 +28,9 @@ export class SnapshotService implements ISnapshotService {
   private readonly unsubscribe: () => void;
 
   public constructor(private readonly api: ExoprocApi) {
-    this.unsubscribe = api.snapshot.onDidChangeList(() => this.changeEmitter.fire());
+    this.unsubscribe = api.snapshot.onDidChangeList(() =>
+      this.changeEmitter.fire(),
+    );
   }
 
   public list(): Promise<readonly SnapshotMetaDto[]> {

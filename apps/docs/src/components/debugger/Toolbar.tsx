@@ -17,13 +17,27 @@ export interface DebugToolbarProps {
   selectedAddress?: bigint;
 }
 
-export function DebugToolbar({ session, tid, selectedAddress }: DebugToolbarProps) {
-  const { process, canRun, continueExecution, stepOver, stepInto, stepOut, runToCursor } = session;
+export function DebugToolbar({
+  session,
+  tid,
+  selectedAddress,
+}: DebugToolbarProps) {
+  const {
+    process,
+    canRun,
+    continueExecution,
+    stepOver,
+    stepInto,
+    stepOut,
+    runToCursor,
+  } = session;
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-[#2d2d2d] bg-[#252526] px-3 py-1.5">
       <div className="flex min-w-0 flex-col">
-        <strong className="truncate text-xs text-[#cccccc]">{process?.image ?? '…'}!thread_entry</strong>
+        <strong className="truncate text-xs text-[#cccccc]">
+          {process?.image ?? '…'}!thread_entry
+        </strong>
         <span className="font-mono text-[0.65rem] text-[#858585]">
           PID {process?.pid ?? '…'} / TID {tid}
         </span>
