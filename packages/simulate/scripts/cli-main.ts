@@ -12,8 +12,8 @@ if (args.length === 0) {
     if (text) process.stdout.write(text);
   };
   drain();
-  if (commandPrompt.machine.nodeHostBridge) {
-    await commandPrompt.machine.nodeHostBridge.waitForPending();
+  if (commandPrompt.nodeHostBridge) {
+    await commandPrompt.nodeHostBridge.waitForPending();
     drain();
   }
   process.exit(commandPrompt.process.lastChildExitCode);

@@ -792,14 +792,6 @@ class FunctionCompiler {
     this.storeTypedToAddressInRax(type, displacement);
   }
 
-  private tryReadIntegerLiteral(): number | undefined {
-    if (this.peek().kind === 'num') {
-      const value = Number(this.consume().value ?? 0n);
-      return value;
-    }
-    return undefined;
-  }
-
   // -- expressions --------------------------------------------------------
 
   /** Parses+compiles a full expression; result lands in `rax`. Returns its

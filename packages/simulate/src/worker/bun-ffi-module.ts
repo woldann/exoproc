@@ -4,7 +4,12 @@
  * compiler because it can read source files from the simulated filesystem and
  * load generated machine code into the active process.
  */
-const guestGlobal = globalThis as typeof globalThis & {
+// Cast through `unknown` rather than intersecting with `typeof globalThis`:
+// bun's own ambient `Bun` global type (a complex overloaded `hash`) would
+// otherwise merge with this minimal guest shim's shape, and the shim's
+// intentionally-simple `hash(value: unknown): number` doesn't -- and
+// shouldn't need to -- satisfy that overload set.
+const guestGlobal = globalThis as unknown as {
   Bun?: {
     hash(value: unknown): number;
     sleep(milliseconds: number): Promise<void>;
@@ -24,7 +29,9 @@ if (!guestGlobal.Bun) {
       return hash >>> 0;
     },
     sleep(milliseconds) {
-      return new Promise((resolve) => setTimeout(resolve, milliseconds));
+      return new Promise((resolve) =>
+        setTimeout(() => resolve(), milliseconds),
+      );
     },
     sleepSync(milliseconds) {
       const signal = new Int32Array(new SharedArrayBuffer(4));

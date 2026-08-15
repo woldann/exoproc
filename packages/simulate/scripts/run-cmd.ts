@@ -13,8 +13,8 @@ async function runCommandInSimulate(): Promise<void> {
   const commandPrompt = new Win32CommandPrompt();
   commandPrompt.execute(commandLine);
 
-  if (commandPrompt.machine.nodeHostBridge) {
-    await commandPrompt.machine.nodeHostBridge.waitForPending();
+  if (commandPrompt.nodeHostBridge) {
+    await commandPrompt.nodeHostBridge.waitForPending();
   }
 
   const text = commandPrompt.process.console.drainHostText();

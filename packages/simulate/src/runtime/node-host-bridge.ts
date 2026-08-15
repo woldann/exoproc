@@ -582,7 +582,6 @@ if (requestPath) {
 export class NodeHostBridge {
   private readonly machine: Win64Machine;
   private workerScriptPath: string | null = null;
-  private workerScriptDirectory: string | null = null;
   private readonly syscallId: number;
   private requestId = 0;
   private readonly activeExecutors = new Set<HostExecutorProcess>();
@@ -652,9 +651,8 @@ export class NodeHostBridge {
     this.machine.registerHandler(
       'node.dll',
       'terminateJSProcess',
-      (process, thread, registers) => {
+      (_process, _thread, registers) => {
         const hProcess = Number(registers.RCX);
-        const _exitCode = Number(registers.RDX & 0xffffffffn);
         const object = this.machine.getKernelObject(hProcess);
         if (object && object.kind === 'nodeInvocation') {
           object.signaled = true;
@@ -729,7 +727,6 @@ export class NodeHostBridge {
     const tmpDir =
       this.workerDirectory ??
       fs.mkdtempSync(p.join(os.tmpdir(), 'exoproc-sim-node-'));
-    this.workerScriptDirectory = tmpDir;
     this.workerScriptPath = p.join(tmpDir, 'node-executor.mjs');
     fs.writeFileSync(this.workerScriptPath, WORKER_LOADER_SOURCE, 'utf8');
   }
@@ -877,7 +874,7 @@ export class NodeHostBridge {
         runtimeArgs = scriptArgs.slice(1);
 
         const normalized = process.machine.fileSystem.normalize(
-          scriptPath,
+          scriptPath!,
           process.currentDirectory,
         );
         const entry = process.machine.fileSystem.getEntry(normalized);

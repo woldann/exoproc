@@ -87,8 +87,8 @@ if (import.meta.main) {
       if (text) process.stdout.write(text);
     };
     drain();
-    if (commandPrompt.machine.nodeHostBridge) {
-      commandPrompt.machine.nodeHostBridge.waitForPending().then(() => {
+    if (commandPrompt.nodeHostBridge) {
+      commandPrompt.nodeHostBridge.waitForPending().then(() => {
         drain();
         process.exit(result.exitCode);
       });

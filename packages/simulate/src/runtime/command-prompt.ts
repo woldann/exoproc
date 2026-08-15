@@ -7,6 +7,7 @@ import {
   type Win64Thread,
 } from './win64-machine.js';
 import { CMD_EXIT_REQUEST } from '../bin/cmd.js';
+import type { NodeHostBridge } from './node-host-bridge.js';
 
 const CMD_PATH = 'C:\\Windows\\System32\\cmd.exe';
 
@@ -84,6 +85,11 @@ export class Win32CommandPrompt {
 
   public get isClosed(): boolean {
     return this.closed;
+  }
+
+  /** Exposes only what host-side CLI scripts actually need from `machine` -- waiting for pending Node child processes -- without giving them the whole (still `private`) machine. */
+  public get nodeHostBridge(): NodeHostBridge | null {
+    return this.machine.nodeHostBridge;
   }
 
   public execute(commandLine: string): CommandExecutionResult {
