@@ -52,7 +52,7 @@
   "author": "Serkan",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "@exoproc/win32-abi": "file:../win32-abi",
+    "@exoproc/win32-abi": "workspace:*",
     "bun-capstone-abi": "workspace:*",
     "expect": "^30.4.1"
   },
