@@ -38,6 +38,16 @@ const config = {
     return [{ source: '/', destination: '/tr', permanent: false }];
   },
   turbopack: {
+    // Without this, Turbopack infers the workspace root itself by walking
+    // up looking for lockfiles -- and finds two (this app's own, and the
+    // monorepo root's `bun.lock`), so its guess is unstable across
+    // environments. Locally that only ever surfaced as a warning ("Next.js
+    // inferred your workspace root, but it may not be correct"); in
+    // Cloudflare's build container the inferred root ends up somewhere
+    // `next/package.json` isn't resolvable from, and `next build` treats
+    // that as a hard error ("Turbopack build failed"). Pinning it to this
+    // app's own directory removes the ambiguity outright.
+    root: __dirname,
     resolveAlias: {
       'bun:ffi': './' + path.relative(__dirname, bunFfiTarget),
     },
