@@ -7,28 +7,12 @@ import {
   MarkdownCopyButton,
   ViewOptionsPopover,
 } from 'fumadocs-ui/layouts/docs/page';
-import { notFound, redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/mdx';
 import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { gitConfig } from '@/lib/shared';
-import { DOCS_LAST_VISITED_COOKIE } from '@/lib/docs-last-visited';
-
-/**
- * Where bare `/[lang]/docs` (no `index.mdx` in either locale, see `Page`
- * below) should land: wherever `DocsLastVisitedTracker` last recorded for
- * this language, or `getting-started` on a first visit / after switching
- * language (the cookie value is only trusted when it's under this exact
- * `[lang]` prefix, so it never bounces you into the other locale's page).
- */
-async function docsHomeRedirectTarget(lang: string): Promise<string> {
-  const store = await cookies();
-  const lastVisited = store.get(DOCS_LAST_VISITED_COOKIE)?.value;
-  const prefix = `/${lang}/docs/`;
-  if (lastVisited && lastVisited.startsWith(prefix)) return lastVisited;
-  return `/${lang}/docs/getting-started`;
-}
+import { DocsHomeRedirect } from '@/components/docs/DocsHomeRedirect';
 
 export default async function Page(
   props: PageProps<'/[lang]/docs/[[...slug]]'>,
@@ -38,9 +22,10 @@ export default async function Page(
   if (!page) {
     // `/docs` itself (empty slug) has no `index.mdx` in either locale --
     // land wherever the user last was instead of 404ing, which is what
-    // every "Docs" link in the app (e.g. `IdeActivityBar`) points at.
-    if (!params.slug?.length)
-      redirect(await docsHomeRedirectTarget(params.lang));
+    // every "Docs" link in the app (e.g. `IdeActivityBar`) points at. See
+    // `DocsHomeRedirect`'s doc comment for why this is a client redirect
+    // rather than a server one reading `next/headers`'s `cookies()`.
+    if (!params.slug?.length) return <DocsHomeRedirect lang={params.lang} />;
     notFound();
   }
 
@@ -82,8 +67,9 @@ export async function generateMetadata(
   const params = await props.params;
   const page = source.getPage(params.slug, params.lang);
   if (!page) {
-    if (!params.slug?.length)
-      redirect(await docsHomeRedirectTarget(params.lang));
+    if (!params.slug?.length) {
+      return { title: 'Dokümantasyon' };
+    }
     notFound();
   }
 
