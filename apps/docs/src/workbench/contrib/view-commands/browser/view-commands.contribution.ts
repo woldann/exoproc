@@ -1,5 +1,6 @@
 import { CommandsRegistry } from '@/platform/commands/common/commands';
 import { getViewContainers } from '@/platform/views/viewContainerRegistry';
+import { parseLocalizedPathname } from '@/lib/i18n';
 
 /**
  * Registers one "View: Show X" command per view container, generated
@@ -16,7 +17,16 @@ import { getViewContainers } from '@/platform/views/viewContainerRegistry';
  * threading a router reference through command registration to avoid.
  */
 function currentLang(): string {
-  return window.location.pathname.split('/')[1] || 'tr';
+  // Was `window.location.pathname.split('/')[1] || 'tr'` -- a real bug:
+  // that reads the first *route* segment as if it were always the locale,
+  // which only holds for an explicitly-prefixed URL (`/en/ide` -> "en").
+  // With `hideLocale: 'default-locale'` (see `lib/i18n.ts`), bare `/docs`
+  // and `/ide` have "docs"/"ide" as their first segment -- this returned
+  // `lang: "ide"` on the IDE's own bare URL, which `container.getHref`
+  // then built into a broken `/ide/ide` href. `parseLocalizedPathname`
+  // treats an unrecognized first segment as the hidden-prefix default
+  // locale instead of assuming it's always a locale code.
+  return parseLocalizedPathname(window.location.pathname).lang;
 }
 
 for (const container of getViewContainers()) {

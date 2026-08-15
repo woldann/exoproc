@@ -43,3 +43,30 @@ export const i18n = defineI18nUI(
 export function localizedPath(lang: string, path: string): string {
   return lang === DEFAULT_LOCALE ? path : `/${lang}${path}`;
 }
+
+/**
+ * Splits a browser `pathname` into `{ lang, rest }`, the inverse of
+ * `localizedPath`. Treats an unrecognized (or missing) first segment as
+ * `DEFAULT_LOCALE` with the *entire* pathname as `rest` -- i.e. it acts as
+ * if the hidden `/tr` segment were actually there, rather than assuming
+ * the first segment is always a locale code the way a naive
+ * `pathname.split('/')[1]` does. That naive version is wrong for exactly
+ * the paths `hideLocale: 'default-locale'` creates: bare `/docs` and
+ * `/ide` have "docs"/"ide" as their first segment, not "tr" -- code that
+ * read that segment straight as the locale (e.g. a past version of
+ * `view-commands.contribution.ts`'s `currentLang()`) misread it as
+ * `lang: "docs"` and then mis-built hrefs like `/ide/ide` on top of that.
+ * Use this (or `AppRootProvider`'s identical inline logic, which predates
+ * this shared version) anywhere a client needs "what locale/page is this
+ * pathname" from `window.location.pathname`/`usePathname()`.
+ */
+export function parseLocalizedPathname(pathname: string): {
+  lang: string;
+  rest: string;
+} {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] === 'en' || segments[0] === 'tr') {
+    return { lang: segments[0], rest: `/${segments.slice(1).join('/')}` };
+  }
+  return { lang: DEFAULT_LOCALE, rest: `/${segments.join('/')}` };
+}

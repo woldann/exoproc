@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { RootProvider } from 'fumadocs-ui/provider/next';
-import { i18n, localizedPath } from '@/lib/i18n';
+import { i18n, localizedPath, parseLocalizedPathname } from '@/lib/i18n';
 
 export interface AppRootProviderProps {
   readonly lang: string;
@@ -21,18 +21,18 @@ export interface AppRootProviderProps {
  * `en` -> `tr` in place produces `/tr/docs/...` instead of stripping the
  * prefix -- a real, reported bug (switching en -> tr kept an explicit `/tr`
  * in the URL, when the whole point of `hideLocale` is that `/tr` never
- * appears). Stripping any existing `en`/`tr` prefix first, then reapplying
- * one via `localizedPath` (which already knows to omit it for the default
- * locale), fixes both directions.
+ * appears). `parseLocalizedPathname` (`lib/i18n.ts`) strips any existing
+ * `en`/`tr` prefix first (treating a bare path as the hidden-prefix default
+ * locale rather than misreading its first segment as the locale); then
+ * `localizedPath` reapplies the right one for the target locale, omitting
+ * it again if switching back to the default -- correct in both directions.
  */
 export function AppRootProvider({ lang, children }: AppRootProviderProps) {
   const router = useRouter();
   const pathname = usePathname() ?? '/';
 
   const onLocaleChange = (nextLocale: string) => {
-    const segments = pathname.split('/').filter(Boolean);
-    if (segments[0] === 'en' || segments[0] === 'tr') segments.shift();
-    const rest = `/${segments.join('/')}`;
+    const { rest } = parseLocalizedPathname(pathname);
     router.push(localizedPath(nextLocale, rest));
   };
 
