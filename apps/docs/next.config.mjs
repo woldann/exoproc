@@ -41,6 +41,33 @@ const config = {
   async redirects() {
     return [{ source: '/', destination: '/tr/docs', permanent: false }];
   },
+  // Without `proxy.ts` (see above), the default locale can't hide its own
+  // prefix the usual way -- but an unprefixed `/docs`/`/ide` still needs
+  // to work and serve Turkish, since that's the site's actual entry point
+  // for anyone who lands on a bare link. `rewrites()` (unlike `redirects()`)
+  // is invisible to the browser -- the URL bar keeps showing `/docs`, only
+  // the internally-served content is `/tr/docs` -- and, like `redirects()`,
+  // it's resolved at the static routing layer rather than in a Worker
+  // request handler, so it doesn't need the Node.js runtime `proxy.ts`
+  // would. Every other internal link (nav, language switcher, ...) still
+  // points at the fully `/tr/...`-prefixed URL as before -- this only
+  // covers someone arriving at the unprefixed one directly.
+  //
+  // Two rules per route, not one `/docs/:path*`: that pattern's leading
+  // `/` before `:path*` is a literal character, so it only matches
+  // `/docs/...` (something has to follow that slash) and 404s on bare
+  // `/docs` itself -- confirmed reproducing exactly that. The `{/:path*}`
+  // optional-group syntax Next.js docs show for this exact case also
+  // failed here ("Unexpected MODIFIER", a parser limitation in this
+  // Next.js version) -- two separate rules sidesteps needing it at all.
+  async rewrites() {
+    return [
+      { source: '/docs', destination: '/tr/docs' },
+      { source: '/docs/:path*', destination: '/tr/docs/:path*' },
+      { source: '/ide', destination: '/tr/ide' },
+      { source: '/ide/:path*', destination: '/tr/ide/:path*' },
+    ];
+  },
   turbopack: {
     // Without this, Turbopack infers the workspace root itself by walking
     // up looking for lockfiles -- and finds two (this app's own, and the
