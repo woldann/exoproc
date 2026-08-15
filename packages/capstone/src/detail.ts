@@ -1,8 +1,8 @@
 import * as bunffi from 'bun:ffi';
 import type { Pointer } from 'bun:ffi';
 import { cs_detail, cs_x86, cs_x86_op } from './struct/index.js';
-import { x86_op_type } from './types/index.js';
-import type { X86Detail, X86, X86Operand } from './types/index.js';
+import { x86_op_type } from 'bun-capstone-abi';
+import type { X86Detail, X86, X86Operand } from 'bun-capstone-abi';
 
 interface StructFields {
   [field: string]: { offset: number };

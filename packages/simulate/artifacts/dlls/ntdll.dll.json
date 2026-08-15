@@ -1,0 +1,60 @@
+{
+  "format": "EXOPROC DLL memory image",
+  "windowsPe": false,
+  "name": "ntdll.dll",
+  "imageBase": "0x7fe001000000",
+  "imageBytes": 4096,
+  "iatBytes": 0,
+  "importCount": 0,
+  "exportSlotBytes": 1024,
+  "exportCount": 1,
+  "bindingCounts": {
+    "syscall": 1
+  },
+  "hashes": {
+    "memoryImageSha256": "9d3a10894eef500c5d9554e686a51d9d6b0683c4dbc3e14b72e2e2fbaf7f0b57",
+    "iatSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "sections": {
+    ".text": {
+      "address": "0x7fe001000000",
+      "bytes": 4096,
+      "protection": "rx"
+    },
+    ".idata": {
+      "address": "0x7fe001001000",
+      "bytes": 0,
+      "protection": "r",
+      "symbols": []
+    },
+    ".rdata": {
+      "bytes": 0,
+      "symbols": []
+    },
+    ".data": {
+      "bytes": 0,
+      "symbols": []
+    },
+    ".bss": {
+      "bytes": 0,
+      "symbols": []
+    }
+  },
+  "exports": [
+    {
+      "name": "RtlImageNtHeader",
+      "ordinal": 0,
+      "address": "0x7fe001000000",
+      "offset": 0,
+      "slotBytes": 1024,
+      "thunkBytes": 16,
+      "syscallId": 8192,
+      "binding": "syscall",
+      "args": [12],
+      "returns": 12,
+      "compilerBytes": "b8 00 20 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
+      "linkedBytes": "b8 00 20 00 00 0f 05 c3 90 90 90 90 90 90 90 90",
+      "relocations": []
+    }
+  ]
+}

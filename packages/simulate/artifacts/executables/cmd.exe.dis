@@ -1,0 +1,208 @@
+cmd.exe / linked EXOPROC64 image
+text-base=0x7ff603a01000 iat-base=0x7ff603a02000 data-base=0x7ff603a03000
+entry=0x7ff603a01000
+text-bytes=534 data-bytes=4592
+
+relocations:
+; +000b iat-relative32 -> IAT+0000 (0x7ff603a02000) -> kernel32.dll!GetStdHandle (0x7fe000016000)
+; +0021 iat-relative32 -> IAT+0000 (0x7ff603a02000) -> kernel32.dll!GetStdHandle (0x7fe000016000)
+; +002e absolute64 -> banner (0x7ff603a03000)
+; +006c absolute64 -> writtenCount (0x7ff603a040c8)
+; +007c iat-relative32 -> IAT+0008 (0x7ff603a02008) -> kernel32.dll!WriteFile (0x7fe000000800)
+; +008c absolute64 -> currentDirectory (0x7ff603a040d0)
+; +009a iat-relative32 -> IAT+0010 (0x7ff603a02010) -> kernel32.dll!GetCurrentDirectoryA (0x7fe000013000)
+; +00a7 absolute64 -> currentDirectory (0x7ff603a040d0)
+; +00b6 absolute64 -> prompt (0x7ff603a03061)
+; +00d3 absolute64 -> input (0x7ff603a030c0)
+; +00e7 absolute64 -> readCount (0x7ff603a040c0)
+; +00f7 iat-relative32 -> IAT+0018 (0x7ff603a02018) -> kernel32.dll!ReadFile (0x7fe000000c00)
+; +0105 absolute64 -> input (0x7ff603a030c0)
+; +0115 absolute64 -> processInformation (0x7ff603a041d4)
+; +012e iat-relative32 -> IAT+0020 (0x7ff603a02020) -> kernel32.dll!CreateProcessA (0x7fe000007000)
+; +0140 absolute64 -> processInformation (0x7ff603a041d4)
+; +0156 iat-relative32 -> IAT+0028 (0x7ff603a02028) -> kernel32.dll!WaitForSingleObject (0x7fe000009800)
+; +0160 absolute64 -> processInformation (0x7ff603a041d4)
+; +016d absolute64 -> childExitCode (0x7ff603a041ec)
+; +017b iat-relative32 -> IAT+0030 (0x7ff603a02030) -> kernel32.dll!GetExitCodeProcess (0x7fe000009c00)
+; +0185 absolute64 -> processInformation (0x7ff603a041d4)
+; +0196 iat-relative32 -> IAT+0038 (0x7ff603a02038) -> kernel32.dll!CloseHandle (0x7fe000009000)
+; +01a0 absolute64 -> processInformation (0x7ff603a041d4)
+; +01b2 iat-relative32 -> IAT+0038 (0x7ff603a02038) -> kernel32.dll!CloseHandle (0x7fe000009000)
+; +01c5 absolute64 -> errorPrefix (0x7ff603a03063)
+; +01de absolute64 -> readCount (0x7ff603a040c0)
+; +01ef absolute64 -> input (0x7ff603a030c0)
+; +01fe absolute64 -> errorSuffix (0x7ff603a03065)
+
+section .text
+; address=0x7ff603a01000 size=534 protection=rx
+0x00007ff603a01000 +0000  b9 f5 ff ff ff                  mov      ecx, 0xfffffff5
+0x00007ff603a01005 +0005  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a01009 +0009  ff 15 f1 0f 00 00               call     [rip+0xff1] ; IAT[0x7ff603a02000] -> kernel32.dll!GetStdHandle (0x7fe000016000)
+0x00007ff603a0100f +000f  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603a01013 +0013  4c 8b f8                        mov      r15, rax
+0x00007ff603a01016 +0016  b9 f6 ff ff ff                  mov      ecx, 0xfffffff6
+0x00007ff603a0101b +001b  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a0101f +001f  ff 15 db 0f 00 00               call     [rip+0xfdb] ; IAT[0x7ff603a02000] -> kernel32.dll!GetStdHandle (0x7fe000016000)
+0x00007ff603a01025 +0025  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603a01029 +0029  4c 8b f0                        mov      r14, rax
+0x00007ff603a0102c +002c  48 ba 00 30 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a03000
+0x00007ff603a01036 +0036  49 b8 60 00 00 00 00 00 00 00   mov      r8, 0x60
+0x00007ff603a01040 +0040  e8 22 00 00 00                  call     0x7ff603a01067 ; -> 0x7ff603a01067
+0x00007ff603a01045 +0045  e8 3b 00 00 00                  call     0x7ff603a01085 ; -> 0x7ff603a01085
+0x00007ff603a0104a +004a  e8 7f 00 00 00                  call     0x7ff603a010ce ; -> 0x7ff603a010ce
+0x00007ff603a0104f +004f  e8 ac 00 00 00                  call     0x7ff603a01100 ; -> 0x7ff603a01100
+0x00007ff603a01054 +0054  48 85 c0                        test     rax, rax
+0x00007ff603a01057 +0057  0f 85 05 00 00 00               jne      0x7ff603a01062 ; -> 0x7ff603a01062
+0x00007ff603a0105d +005d  e8 61 01 00 00                  call     0x7ff603a011c3 ; -> 0x7ff603a011c3
+0x00007ff603a01062 +0062  e9 de ff ff ff                  jmp      0x7ff603a01045 ; -> 0x7ff603a01045
+0x00007ff603a01067 +0067  49 8b cf                        mov      rcx, r15
+0x00007ff603a0106a +006a  49 b9 c8 40 a0 03 f6 7f 00 00   mov      r9, 0x7ff603a040c8
+0x00007ff603a01074 +0074  6a 00                           push     0x0
+0x00007ff603a01076 +0076  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a0107a +007a  ff 15 88 0f 00 00               call     [rip+0xf88] ; IAT[0x7ff603a02008] -> kernel32.dll!WriteFile (0x7fe000000800)
+0x00007ff603a01080 +0080  48 83 c4 28                     add      rsp, 0x28
+0x00007ff603a01084 +0084  c3                              ret
+0x00007ff603a01085 +0085  b9 04 01 00 00                  mov      ecx, 0x104
+0x00007ff603a0108a +008a  48 ba d0 40 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a040d0
+0x00007ff603a01094 +0094  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a01098 +0098  ff 15 72 0f 00 00               call     [rip+0xf72] ; IAT[0x7ff603a02010] -> kernel32.dll!GetCurrentDirectoryA (0x7fe000013000)
+0x00007ff603a0109e +009e  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603a010a2 +00a2  4c 8b c0                        mov      r8, rax
+0x00007ff603a010a5 +00a5  48 ba d0 40 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a040d0
+0x00007ff603a010af +00af  e8 b3 ff ff ff                  call     0x7ff603a01067 ; -> 0x7ff603a01067
+0x00007ff603a010b4 +00b4  48 ba 61 30 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a03061
+0x00007ff603a010be +00be  49 b8 01 00 00 00 00 00 00 00   mov      r8, 0x1
+0x00007ff603a010c8 +00c8  e8 9a ff ff ff                  call     0x7ff603a01067 ; -> 0x7ff603a01067
+0x00007ff603a010cd +00cd  c3                              ret
+0x00007ff603a010ce +00ce  49 8b ce                        mov      rcx, r14
+0x00007ff603a010d1 +00d1  48 ba c0 30 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a030c0
+0x00007ff603a010db +00db  49 b8 ff 0f 00 00 00 00 00 00   mov      r8, 0xfff
+0x00007ff603a010e5 +00e5  49 b9 c0 40 a0 03 f6 7f 00 00   mov      r9, 0x7ff603a040c0
+0x00007ff603a010ef +00ef  6a 00                           push     0x0
+0x00007ff603a010f1 +00f1  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a010f5 +00f5  ff 15 1d 0f 00 00               call     [rip+0xf1d] ; IAT[0x7ff603a02018] -> kernel32.dll!ReadFile (0x7fe000000c00)
+0x00007ff603a010fb +00fb  48 83 c4 28                     add      rsp, 0x28
+0x00007ff603a010ff +00ff  c3                              ret
+0x00007ff603a01100 +0100  48 31 c9                        xor      rcx, rcx
+0x00007ff603a01103 +0103  48 ba c0 30 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a030c0
+0x00007ff603a0110d +010d  4d 31 c0                        xor      r8, r8
+0x00007ff603a01110 +0110  4d 31 c9                        xor      r9, r9
+0x00007ff603a01113 +0113  48 b8 d4 41 a0 03 f6 7f 00 00   mov      rax, 0x7ff603a041d4
+0x00007ff603a0111d +011d  50                              push     rax
+0x00007ff603a0111e +011e  6a 00                           push     0x0
+0x00007ff603a01120 +0120  6a 00                           push     0x0
+0x00007ff603a01122 +0122  6a 00                           push     0x0
+0x00007ff603a01124 +0124  6a 00                           push     0x0
+0x00007ff603a01126 +0126  6a 01                           push     0x1
+0x00007ff603a01128 +0128  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a0112c +012c  ff 15 ee 0e 00 00               call     [rip+0xeee] ; IAT[0x7ff603a02020] -> kernel32.dll!CreateProcessA (0x7fe000007000)
+0x00007ff603a01132 +0132  48 83 c4 50                     add      rsp, 0x50
+0x00007ff603a01136 +0136  85 c0                           test     eax, eax
+0x00007ff603a01138 +0138  0f 84 82 00 00 00               je       0x7ff603a011c0 ; -> 0x7ff603a011c0
+0x00007ff603a0113e +013e  48 b8 d4 41 a0 03 f6 7f 00 00   mov      rax, 0x7ff603a041d4
+0x00007ff603a01148 +0148  48 8b 08                        mov      rcx, [rax]
+0x00007ff603a0114b +014b  ba ff ff ff ff                  mov      edx, 0xffffffff
+0x00007ff603a01150 +0150  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a01154 +0154  ff 15 ce 0e 00 00               call     [rip+0xece] ; IAT[0x7ff603a02028] -> kernel32.dll!WaitForSingleObject (0x7fe000009800)
+0x00007ff603a0115a +015a  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603a0115e +015e  48 b8 d4 41 a0 03 f6 7f 00 00   mov      rax, 0x7ff603a041d4
+0x00007ff603a01168 +0168  48 8b 08                        mov      rcx, [rax]
+0x00007ff603a0116b +016b  48 ba ec 41 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a041ec
+0x00007ff603a01175 +0175  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a01179 +0179  ff 15 b1 0e 00 00               call     [rip+0xeb1] ; IAT[0x7ff603a02030] -> kernel32.dll!GetExitCodeProcess (0x7fe000009c00)
+0x00007ff603a0117f +017f  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603a01183 +0183  48 b8 d4 41 a0 03 f6 7f 00 00   mov      rax, 0x7ff603a041d4
+0x00007ff603a0118d +018d  48 8b 08                        mov      rcx, [rax]
+0x00007ff603a01190 +0190  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a01194 +0194  ff 15 9e 0e 00 00               call     [rip+0xe9e] ; IAT[0x7ff603a02038] -> kernel32.dll!CloseHandle (0x7fe000009000)
+0x00007ff603a0119a +019a  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603a0119e +019e  48 b8 d4 41 a0 03 f6 7f 00 00   mov      rax, 0x7ff603a041d4
+0x00007ff603a011a8 +01a8  48 8b 48 08                     mov      rcx, [rax+0x8]
+0x00007ff603a011ac +01ac  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603a011b0 +01b0  ff 15 82 0e 00 00               call     [rip+0xe82] ; IAT[0x7ff603a02038] -> kernel32.dll!CloseHandle (0x7fe000009000)
+0x00007ff603a011b6 +01b6  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603a011ba +01ba  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff603a011bf +01bf  c3                              ret
+0x00007ff603a011c0 +01c0  31 c0                           xor      eax, eax
+0x00007ff603a011c2 +01c2  c3                              ret
+0x00007ff603a011c3 +01c3  48 ba 63 30 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a03063
+0x00007ff603a011cd +01cd  49 b8 01 00 00 00 00 00 00 00   mov      r8, 0x1
+0x00007ff603a011d7 +01d7  e8 8b fe ff ff                  call     0x7ff603a01067 ; -> 0x7ff603a01067
+0x00007ff603a011dc +01dc  48 b8 c0 40 a0 03 f6 7f 00 00   mov      rax, 0x7ff603a040c0
+0x00007ff603a011e6 +01e6  4c 8b 00                        mov      r8, [rax]
+0x00007ff603a011e9 +01e9  49 83 e8 02                     sub      r8, 0x2
+0x00007ff603a011ed +01ed  48 ba c0 30 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a030c0
+0x00007ff603a011f7 +01f7  e8 6b fe ff ff                  call     0x7ff603a01067 ; -> 0x7ff603a01067
+0x00007ff603a011fc +01fc  48 ba 65 30 a0 03 f6 7f 00 00   mov      rdx, 0x7ff603a03065
+0x00007ff603a01206 +0206  49 b8 5a 00 00 00 00 00 00 00   mov      r8, 0x5a
+0x00007ff603a01210 +0210  e8 52 fe ff ff                  call     0x7ff603a01067 ; -> 0x7ff603a01067
+0x00007ff603a01215 +0215  c3                              ret
+
+section .idata
+; address=0x7ff603a02000 size=64 protection=r
+0x00007ff603a02000 +0000  00 60 01 00 e0 7f 00 00 GetStdHandle                 -> kernel32.dll!GetStdHandle (0x7fe000016000) state=resolved
+0x00007ff603a02008 +0008  00 08 00 00 e0 7f 00 00 WriteFile                    -> kernel32.dll!WriteFile (0x7fe000000800) state=resolved
+0x00007ff603a02010 +0010  00 30 01 00 e0 7f 00 00 GetCurrentDirectoryA         -> kernel32.dll!GetCurrentDirectoryA (0x7fe000013000) state=resolved
+0x00007ff603a02018 +0018  00 0c 00 00 e0 7f 00 00 ReadFile                     -> kernel32.dll!ReadFile (0x7fe000000c00) state=resolved
+0x00007ff603a02020 +0020  00 70 00 00 e0 7f 00 00 CreateProcessA               -> kernel32.dll!CreateProcessA (0x7fe000007000) state=resolved
+0x00007ff603a02028 +0028  00 98 00 00 e0 7f 00 00 WaitForSingleObject          -> kernel32.dll!WaitForSingleObject (0x7fe000009800) state=resolved
+0x00007ff603a02030 +0030  00 9c 00 00 e0 7f 00 00 GetExitCodeProcess           -> kernel32.dll!GetExitCodeProcess (0x7fe000009c00) state=resolved
+0x00007ff603a02038 +0038  00 90 00 00 e0 7f 00 00 CloseHandle                  -> kernel32.dll!CloseHandle (0x7fe000009000) state=resolved
+
+section .rdata
+; address=0x7ff603a03000 size=192
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+banner: ; address=0x7ff603a03000 size=97
+  ; utf8="Microsoft Windows [Version 10.0.19045.4046]\r\n(c) Microsoft Corporation. All rights reserved.\r\n\r\n\u0000"
+  db 0x4d, 0x69, 0x63, 0x72, 0x6f, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x57, 0x69, 0x6e, 0x64, 0x6f, 0x77
+  db 0x73, 0x20, 0x5b, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x20, 0x31, 0x30, 0x2e, 0x30, 0x2e
+  db 0x31, 0x39, 0x30, 0x34, 0x35, 0x2e, 0x34, 0x30, 0x34, 0x36, 0x5d, 0x0d, 0x0a, 0x28, 0x63, 0x29
+  db 0x20, 0x4d, 0x69, 0x63, 0x72, 0x6f, 0x73, 0x6f, 0x66, 0x74, 0x20, 0x43, 0x6f, 0x72, 0x70, 0x6f
+  db 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x20, 0x41, 0x6c, 0x6c, 0x20, 0x72, 0x69, 0x67, 0x68
+  db 0x74, 0x73, 0x20, 0x72, 0x65, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x2e, 0x0d, 0x0a, 0x0d, 0x0a
+  db 0x00
+
+prompt: ; address=0x7ff603a03061 size=2
+  ; utf8=">\u0000"
+  db 0x3e, 0x00
+
+errorPrefix: ; address=0x7ff603a03063 size=2
+  ; utf8="'\u0000"
+  db 0x27, 0x00
+
+errorSuffix: ; address=0x7ff603a03065 size=91
+  ; utf8="' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n\u0000"
+  db 0x27, 0x20, 0x69, 0x73, 0x20, 0x6e, 0x6f, 0x74, 0x20, 0x72, 0x65, 0x63, 0x6f, 0x67, 0x6e, 0x69
+  db 0x7a, 0x65, 0x64, 0x20, 0x61, 0x73, 0x20, 0x61, 0x6e, 0x20, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e
+  db 0x61, 0x6c, 0x20, 0x6f, 0x72, 0x20, 0x65, 0x78, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x20, 0x63
+  db 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x2c, 0x0d, 0x0a, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x62, 0x6c
+  db 0x65, 0x20, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x20, 0x6f, 0x72, 0x20, 0x62, 0x61, 0x74
+  db 0x63, 0x68, 0x20, 0x66, 0x69, 0x6c, 0x65, 0x2e, 0x0d, 0x0a, 0x00
+
+section .data
+; address=0x7ff603a030c0 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff603a030c0 size=4400
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+input: ; address=0x7ff603a030c0 size=4096
+  resb 4096
+
+readCount: ; address=0x7ff603a040c0 size=8
+  resb 8
+
+writtenCount: ; address=0x7ff603a040c8 size=8
+  resb 8
+
+currentDirectory: ; address=0x7ff603a040d0 size=260
+  resb 260
+
+processInformation: ; address=0x7ff603a041d4 size=24
+  resb 24
+
+childExitCode: ; address=0x7ff603a041ec size=4
+  resb 4

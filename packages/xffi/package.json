@@ -11,6 +11,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./cdefine": {
+      "types": "./dist/cdefine.d.ts",
+      "import": "./dist/cdefine.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
     }
   },
   "types": "./dist/index.d.ts",

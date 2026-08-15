@@ -1,0 +1,59 @@
+clear.exe / linked EXOPROC64 image
+text-base=0x7ff603601000 iat-base=0x7ff603602000 data-base=0x7ff603603000
+entry=0x7ff603601000
+text-bytes=101 data-bytes=4
+
+relocations:
+; +000c iat-relative32 -> IAT+0000 (0x7ff603602000) -> kernel32.dll!GetStdHandle (0x7fe000016000)
+; +002d absolute64 -> written (0x7ff603603000)
+; +0040 iat-relative32 -> IAT+0008 (0x7ff603602008) -> kernel32.dll!FillConsoleOutputCharacterA (0x7fe000017000)
+; +0056 iat-relative32 -> IAT+0010 (0x7ff603602010) -> kernel32.dll!SetConsoleCursorPosition (0x7fe000017c00)
+
+section .text
+; address=0x7ff603601000 size=101 protection=rx
+0x00007ff603601000 +0000  53                              push     rbx
+0x00007ff603601001 +0001  b9 f5 ff ff ff                  mov      ecx, 0xfffffff5
+0x00007ff603601006 +0006  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff60360100a +000a  ff 15 f0 0f 00 00               call     [rip+0xff0] ; IAT[0x7ff603602000] -> kernel32.dll!GetStdHandle (0x7fe000016000)
+0x00007ff603601010 +0010  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603601014 +0014  48 8b d8                        mov      rbx, rax
+0x00007ff603601017 +0017  48 8b cb                        mov      rcx, rbx
+0x00007ff60360101a +001a  ba 20 00 00 00                  mov      edx, 0x20
+0x00007ff60360101f +001f  41 b8 ff ff ff ff               mov      r8d, 0xffffffff
+0x00007ff603601025 +0025  41 b9 00 00 00 00               mov      r9d, 0x0
+0x00007ff60360102b +002b  48 b8 00 30 60 03 f6 7f 00 00   mov      rax, 0x7ff603603000
+0x00007ff603601035 +0035  48 83 ec 30                     sub      rsp, 0x30
+0x00007ff603601039 +0039  48 89 44 24 20                  mov      [rsp+0x20], rax
+0x00007ff60360103e +003e  ff 15 c4 0f 00 00               call     [rip+0xfc4] ; IAT[0x7ff603602008] -> kernel32.dll!FillConsoleOutputCharacterA (0x7fe000017000)
+0x00007ff603601044 +0044  48 83 c4 30                     add      rsp, 0x30
+0x00007ff603601048 +0048  48 8b cb                        mov      rcx, rbx
+0x00007ff60360104b +004b  ba 00 00 00 00                  mov      edx, 0x0
+0x00007ff603601050 +0050  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603601054 +0054  ff 15 b6 0f 00 00               call     [rip+0xfb6] ; IAT[0x7ff603602010] -> kernel32.dll!SetConsoleCursorPosition (0x7fe000017c00)
+0x00007ff60360105a +005a  48 83 c4 20                     add      rsp, 0x20
+0x00007ff60360105e +005e  b8 00 00 00 00                  mov      eax, 0x0
+0x00007ff603601063 +0063  5b                              pop      rbx
+0x00007ff603601064 +0064  c3                              ret
+
+section .idata
+; address=0x7ff603602000 size=24 protection=r
+0x00007ff603602000 +0000  00 60 01 00 e0 7f 00 00 GetStdHandle                 -> kernel32.dll!GetStdHandle (0x7fe000016000) state=resolved
+0x00007ff603602008 +0008  00 70 01 00 e0 7f 00 00 FillConsoleOutputCharacterA  -> kernel32.dll!FillConsoleOutputCharacterA (0x7fe000017000) state=resolved
+0x00007ff603602010 +0010  00 7c 01 00 e0 7f 00 00 SetConsoleCursorPosition     -> kernel32.dll!SetConsoleCursorPosition (0x7fe000017c00) state=resolved
+
+section .rdata
+; address=0x7ff603603000 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .data
+; address=0x7ff603603000 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff603603000 size=4
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+written: ; address=0x7ff603603000 size=4
+  resb 4

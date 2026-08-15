@@ -1,0 +1,45 @@
+hostname.exe / linked EXOPROC64 image
+text-base=0x7ff600601000 iat-base=0x7ff600602000 data-base=0x7ff600603000
+entry=0x7ff600601000
+text-bytes=40 data-bytes=19
+
+relocations:
+; +0002 absolute64 -> output (0x7ff600603000)
+; +000c absolute64 -> __exoproc_printf_string_format (0x7ff600603010)
+; +001a iat-relative32 -> IAT+0000 (0x7ff600602000) -> msvcrt.dll!printf (0x7fe002006400)
+
+section .text
+; address=0x7ff600601000 size=40 protection=rx
+0x00007ff600601000 +0000  48 ba 00 30 60 00 f6 7f 00 00   mov      rdx, 0x7ff600603000
+0x00007ff60060100a +000a  48 b9 10 30 60 00 f6 7f 00 00   mov      rcx, 0x7ff600603010
+0x00007ff600601014 +0014  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff600601018 +0018  ff 15 e2 0f 00 00               call     [rip+0xfe2] ; IAT[0x7ff600602000] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff60060101e +001e  48 83 c4 20                     add      rsp, 0x20
+0x00007ff600601022 +0022  b8 00 00 00 00                  mov      eax, 0x0
+0x00007ff600601027 +0027  c3                              ret
+
+section .idata
+; address=0x7ff600602000 size=8 protection=r
+0x00007ff600602000 +0000  00 64 00 02 e0 7f 00 00 printf                       -> msvcrt.dll!printf (0x7fe002006400) state=resolved
+
+section .rdata
+; address=0x7ff600603000 size=19
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+output: ; address=0x7ff600603000 size=16
+  ; utf8="EXOPROC-WIN64\r\n\u0000"
+  db 0x45, 0x58, 0x4f, 0x50, 0x52, 0x4f, 0x43, 0x2d, 0x57, 0x49, 0x4e, 0x36, 0x34, 0x0d, 0x0a, 0x00
+
+__exoproc_printf_string_format: ; address=0x7ff600603010 size=3
+  ; utf8="%s\u0000"
+  db 0x25, 0x73, 0x00
+
+section .data
+; address=0x7ff600603013 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff600603013 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty

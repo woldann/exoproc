@@ -1,0 +1,131 @@
+gdi32.dll / generated DLL memory image
+image-base=0x7fe004000000 image-bytes=8192
+export-slot-bytes=1024
+
+section .text
+; address=0x7fe004000000 size=8192 protection=rx
+
+gdi32.dll!GetStockObject
+address=0x7fe004000000 offset=0x0 thunk-bytes=16 binding=syscall
+0x00007fe004000000 +0000  b8 00 50 00 00                  mov      eax, 0x5000
+0x00007fe004000005 +0005  0f 05                           syscall
+0x00007fe004000007 +0007  c3                              ret
+0x00007fe004000008 +0008  90                              nop
+0x00007fe004000009 +0009  90                              nop
+0x00007fe00400000a +000a  90                              nop
+0x00007fe00400000b +000b  90                              nop
+0x00007fe00400000c +000c  90                              nop
+0x00007fe00400000d +000d  90                              nop
+0x00007fe00400000e +000e  90                              nop
+0x00007fe00400000f +000f  90                              nop
+
+gdi32.dll!SetTextColor
+address=0x7fe004000400 offset=0x400 thunk-bytes=16 binding=syscall
+0x00007fe004000400 +0000  b8 01 50 00 00                  mov      eax, 0x5001
+0x00007fe004000405 +0005  0f 05                           syscall
+0x00007fe004000407 +0007  c3                              ret
+0x00007fe004000408 +0008  90                              nop
+0x00007fe004000409 +0009  90                              nop
+0x00007fe00400040a +000a  90                              nop
+0x00007fe00400040b +000b  90                              nop
+0x00007fe00400040c +000c  90                              nop
+0x00007fe00400040d +000d  90                              nop
+0x00007fe00400040e +000e  90                              nop
+0x00007fe00400040f +000f  90                              nop
+
+gdi32.dll!SetBkMode
+address=0x7fe004000800 offset=0x800 thunk-bytes=16 binding=syscall
+0x00007fe004000800 +0000  b8 02 50 00 00                  mov      eax, 0x5002
+0x00007fe004000805 +0005  0f 05                           syscall
+0x00007fe004000807 +0007  c3                              ret
+0x00007fe004000808 +0008  90                              nop
+0x00007fe004000809 +0009  90                              nop
+0x00007fe00400080a +000a  90                              nop
+0x00007fe00400080b +000b  90                              nop
+0x00007fe00400080c +000c  90                              nop
+0x00007fe00400080d +000d  90                              nop
+0x00007fe00400080e +000e  90                              nop
+0x00007fe00400080f +000f  90                              nop
+
+gdi32.dll!SetBkColor
+address=0x7fe004000c00 offset=0xc00 thunk-bytes=16 binding=syscall
+0x00007fe004000c00 +0000  b8 03 50 00 00                  mov      eax, 0x5003
+0x00007fe004000c05 +0005  0f 05                           syscall
+0x00007fe004000c07 +0007  c3                              ret
+0x00007fe004000c08 +0008  90                              nop
+0x00007fe004000c09 +0009  90                              nop
+0x00007fe004000c0a +000a  90                              nop
+0x00007fe004000c0b +000b  90                              nop
+0x00007fe004000c0c +000c  90                              nop
+0x00007fe004000c0d +000d  90                              nop
+0x00007fe004000c0e +000e  90                              nop
+0x00007fe004000c0f +000f  90                              nop
+
+gdi32.dll!CreateSolidBrush
+address=0x7fe004001000 offset=0x1000 thunk-bytes=16 binding=syscall
+0x00007fe004001000 +0000  b8 04 50 00 00                  mov      eax, 0x5004
+0x00007fe004001005 +0005  0f 05                           syscall
+0x00007fe004001007 +0007  c3                              ret
+0x00007fe004001008 +0008  90                              nop
+0x00007fe004001009 +0009  90                              nop
+0x00007fe00400100a +000a  90                              nop
+0x00007fe00400100b +000b  90                              nop
+0x00007fe00400100c +000c  90                              nop
+0x00007fe00400100d +000d  90                              nop
+0x00007fe00400100e +000e  90                              nop
+0x00007fe00400100f +000f  90                              nop
+
+gdi32.dll!DeleteObject
+address=0x7fe004001400 offset=0x1400 thunk-bytes=16 binding=syscall
+0x00007fe004001400 +0000  b8 05 50 00 00                  mov      eax, 0x5005
+0x00007fe004001405 +0005  0f 05                           syscall
+0x00007fe004001407 +0007  c3                              ret
+0x00007fe004001408 +0008  90                              nop
+0x00007fe004001409 +0009  90                              nop
+0x00007fe00400140a +000a  90                              nop
+0x00007fe00400140b +000b  90                              nop
+0x00007fe00400140c +000c  90                              nop
+0x00007fe00400140d +000d  90                              nop
+0x00007fe00400140e +000e  90                              nop
+0x00007fe00400140f +000f  90                              nop
+
+gdi32.dll!SelectObject
+address=0x7fe004001800 offset=0x1800 thunk-bytes=16 binding=syscall
+0x00007fe004001800 +0000  b8 06 50 00 00                  mov      eax, 0x5006
+0x00007fe004001805 +0005  0f 05                           syscall
+0x00007fe004001807 +0007  c3                              ret
+0x00007fe004001808 +0008  90                              nop
+0x00007fe004001809 +0009  90                              nop
+0x00007fe00400180a +000a  90                              nop
+0x00007fe00400180b +000b  90                              nop
+0x00007fe00400180c +000c  90                              nop
+0x00007fe00400180d +000d  90                              nop
+0x00007fe00400180e +000e  90                              nop
+0x00007fe00400180f +000f  90                              nop
+
+gdi32.dll!Ellipse
+address=0x7fe004001c00 offset=0x1c00 thunk-bytes=16 binding=syscall
+0x00007fe004001c00 +0000  b8 07 50 00 00                  mov      eax, 0x5007
+0x00007fe004001c05 +0005  0f 05                           syscall
+0x00007fe004001c07 +0007  c3                              ret
+0x00007fe004001c08 +0008  90                              nop
+0x00007fe004001c09 +0009  90                              nop
+0x00007fe004001c0a +000a  90                              nop
+0x00007fe004001c0b +000b  90                              nop
+0x00007fe004001c0c +000c  90                              nop
+0x00007fe004001c0d +000d  90                              nop
+0x00007fe004001c0e +000e  90                              nop
+0x00007fe004001c0f +000f  90                              nop
+
+section .idata
+; address=0x7fe004002000 size=0 protection=r
+; empty
+
+section .rdata
+; empty
+
+section .data
+; empty
+
+section .bss
+; empty

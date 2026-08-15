@@ -1,0 +1,133 @@
+{
+  "format": "EXOPROC64",
+  "windowsPe": false,
+  "path": "C:\\Windows\\System32\\cls.exe",
+  "name": "cls.exe",
+  "imageBytes": 169,
+  "headerBytes": 64,
+  "textBytes": 101,
+  "iatBytes": 24,
+  "importCount": 3,
+  "dataBytes": 4,
+  "entryOffset": 0,
+  "relocationCount": 4,
+  "imports": [
+    "kernel32.dll!FillConsoleOutputCharacterA",
+    "kernel32.dll!GetStdHandle",
+    "kernel32.dll!SetConsoleCursorPosition"
+  ],
+  "hashes": {
+    "imageSha256": "bd68154a974e8057018eef6660d69d1432e99b2e5e8e1d93c910dfc8e4fab895",
+    "compilerTextSha256": "4b519939896642f4305a1d9ab86573e1c83f5aa0f82b0b1a5ad60f1df27bf246",
+    "linkedTextSha256": "259a6c6cf3f520de4fb377c34c78de677438c60615485cf221b38238c56ac80e",
+    "iatSha256": "ea621822eaf210c2730a615fa7b9f0a154ce9a387e13865d9cf5f418039945cc",
+    "dataSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+  },
+  "sections": {
+    ".text": {
+      "address": "0x7ff603801000",
+      "bytes": 101,
+      "protection": "rx"
+    },
+    ".idata": {
+      "address": "0x7ff603802000",
+      "bytes": 24,
+      "protection": "r",
+      "symbols": [
+        {
+          "name": "GetStdHandle",
+          "address": "0x7ff603802000",
+          "target": "kernel32.dll!GetStdHandle",
+          "targetAddress": "0x7fe000016000",
+          "state": "resolved"
+        },
+        {
+          "name": "FillConsoleOutputCharacterA",
+          "address": "0x7ff603802008",
+          "target": "kernel32.dll!FillConsoleOutputCharacterA",
+          "targetAddress": "0x7fe000017000",
+          "state": "resolved"
+        },
+        {
+          "name": "SetConsoleCursorPosition",
+          "address": "0x7ff603802010",
+          "target": "kernel32.dll!SetConsoleCursorPosition",
+          "targetAddress": "0x7fe000017c00",
+          "state": "resolved"
+        }
+      ]
+    },
+    ".rdata": {
+      "address": "0x7ff603803000",
+      "bytes": 0,
+      "zeroFill": false,
+      "symbols": []
+    },
+    ".data": {
+      "address": "0x7ff603803000",
+      "bytes": 0,
+      "zeroFill": false,
+      "symbols": []
+    },
+    ".bss": {
+      "address": "0x7ff603803000",
+      "bytes": 4,
+      "zeroFill": true,
+      "symbols": [
+        {
+          "name": "written",
+          "address": "0x7ff603803000",
+          "offset": 0,
+          "bytes": 4
+        }
+      ]
+    }
+  },
+  "relocations": [
+    {
+      "offset": 12,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "GetStdHandle",
+        "address": "0x7fe000016000",
+        "iatOffset": 0,
+        "iatSlotAddress": "0x7ff603802000"
+      }
+    },
+    {
+      "offset": 45,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "written",
+        "address": "0x7ff603803000"
+      }
+    },
+    {
+      "offset": 64,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "FillConsoleOutputCharacterA",
+        "address": "0x7fe000017000",
+        "iatOffset": 8,
+        "iatSlotAddress": "0x7ff603802008"
+      }
+    },
+    {
+      "offset": 86,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "SetConsoleCursorPosition",
+        "address": "0x7fe000017c00",
+        "iatOffset": 16,
+        "iatSlotAddress": "0x7ff603802010"
+      }
+    }
+  ]
+}

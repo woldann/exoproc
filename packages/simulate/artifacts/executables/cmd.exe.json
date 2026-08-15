@@ -1,0 +1,465 @@
+{
+  "format": "EXOPROC64",
+  "windowsPe": false,
+  "path": "C:\\Windows\\System32\\cmd.exe",
+  "name": "cmd.exe",
+  "imageBytes": 5190,
+  "headerBytes": 64,
+  "textBytes": 534,
+  "iatBytes": 64,
+  "importCount": 8,
+  "dataBytes": 4592,
+  "entryOffset": 0,
+  "relocationCount": 28,
+  "imports": [
+    "kernel32.dll!CloseHandle",
+    "kernel32.dll!CreateProcessA",
+    "kernel32.dll!GetCurrentDirectoryA",
+    "kernel32.dll!GetExitCodeProcess",
+    "kernel32.dll!GetStdHandle",
+    "kernel32.dll!ReadFile",
+    "kernel32.dll!WaitForSingleObject",
+    "kernel32.dll!WriteFile"
+  ],
+  "hashes": {
+    "imageSha256": "b3985c4a63ccbd131cb727f2786806fd65b04c29d1068cd0c8d4635fedb70bd0",
+    "compilerTextSha256": "68f3ec33957c5e7bfd56a01102a64e5c1eafd4cc747487f757c574e979598981",
+    "linkedTextSha256": "ef3b5d7dc5c5f4530264f4fadd10f5f569b852827e8d4309f3d8b5b82e48a5ed",
+    "iatSha256": "c4757ff1b06c6a29b92e7aee28b427a4f434209780efd720de65797a82602eb4",
+    "dataSha256": "80803b27e0547eb7479aced6e5b1516ed9427fb3201315eec3fbb824bc15f62b"
+  },
+  "sections": {
+    ".text": {
+      "address": "0x7ff603a01000",
+      "bytes": 534,
+      "protection": "rx"
+    },
+    ".idata": {
+      "address": "0x7ff603a02000",
+      "bytes": 64,
+      "protection": "r",
+      "symbols": [
+        {
+          "name": "GetStdHandle",
+          "address": "0x7ff603a02000",
+          "target": "kernel32.dll!GetStdHandle",
+          "targetAddress": "0x7fe000016000",
+          "state": "resolved"
+        },
+        {
+          "name": "WriteFile",
+          "address": "0x7ff603a02008",
+          "target": "kernel32.dll!WriteFile",
+          "targetAddress": "0x7fe000000800",
+          "state": "resolved"
+        },
+        {
+          "name": "GetCurrentDirectoryA",
+          "address": "0x7ff603a02010",
+          "target": "kernel32.dll!GetCurrentDirectoryA",
+          "targetAddress": "0x7fe000013000",
+          "state": "resolved"
+        },
+        {
+          "name": "ReadFile",
+          "address": "0x7ff603a02018",
+          "target": "kernel32.dll!ReadFile",
+          "targetAddress": "0x7fe000000c00",
+          "state": "resolved"
+        },
+        {
+          "name": "CreateProcessA",
+          "address": "0x7ff603a02020",
+          "target": "kernel32.dll!CreateProcessA",
+          "targetAddress": "0x7fe000007000",
+          "state": "resolved"
+        },
+        {
+          "name": "WaitForSingleObject",
+          "address": "0x7ff603a02028",
+          "target": "kernel32.dll!WaitForSingleObject",
+          "targetAddress": "0x7fe000009800",
+          "state": "resolved"
+        },
+        {
+          "name": "GetExitCodeProcess",
+          "address": "0x7ff603a02030",
+          "target": "kernel32.dll!GetExitCodeProcess",
+          "targetAddress": "0x7fe000009c00",
+          "state": "resolved"
+        },
+        {
+          "name": "CloseHandle",
+          "address": "0x7ff603a02038",
+          "target": "kernel32.dll!CloseHandle",
+          "targetAddress": "0x7fe000009000",
+          "state": "resolved"
+        }
+      ]
+    },
+    ".rdata": {
+      "address": "0x7ff603a03000",
+      "bytes": 192,
+      "zeroFill": false,
+      "symbols": [
+        {
+          "name": "banner",
+          "address": "0x7ff603a03000",
+          "offset": 0,
+          "bytes": 97
+        },
+        {
+          "name": "prompt",
+          "address": "0x7ff603a03061",
+          "offset": 97,
+          "bytes": 2
+        },
+        {
+          "name": "errorPrefix",
+          "address": "0x7ff603a03063",
+          "offset": 99,
+          "bytes": 2
+        },
+        {
+          "name": "errorSuffix",
+          "address": "0x7ff603a03065",
+          "offset": 101,
+          "bytes": 91
+        }
+      ]
+    },
+    ".data": {
+      "address": "0x7ff603a030c0",
+      "bytes": 0,
+      "zeroFill": false,
+      "symbols": []
+    },
+    ".bss": {
+      "address": "0x7ff603a030c0",
+      "bytes": 4400,
+      "zeroFill": true,
+      "symbols": [
+        {
+          "name": "input",
+          "address": "0x7ff603a030c0",
+          "offset": 192,
+          "bytes": 4096
+        },
+        {
+          "name": "readCount",
+          "address": "0x7ff603a040c0",
+          "offset": 4288,
+          "bytes": 8
+        },
+        {
+          "name": "writtenCount",
+          "address": "0x7ff603a040c8",
+          "offset": 4296,
+          "bytes": 8
+        },
+        {
+          "name": "currentDirectory",
+          "address": "0x7ff603a040d0",
+          "offset": 4304,
+          "bytes": 260
+        },
+        {
+          "name": "processInformation",
+          "address": "0x7ff603a041d4",
+          "offset": 4564,
+          "bytes": 24
+        },
+        {
+          "name": "childExitCode",
+          "address": "0x7ff603a041ec",
+          "offset": 4588,
+          "bytes": 4
+        }
+      ]
+    }
+  },
+  "relocations": [
+    {
+      "offset": 11,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "GetStdHandle",
+        "address": "0x7fe000016000",
+        "iatOffset": 0,
+        "iatSlotAddress": "0x7ff603a02000"
+      }
+    },
+    {
+      "offset": 33,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "GetStdHandle",
+        "address": "0x7fe000016000",
+        "iatOffset": 0,
+        "iatSlotAddress": "0x7ff603a02000"
+      }
+    },
+    {
+      "offset": 46,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "banner",
+        "address": "0x7ff603a03000"
+      }
+    },
+    {
+      "offset": 108,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "writtenCount",
+        "address": "0x7ff603a040c8"
+      }
+    },
+    {
+      "offset": 124,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "WriteFile",
+        "address": "0x7fe000000800",
+        "iatOffset": 8,
+        "iatSlotAddress": "0x7ff603a02008"
+      }
+    },
+    {
+      "offset": 140,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "currentDirectory",
+        "address": "0x7ff603a040d0"
+      }
+    },
+    {
+      "offset": 154,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "GetCurrentDirectoryA",
+        "address": "0x7fe000013000",
+        "iatOffset": 16,
+        "iatSlotAddress": "0x7ff603a02010"
+      }
+    },
+    {
+      "offset": 167,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "currentDirectory",
+        "address": "0x7ff603a040d0"
+      }
+    },
+    {
+      "offset": 182,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "prompt",
+        "address": "0x7ff603a03061"
+      }
+    },
+    {
+      "offset": 211,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "input",
+        "address": "0x7ff603a030c0"
+      }
+    },
+    {
+      "offset": 231,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "readCount",
+        "address": "0x7ff603a040c0"
+      }
+    },
+    {
+      "offset": 247,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "ReadFile",
+        "address": "0x7fe000000c00",
+        "iatOffset": 24,
+        "iatSlotAddress": "0x7ff603a02018"
+      }
+    },
+    {
+      "offset": 261,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "input",
+        "address": "0x7ff603a030c0"
+      }
+    },
+    {
+      "offset": 277,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "processInformation",
+        "address": "0x7ff603a041d4"
+      }
+    },
+    {
+      "offset": 302,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "CreateProcessA",
+        "address": "0x7fe000007000",
+        "iatOffset": 32,
+        "iatSlotAddress": "0x7ff603a02020"
+      }
+    },
+    {
+      "offset": 320,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "processInformation",
+        "address": "0x7ff603a041d4"
+      }
+    },
+    {
+      "offset": 342,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "WaitForSingleObject",
+        "address": "0x7fe000009800",
+        "iatOffset": 40,
+        "iatSlotAddress": "0x7ff603a02028"
+      }
+    },
+    {
+      "offset": 352,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "processInformation",
+        "address": "0x7ff603a041d4"
+      }
+    },
+    {
+      "offset": 365,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "childExitCode",
+        "address": "0x7ff603a041ec"
+      }
+    },
+    {
+      "offset": 379,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "GetExitCodeProcess",
+        "address": "0x7fe000009c00",
+        "iatOffset": 48,
+        "iatSlotAddress": "0x7ff603a02030"
+      }
+    },
+    {
+      "offset": 389,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "processInformation",
+        "address": "0x7ff603a041d4"
+      }
+    },
+    {
+      "offset": 406,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "CloseHandle",
+        "address": "0x7fe000009000",
+        "iatOffset": 56,
+        "iatSlotAddress": "0x7ff603a02038"
+      }
+    },
+    {
+      "offset": 416,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "processInformation",
+        "address": "0x7ff603a041d4"
+      }
+    },
+    {
+      "offset": 434,
+      "encoding": "iat-relative32",
+      "target": {
+        "kind": "export",
+        "dll": "kernel32.dll",
+        "function": "CloseHandle",
+        "address": "0x7fe000009000",
+        "iatOffset": 56,
+        "iatSlotAddress": "0x7ff603a02038"
+      }
+    },
+    {
+      "offset": 453,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "errorPrefix",
+        "address": "0x7ff603a03063"
+      }
+    },
+    {
+      "offset": 478,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "readCount",
+        "address": "0x7ff603a040c0"
+      }
+    },
+    {
+      "offset": 495,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "input",
+        "address": "0x7ff603a030c0"
+      }
+    },
+    {
+      "offset": 510,
+      "encoding": "absolute64",
+      "target": {
+        "kind": "data",
+        "symbol": "errorSuffix",
+        "address": "0x7ff603a03065"
+      }
+    }
+  ]
+}

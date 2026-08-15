@@ -1,0 +1,84 @@
+echo.exe / linked EXOPROC64 image
+text-base=0x7ff603e01000 iat-base=0x7ff603e02000 data-base=0x7ff603e03000
+entry=0x7ff603e01000
+text-bytes=169 data-bytes=8
+
+relocations:
+; +0025 iat-relative32 -> IAT+0000 (0x7ff603e02000) -> msvcrt.dll!strlen (0x7fe002002000)
+; +0035 absolute64 -> __exoproc_printf_string_format (0x7ff603e03005)
+; +0043 iat-relative32 -> IAT+0008 (0x7ff603e02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +005b absolute64 -> space (0x7ff603e03000)
+; +0065 absolute64 -> __exoproc_printf_string_format (0x7ff603e03005)
+; +0073 iat-relative32 -> IAT+0008 (0x7ff603e02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +0086 absolute64 -> newline (0x7ff603e03002)
+; +0090 absolute64 -> __exoproc_printf_string_format (0x7ff603e03005)
+; +009e iat-relative32 -> IAT+0008 (0x7ff603e02008) -> msvcrt.dll!printf (0x7fe002006400)
+
+section .text
+; address=0x7ff603e01000 size=169 protection=rx
+0x00007ff603e01000 +0000  8b c1                           mov      eax, ecx
+0x00007ff603e01002 +0002  83 e8 01                        sub      eax, 0x1
+0x00007ff603e01005 +0005  4c 8b f8                        mov      r15, rax
+0x00007ff603e01008 +0008  49 83 ff 00                     cmp      r15, 0x0
+0x00007ff603e0100c +000c  0f 84 72 00 00 00               je       0x7ff603e01084 ; -> 0x7ff603e01084
+0x00007ff603e01012 +0012  4c 8b f2                        mov      r14, rdx
+0x00007ff603e01015 +0015  49 83 c6 08                     add      r14, 0x8
+0x00007ff603e01019 +0019  4d 8b 2e                        mov      r13, [r14]
+0x00007ff603e0101c +001c  49 8b cd                        mov      rcx, r13
+0x00007ff603e0101f +001f  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603e01023 +0023  ff 15 d7 0f 00 00               call     [rip+0xfd7] ; IAT[0x7ff603e02000] -> msvcrt.dll!strlen (0x7fe002002000)
+0x00007ff603e01029 +0029  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603e0102d +002d  4c 8b c0                        mov      r8, rax
+0x00007ff603e01030 +0030  49 8b d5                        mov      rdx, r13
+0x00007ff603e01033 +0033  48 b9 05 30 e0 03 f6 7f 00 00   mov      rcx, 0x7ff603e03005
+0x00007ff603e0103d +003d  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603e01041 +0041  ff 15 c1 0f 00 00               call     [rip+0xfc1] ; IAT[0x7ff603e02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff603e01047 +0047  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603e0104b +004b  49 83 ef 01                     sub      r15, 0x1
+0x00007ff603e0104f +004f  49 83 ff 00                     cmp      r15, 0x0
+0x00007ff603e01053 +0053  0f 84 2b 00 00 00               je       0x7ff603e01084 ; -> 0x7ff603e01084
+0x00007ff603e01059 +0059  48 ba 00 30 e0 03 f6 7f 00 00   mov      rdx, 0x7ff603e03000
+0x00007ff603e01063 +0063  48 b9 05 30 e0 03 f6 7f 00 00   mov      rcx, 0x7ff603e03005
+0x00007ff603e0106d +006d  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603e01071 +0071  ff 15 91 0f 00 00               call     [rip+0xf91] ; IAT[0x7ff603e02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff603e01077 +0077  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603e0107b +007b  49 83 c6 08                     add      r14, 0x8
+0x00007ff603e0107f +007f  e9 95 ff ff ff                  jmp      0x7ff603e01019 ; -> 0x7ff603e01019
+0x00007ff603e01084 +0084  48 ba 02 30 e0 03 f6 7f 00 00   mov      rdx, 0x7ff603e03002
+0x00007ff603e0108e +008e  48 b9 05 30 e0 03 f6 7f 00 00   mov      rcx, 0x7ff603e03005
+0x00007ff603e01098 +0098  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff603e0109c +009c  ff 15 66 0f 00 00               call     [rip+0xf66] ; IAT[0x7ff603e02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff603e010a2 +00a2  48 83 c4 20                     add      rsp, 0x20
+0x00007ff603e010a6 +00a6  31 c0                           xor      eax, eax
+0x00007ff603e010a8 +00a8  c3                              ret
+
+section .idata
+; address=0x7ff603e02000 size=16 protection=r
+0x00007ff603e02000 +0000  00 20 00 02 e0 7f 00 00 strlen                       -> msvcrt.dll!strlen (0x7fe002002000) state=resolved
+0x00007ff603e02008 +0008  00 64 00 02 e0 7f 00 00 printf                       -> msvcrt.dll!printf (0x7fe002006400) state=resolved
+
+section .rdata
+; address=0x7ff603e03000 size=8
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+space: ; address=0x7ff603e03000 size=2
+  ; utf8=" \u0000"
+  db 0x20, 0x00
+
+newline: ; address=0x7ff603e03002 size=3
+  ; utf8="\r\n\u0000"
+  db 0x0d, 0x0a, 0x00
+
+__exoproc_printf_string_format: ; address=0x7ff603e03005 size=3
+  ; utf8="%s\u0000"
+  db 0x25, 0x73, 0x00
+
+section .data
+; address=0x7ff603e03008 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff603e03008 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty

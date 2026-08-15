@@ -1,0 +1,174 @@
+whois.exe / linked EXOPROC64 image
+text-base=0x7ff601a01000 iat-base=0x7ff601a02000 data-base=0x7ff601a03000
+entry=0x7ff601a01000
+text-bytes=376 data-bytes=360
+
+relocations:
+; +0019 iat-relative32 -> IAT+0000 (0x7ff601a02000) -> ws2_32.dll!inet_addr (0x7fe007002800)
+; +0038 absolute64 -> localRecord (0x7ff601a03017)
+; +0042 absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +0050 iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +005f absolute64 -> newline (0x7ff601a03162)
+; +0069 absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +0077 iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +0084 absolute64 -> blockedPrefix (0x7ff601a030b8)
+; +008e absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +009c iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +00ab absolute64 -> blockedSuffix (0x7ff601a030d2)
+; +00b5 absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +00c3 iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +00d3 absolute64 -> invalidPrefix (0x7ff601a0312c)
+; +00dd absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +00eb iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +00fa absolute64 -> invalidSuffix (0x7ff601a03142)
+; +0104 absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +0112 iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +0122 absolute64 -> usage (0x7ff601a03000)
+; +012c absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +013a iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+; +0151 iat-relative32 -> IAT+0010 (0x7ff601a02010) -> msvcrt.dll!strlen (0x7fe002002000)
+; +0161 absolute64 -> __exoproc_printf_string_format (0x7ff601a03165)
+; +016f iat-relative32 -> IAT+0008 (0x7ff601a02008) -> msvcrt.dll!printf (0x7fe002006400)
+
+section .text
+; address=0x7ff601a01000 size=376 protection=rx
+0x00007ff601a01000 +0000  83 f9 01                        cmp      ecx, 0x1
+0x00007ff601a01003 +0003  0f 84 17 01 00 00               je       0x7ff601a01120 ; -> 0x7ff601a01120
+0x00007ff601a01009 +0009  48 8b c2                        mov      rax, rdx
+0x00007ff601a0100c +000c  4c 8b 70 08                     mov      r14, [rax+0x8]
+0x00007ff601a01010 +0010  49 8b ce                        mov      rcx, r14
+0x00007ff601a01013 +0013  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a01017 +0017  ff 15 e3 0f 00 00               call     [rip+0xfe3] ; IAT[0x7ff601a02000] -> ws2_32.dll!inet_addr (0x7fe007002800)
+0x00007ff601a0101d +001d  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a01021 +0021  83 f8 ff                        cmp      eax, 0x-1
+0x00007ff601a01024 +0024  0f 84 a7 00 00 00               je       0x7ff601a010d1 ; -> 0x7ff601a010d1
+0x00007ff601a0102a +002a  81 f8 7f 00 00 01               cmp      eax, 0x100007f
+0x00007ff601a01030 +0030  0f 85 4c 00 00 00               jne      0x7ff601a01082 ; -> 0x7ff601a01082
+0x00007ff601a01036 +0036  48 ba 17 30 a0 01 f6 7f 00 00   mov      rdx, 0x7ff601a03017
+0x00007ff601a01040 +0040  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a0104a +004a  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a0104e +004e  ff 15 b4 0f 00 00               call     [rip+0xfb4] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a01054 +0054  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a01058 +0058  e8 eb 00 00 00                  call     0x7ff601a01148 ; -> 0x7ff601a01148
+0x00007ff601a0105d +005d  48 ba 62 31 a0 01 f6 7f 00 00   mov      rdx, 0x7ff601a03162
+0x00007ff601a01067 +0067  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a01071 +0071  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a01075 +0075  ff 15 8d 0f 00 00               call     [rip+0xf8d] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a0107b +007b  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a0107f +007f  31 c0                           xor      eax, eax
+0x00007ff601a01081 +0081  c3                              ret
+0x00007ff601a01082 +0082  48 ba b8 30 a0 01 f6 7f 00 00   mov      rdx, 0x7ff601a030b8
+0x00007ff601a0108c +008c  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a01096 +0096  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a0109a +009a  ff 15 68 0f 00 00               call     [rip+0xf68] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a010a0 +00a0  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a010a4 +00a4  e8 9f 00 00 00                  call     0x7ff601a01148 ; -> 0x7ff601a01148
+0x00007ff601a010a9 +00a9  48 ba d2 30 a0 01 f6 7f 00 00   mov      rdx, 0x7ff601a030d2
+0x00007ff601a010b3 +00b3  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a010bd +00bd  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a010c1 +00c1  ff 15 41 0f 00 00               call     [rip+0xf41] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a010c7 +00c7  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a010cb +00cb  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff601a010d0 +00d0  c3                              ret
+0x00007ff601a010d1 +00d1  48 ba 2c 31 a0 01 f6 7f 00 00   mov      rdx, 0x7ff601a0312c
+0x00007ff601a010db +00db  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a010e5 +00e5  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a010e9 +00e9  ff 15 19 0f 00 00               call     [rip+0xf19] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a010ef +00ef  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a010f3 +00f3  e8 50 00 00 00                  call     0x7ff601a01148 ; -> 0x7ff601a01148
+0x00007ff601a010f8 +00f8  48 ba 42 31 a0 01 f6 7f 00 00   mov      rdx, 0x7ff601a03142
+0x00007ff601a01102 +0102  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a0110c +010c  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a01110 +0110  ff 15 f2 0e 00 00               call     [rip+0xef2] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a01116 +0116  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a0111a +011a  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff601a0111f +011f  c3                              ret
+0x00007ff601a01120 +0120  48 ba 00 30 a0 01 f6 7f 00 00   mov      rdx, 0x7ff601a03000
+0x00007ff601a0112a +012a  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a01134 +0134  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a01138 +0138  ff 15 ca 0e 00 00               call     [rip+0xeca] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a0113e +013e  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a01142 +0142  b8 01 00 00 00                  mov      eax, 0x1
+0x00007ff601a01147 +0147  c3                              ret
+0x00007ff601a01148 +0148  49 8b ce                        mov      rcx, r14
+0x00007ff601a0114b +014b  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a0114f +014f  ff 15 bb 0e 00 00               call     [rip+0xebb] ; IAT[0x7ff601a02010] -> msvcrt.dll!strlen (0x7fe002002000)
+0x00007ff601a01155 +0155  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a01159 +0159  4c 8b c0                        mov      r8, rax
+0x00007ff601a0115c +015c  49 8b d6                        mov      rdx, r14
+0x00007ff601a0115f +015f  48 b9 65 31 a0 01 f6 7f 00 00   mov      rcx, 0x7ff601a03165
+0x00007ff601a01169 +0169  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601a0116d +016d  ff 15 95 0e 00 00               call     [rip+0xe95] ; IAT[0x7ff601a02008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601a01173 +0173  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601a01177 +0177  c3                              ret
+
+section .idata
+; address=0x7ff601a02000 size=24 protection=r
+0x00007ff601a02000 +0000  00 28 00 07 e0 7f 00 00 inet_addr                    -> ws2_32.dll!inet_addr (0x7fe007002800) state=resolved
+0x00007ff601a02008 +0008  00 64 00 02 e0 7f 00 00 printf                       -> msvcrt.dll!printf (0x7fe002006400) state=resolved
+0x00007ff601a02010 +0010  00 20 00 02 e0 7f 00 00 strlen                       -> msvcrt.dll!strlen (0x7fe002002000) state=resolved
+
+section .rdata
+; address=0x7ff601a03000 size=360
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+usage: ; address=0x7ff601a03000 size=23
+  ; utf8="Usage: whois address\r\n\u0000"
+  db 0x55, 0x73, 0x61, 0x67, 0x65, 0x3a, 0x20, 0x77, 0x68, 0x6f, 0x69, 0x73, 0x20, 0x61, 0x64, 0x64
+  db 0x72, 0x65, 0x73, 0x73, 0x0d, 0x0a, 0x00
+
+localRecord: ; address=0x7ff601a03017 size=161
+  ; utf8="NetRange:       127.0.0.0 - 127.255.255.255\r\nCIDR:           127.0.0.0/8\r\nNetName:        EXOPROC-LOOPBACK\r\nNetType:        Simulated Loopback\r\nQuery:          \u0000"
+  db 0x4e, 0x65, 0x74, 0x52, 0x61, 0x6e, 0x67, 0x65, 0x3a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20
+  db 0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x30, 0x20, 0x2d, 0x20, 0x31, 0x32, 0x37, 0x2e
+  db 0x32, 0x35, 0x35, 0x2e, 0x32, 0x35, 0x35, 0x2e, 0x32, 0x35, 0x35, 0x0d, 0x0a, 0x43, 0x49, 0x44
+  db 0x52, 0x3a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x31, 0x32, 0x37
+  db 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x30, 0x2f, 0x38, 0x0d, 0x0a, 0x4e, 0x65, 0x74, 0x4e, 0x61, 0x6d
+  db 0x65, 0x3a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x45, 0x58, 0x4f, 0x50, 0x52, 0x4f
+  db 0x43, 0x2d, 0x4c, 0x4f, 0x4f, 0x50, 0x42, 0x41, 0x43, 0x4b, 0x0d, 0x0a, 0x4e, 0x65, 0x74, 0x54
+  db 0x79, 0x70, 0x65, 0x3a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x53, 0x69, 0x6d, 0x75
+  db 0x6c, 0x61, 0x74, 0x65, 0x64, 0x20, 0x4c, 0x6f, 0x6f, 0x70, 0x62, 0x61, 0x63, 0x6b, 0x0d, 0x0a
+  db 0x51, 0x75, 0x65, 0x72, 0x79, 0x3a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20
+  db 0x00
+
+blockedPrefix: ; address=0x7ff601a030b8 size=26
+  ; utf8="WHOIS lookup blocked for \u0000"
+  db 0x57, 0x48, 0x4f, 0x49, 0x53, 0x20, 0x6c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x20, 0x62, 0x6c, 0x6f
+  db 0x63, 0x6b, 0x65, 0x64, 0x20, 0x66, 0x6f, 0x72, 0x20, 0x00
+
+blockedSuffix: ; address=0x7ff601a030d2 size=90
+  ; utf8=".\r\nOnly the simulated 127.0.0.0/8 registry is available.\r\nNo internet request was made.\r\n\u0000"
+  db 0x2e, 0x0d, 0x0a, 0x4f, 0x6e, 0x6c, 0x79, 0x20, 0x74, 0x68, 0x65, 0x20, 0x73, 0x69, 0x6d, 0x75
+  db 0x6c, 0x61, 0x74, 0x65, 0x64, 0x20, 0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x30, 0x2f
+  db 0x38, 0x20, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x20, 0x69, 0x73, 0x20, 0x61, 0x76
+  db 0x61, 0x69, 0x6c, 0x61, 0x62, 0x6c, 0x65, 0x2e, 0x0d, 0x0a, 0x4e, 0x6f, 0x20, 0x69, 0x6e, 0x74
+  db 0x65, 0x72, 0x6e, 0x65, 0x74, 0x20, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x20, 0x77, 0x61
+  db 0x73, 0x20, 0x6d, 0x61, 0x64, 0x65, 0x2e, 0x0d, 0x0a, 0x00
+
+invalidPrefix: ; address=0x7ff601a0312c size=22
+  ; utf8="WHOIS lookup failed: \u0000"
+  db 0x57, 0x48, 0x4f, 0x49, 0x53, 0x20, 0x6c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x20, 0x66, 0x61, 0x69
+  db 0x6c, 0x65, 0x64, 0x3a, 0x20, 0x00
+
+invalidSuffix: ; address=0x7ff601a03142 size=32
+  ; utf8=" is not a local IPv4 address.\r\n\u0000"
+  db 0x20, 0x69, 0x73, 0x20, 0x6e, 0x6f, 0x74, 0x20, 0x61, 0x20, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x20
+  db 0x49, 0x50, 0x76, 0x34, 0x20, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x2e, 0x0d, 0x0a, 0x00
+
+newline: ; address=0x7ff601a03162 size=3
+  ; utf8="\r\n\u0000"
+  db 0x0d, 0x0a, 0x00
+
+__exoproc_printf_string_format: ; address=0x7ff601a03165 size=3
+  ; utf8="%s\u0000"
+  db 0x25, 0x73, 0x00
+
+section .data
+; address=0x7ff601a03168 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff601a03168 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty

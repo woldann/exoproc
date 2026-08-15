@@ -1,0 +1,64 @@
+pwd.exe / linked EXOPROC64 image
+text-base=0x7ff601001000 iat-base=0x7ff601002000 data-base=0x7ff601003000
+entry=0x7ff601001000
+text-bytes=103 data-bytes=266
+
+relocations:
+; +0007 absolute64 -> currentDirectory (0x7ff601003006)
+; +0015 iat-relative32 -> IAT+0000 (0x7ff601002000) -> kernel32.dll!GetCurrentDirectoryA (0x7fe000013000)
+; +0022 absolute64 -> currentDirectory (0x7ff601003006)
+; +002c absolute64 -> __exoproc_printf_string_format (0x7ff601003003)
+; +003a iat-relative32 -> IAT+0008 (0x7ff601002008) -> msvcrt.dll!printf (0x7fe002006400)
+; +0044 absolute64 -> newline (0x7ff601003000)
+; +004e absolute64 -> __exoproc_printf_string_format (0x7ff601003003)
+; +005c iat-relative32 -> IAT+0008 (0x7ff601002008) -> msvcrt.dll!printf (0x7fe002006400)
+
+section .text
+; address=0x7ff601001000 size=103 protection=rx
+0x00007ff601001000 +0000  b9 04 01 00 00                  mov      ecx, 0x104
+0x00007ff601001005 +0005  48 ba 06 30 00 01 f6 7f 00 00   mov      rdx, 0x7ff601003006
+0x00007ff60100100f +000f  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601001013 +0013  ff 15 e7 0f 00 00               call     [rip+0xfe7] ; IAT[0x7ff601002000] -> kernel32.dll!GetCurrentDirectoryA (0x7fe000013000)
+0x00007ff601001019 +0019  48 83 c4 20                     add      rsp, 0x20
+0x00007ff60100101d +001d  4c 8b c0                        mov      r8, rax
+0x00007ff601001020 +0020  48 ba 06 30 00 01 f6 7f 00 00   mov      rdx, 0x7ff601003006
+0x00007ff60100102a +002a  48 b9 03 30 00 01 f6 7f 00 00   mov      rcx, 0x7ff601003003
+0x00007ff601001034 +0034  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff601001038 +0038  ff 15 ca 0f 00 00               call     [rip+0xfca] ; IAT[0x7ff601002008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff60100103e +003e  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601001042 +0042  48 ba 00 30 00 01 f6 7f 00 00   mov      rdx, 0x7ff601003000
+0x00007ff60100104c +004c  48 b9 03 30 00 01 f6 7f 00 00   mov      rcx, 0x7ff601003003
+0x00007ff601001056 +0056  48 83 ec 20                     sub      rsp, 0x20
+0x00007ff60100105a +005a  ff 15 a8 0f 00 00               call     [rip+0xfa8] ; IAT[0x7ff601002008] -> msvcrt.dll!printf (0x7fe002006400)
+0x00007ff601001060 +0060  48 83 c4 20                     add      rsp, 0x20
+0x00007ff601001064 +0064  31 c0                           xor      eax, eax
+0x00007ff601001066 +0066  c3                              ret
+
+section .idata
+; address=0x7ff601002000 size=16 protection=r
+0x00007ff601002000 +0000  00 30 01 00 e0 7f 00 00 GetCurrentDirectoryA         -> kernel32.dll!GetCurrentDirectoryA (0x7fe000013000) state=resolved
+0x00007ff601002008 +0008  00 64 00 02 e0 7f 00 00 printf                       -> msvcrt.dll!printf (0x7fe002006400) state=resolved
+
+section .rdata
+; address=0x7ff601003000 size=6
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+newline: ; address=0x7ff601003000 size=3
+  ; utf8="\r\n\u0000"
+  db 0x0d, 0x0a, 0x00
+
+__exoproc_printf_string_format: ; address=0x7ff601003003 size=3
+  ; utf8="%s\u0000"
+  db 0x25, 0x73, 0x00
+
+section .data
+; address=0x7ff601003006 size=0
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+; empty
+
+section .bss
+; address=0x7ff601003006 size=260
+; EXOPROC64 container içinde ortak data mapping alanında tutulur.
+
+currentDirectory: ; address=0x7ff601003006 size=260
+  resb 260

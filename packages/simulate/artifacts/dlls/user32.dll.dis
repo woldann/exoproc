@@ -1,0 +1,509 @@
+user32.dll / generated DLL memory image
+image-base=0x7fe003000000 image-bytes=36864
+export-slot-bytes=1024
+
+section .text
+; address=0x7fe003000000 size=36864 protection=rx
+
+user32.dll!RegisterClassExW
+address=0x7fe003000000 offset=0x0 thunk-bytes=16 binding=syscall
+0x00007fe003000000 +0000  b8 00 40 00 00                  mov      eax, 0x4000
+0x00007fe003000005 +0005  0f 05                           syscall
+0x00007fe003000007 +0007  c3                              ret
+0x00007fe003000008 +0008  90                              nop
+0x00007fe003000009 +0009  90                              nop
+0x00007fe00300000a +000a  90                              nop
+0x00007fe00300000b +000b  90                              nop
+0x00007fe00300000c +000c  90                              nop
+0x00007fe00300000d +000d  90                              nop
+0x00007fe00300000e +000e  90                              nop
+0x00007fe00300000f +000f  90                              nop
+
+user32.dll!CreateWindowExW
+address=0x7fe003000400 offset=0x400 thunk-bytes=16 binding=syscall
+0x00007fe003000400 +0000  b8 01 40 00 00                  mov      eax, 0x4001
+0x00007fe003000405 +0005  0f 05                           syscall
+0x00007fe003000407 +0007  c3                              ret
+0x00007fe003000408 +0008  90                              nop
+0x00007fe003000409 +0009  90                              nop
+0x00007fe00300040a +000a  90                              nop
+0x00007fe00300040b +000b  90                              nop
+0x00007fe00300040c +000c  90                              nop
+0x00007fe00300040d +000d  90                              nop
+0x00007fe00300040e +000e  90                              nop
+0x00007fe00300040f +000f  90                              nop
+
+user32.dll!ShowWindow
+address=0x7fe003000800 offset=0x800 thunk-bytes=16 binding=syscall
+0x00007fe003000800 +0000  b8 02 40 00 00                  mov      eax, 0x4002
+0x00007fe003000805 +0005  0f 05                           syscall
+0x00007fe003000807 +0007  c3                              ret
+0x00007fe003000808 +0008  90                              nop
+0x00007fe003000809 +0009  90                              nop
+0x00007fe00300080a +000a  90                              nop
+0x00007fe00300080b +000b  90                              nop
+0x00007fe00300080c +000c  90                              nop
+0x00007fe00300080d +000d  90                              nop
+0x00007fe00300080e +000e  90                              nop
+0x00007fe00300080f +000f  90                              nop
+
+user32.dll!UpdateWindow
+address=0x7fe003000c00 offset=0xc00 thunk-bytes=16 binding=syscall
+0x00007fe003000c00 +0000  b8 03 40 00 00                  mov      eax, 0x4003
+0x00007fe003000c05 +0005  0f 05                           syscall
+0x00007fe003000c07 +0007  c3                              ret
+0x00007fe003000c08 +0008  90                              nop
+0x00007fe003000c09 +0009  90                              nop
+0x00007fe003000c0a +000a  90                              nop
+0x00007fe003000c0b +000b  90                              nop
+0x00007fe003000c0c +000c  90                              nop
+0x00007fe003000c0d +000d  90                              nop
+0x00007fe003000c0e +000e  90                              nop
+0x00007fe003000c0f +000f  90                              nop
+
+user32.dll!GetMessageW
+address=0x7fe003001000 offset=0x1000 thunk-bytes=16 binding=syscall
+0x00007fe003001000 +0000  b8 04 40 00 00                  mov      eax, 0x4004
+0x00007fe003001005 +0005  0f 05                           syscall
+0x00007fe003001007 +0007  c3                              ret
+0x00007fe003001008 +0008  90                              nop
+0x00007fe003001009 +0009  90                              nop
+0x00007fe00300100a +000a  90                              nop
+0x00007fe00300100b +000b  90                              nop
+0x00007fe00300100c +000c  90                              nop
+0x00007fe00300100d +000d  90                              nop
+0x00007fe00300100e +000e  90                              nop
+0x00007fe00300100f +000f  90                              nop
+
+user32.dll!PeekMessageW
+address=0x7fe003001400 offset=0x1400 thunk-bytes=16 binding=syscall
+0x00007fe003001400 +0000  b8 05 40 00 00                  mov      eax, 0x4005
+0x00007fe003001405 +0005  0f 05                           syscall
+0x00007fe003001407 +0007  c3                              ret
+0x00007fe003001408 +0008  90                              nop
+0x00007fe003001409 +0009  90                              nop
+0x00007fe00300140a +000a  90                              nop
+0x00007fe00300140b +000b  90                              nop
+0x00007fe00300140c +000c  90                              nop
+0x00007fe00300140d +000d  90                              nop
+0x00007fe00300140e +000e  90                              nop
+0x00007fe00300140f +000f  90                              nop
+
+user32.dll!TranslateMessage
+address=0x7fe003001800 offset=0x1800 thunk-bytes=16 binding=syscall
+0x00007fe003001800 +0000  b8 06 40 00 00                  mov      eax, 0x4006
+0x00007fe003001805 +0005  0f 05                           syscall
+0x00007fe003001807 +0007  c3                              ret
+0x00007fe003001808 +0008  90                              nop
+0x00007fe003001809 +0009  90                              nop
+0x00007fe00300180a +000a  90                              nop
+0x00007fe00300180b +000b  90                              nop
+0x00007fe00300180c +000c  90                              nop
+0x00007fe00300180d +000d  90                              nop
+0x00007fe00300180e +000e  90                              nop
+0x00007fe00300180f +000f  90                              nop
+
+user32.dll!DispatchMessageW
+address=0x7fe003001c00 offset=0x1c00 thunk-bytes=16 binding=syscall
+0x00007fe003001c00 +0000  b8 07 40 00 00                  mov      eax, 0x4007
+0x00007fe003001c05 +0005  0f 05                           syscall
+0x00007fe003001c07 +0007  c3                              ret
+0x00007fe003001c08 +0008  90                              nop
+0x00007fe003001c09 +0009  90                              nop
+0x00007fe003001c0a +000a  90                              nop
+0x00007fe003001c0b +000b  90                              nop
+0x00007fe003001c0c +000c  90                              nop
+0x00007fe003001c0d +000d  90                              nop
+0x00007fe003001c0e +000e  90                              nop
+0x00007fe003001c0f +000f  90                              nop
+
+user32.dll!PostQuitMessage
+address=0x7fe003002000 offset=0x2000 thunk-bytes=16 binding=syscall
+0x00007fe003002000 +0000  b8 08 40 00 00                  mov      eax, 0x4008
+0x00007fe003002005 +0005  0f 05                           syscall
+0x00007fe003002007 +0007  c3                              ret
+0x00007fe003002008 +0008  90                              nop
+0x00007fe003002009 +0009  90                              nop
+0x00007fe00300200a +000a  90                              nop
+0x00007fe00300200b +000b  90                              nop
+0x00007fe00300200c +000c  90                              nop
+0x00007fe00300200d +000d  90                              nop
+0x00007fe00300200e +000e  90                              nop
+0x00007fe00300200f +000f  90                              nop
+
+user32.dll!DefWindowProcW
+address=0x7fe003002400 offset=0x2400 thunk-bytes=16 binding=syscall
+0x00007fe003002400 +0000  b8 09 40 00 00                  mov      eax, 0x4009
+0x00007fe003002405 +0005  0f 05                           syscall
+0x00007fe003002407 +0007  c3                              ret
+0x00007fe003002408 +0008  90                              nop
+0x00007fe003002409 +0009  90                              nop
+0x00007fe00300240a +000a  90                              nop
+0x00007fe00300240b +000b  90                              nop
+0x00007fe00300240c +000c  90                              nop
+0x00007fe00300240d +000d  90                              nop
+0x00007fe00300240e +000e  90                              nop
+0x00007fe00300240f +000f  90                              nop
+
+user32.dll!BeginPaint
+address=0x7fe003002800 offset=0x2800 thunk-bytes=16 binding=syscall
+0x00007fe003002800 +0000  b8 0a 40 00 00                  mov      eax, 0x400a
+0x00007fe003002805 +0005  0f 05                           syscall
+0x00007fe003002807 +0007  c3                              ret
+0x00007fe003002808 +0008  90                              nop
+0x00007fe003002809 +0009  90                              nop
+0x00007fe00300280a +000a  90                              nop
+0x00007fe00300280b +000b  90                              nop
+0x00007fe00300280c +000c  90                              nop
+0x00007fe00300280d +000d  90                              nop
+0x00007fe00300280e +000e  90                              nop
+0x00007fe00300280f +000f  90                              nop
+
+user32.dll!EndPaint
+address=0x7fe003002c00 offset=0x2c00 thunk-bytes=16 binding=syscall
+0x00007fe003002c00 +0000  b8 0b 40 00 00                  mov      eax, 0x400b
+0x00007fe003002c05 +0005  0f 05                           syscall
+0x00007fe003002c07 +0007  c3                              ret
+0x00007fe003002c08 +0008  90                              nop
+0x00007fe003002c09 +0009  90                              nop
+0x00007fe003002c0a +000a  90                              nop
+0x00007fe003002c0b +000b  90                              nop
+0x00007fe003002c0c +000c  90                              nop
+0x00007fe003002c0d +000d  90                              nop
+0x00007fe003002c0e +000e  90                              nop
+0x00007fe003002c0f +000f  90                              nop
+
+user32.dll!GetClientRect
+address=0x7fe003003000 offset=0x3000 thunk-bytes=16 binding=syscall
+0x00007fe003003000 +0000  b8 0c 40 00 00                  mov      eax, 0x400c
+0x00007fe003003005 +0005  0f 05                           syscall
+0x00007fe003003007 +0007  c3                              ret
+0x00007fe003003008 +0008  90                              nop
+0x00007fe003003009 +0009  90                              nop
+0x00007fe00300300a +000a  90                              nop
+0x00007fe00300300b +000b  90                              nop
+0x00007fe00300300c +000c  90                              nop
+0x00007fe00300300d +000d  90                              nop
+0x00007fe00300300e +000e  90                              nop
+0x00007fe00300300f +000f  90                              nop
+
+user32.dll!DrawTextW
+address=0x7fe003003400 offset=0x3400 thunk-bytes=16 binding=syscall
+0x00007fe003003400 +0000  b8 0d 40 00 00                  mov      eax, 0x400d
+0x00007fe003003405 +0005  0f 05                           syscall
+0x00007fe003003407 +0007  c3                              ret
+0x00007fe003003408 +0008  90                              nop
+0x00007fe003003409 +0009  90                              nop
+0x00007fe00300340a +000a  90                              nop
+0x00007fe00300340b +000b  90                              nop
+0x00007fe00300340c +000c  90                              nop
+0x00007fe00300340d +000d  90                              nop
+0x00007fe00300340e +000e  90                              nop
+0x00007fe00300340f +000f  90                              nop
+
+user32.dll!LoadCursorW
+address=0x7fe003003800 offset=0x3800 thunk-bytes=16 binding=syscall
+0x00007fe003003800 +0000  b8 0e 40 00 00                  mov      eax, 0x400e
+0x00007fe003003805 +0005  0f 05                           syscall
+0x00007fe003003807 +0007  c3                              ret
+0x00007fe003003808 +0008  90                              nop
+0x00007fe003003809 +0009  90                              nop
+0x00007fe00300380a +000a  90                              nop
+0x00007fe00300380b +000b  90                              nop
+0x00007fe00300380c +000c  90                              nop
+0x00007fe00300380d +000d  90                              nop
+0x00007fe00300380e +000e  90                              nop
+0x00007fe00300380f +000f  90                              nop
+
+user32.dll!LoadIconW
+address=0x7fe003003c00 offset=0x3c00 thunk-bytes=16 binding=syscall
+0x00007fe003003c00 +0000  b8 0f 40 00 00                  mov      eax, 0x400f
+0x00007fe003003c05 +0005  0f 05                           syscall
+0x00007fe003003c07 +0007  c3                              ret
+0x00007fe003003c08 +0008  90                              nop
+0x00007fe003003c09 +0009  90                              nop
+0x00007fe003003c0a +000a  90                              nop
+0x00007fe003003c0b +000b  90                              nop
+0x00007fe003003c0c +000c  90                              nop
+0x00007fe003003c0d +000d  90                              nop
+0x00007fe003003c0e +000e  90                              nop
+0x00007fe003003c0f +000f  90                              nop
+
+user32.dll!FillRect
+address=0x7fe003004000 offset=0x4000 thunk-bytes=16 binding=syscall
+0x00007fe003004000 +0000  b8 10 40 00 00                  mov      eax, 0x4010
+0x00007fe003004005 +0005  0f 05                           syscall
+0x00007fe003004007 +0007  c3                              ret
+0x00007fe003004008 +0008  90                              nop
+0x00007fe003004009 +0009  90                              nop
+0x00007fe00300400a +000a  90                              nop
+0x00007fe00300400b +000b  90                              nop
+0x00007fe00300400c +000c  90                              nop
+0x00007fe00300400d +000d  90                              nop
+0x00007fe00300400e +000e  90                              nop
+0x00007fe00300400f +000f  90                              nop
+
+user32.dll!InvalidateRect
+address=0x7fe003004400 offset=0x4400 thunk-bytes=16 binding=syscall
+0x00007fe003004400 +0000  b8 11 40 00 00                  mov      eax, 0x4011
+0x00007fe003004405 +0005  0f 05                           syscall
+0x00007fe003004407 +0007  c3                              ret
+0x00007fe003004408 +0008  90                              nop
+0x00007fe003004409 +0009  90                              nop
+0x00007fe00300440a +000a  90                              nop
+0x00007fe00300440b +000b  90                              nop
+0x00007fe00300440c +000c  90                              nop
+0x00007fe00300440d +000d  90                              nop
+0x00007fe00300440e +000e  90                              nop
+0x00007fe00300440f +000f  90                              nop
+
+user32.dll!GetDC
+address=0x7fe003004800 offset=0x4800 thunk-bytes=16 binding=syscall
+0x00007fe003004800 +0000  b8 12 40 00 00                  mov      eax, 0x4012
+0x00007fe003004805 +0005  0f 05                           syscall
+0x00007fe003004807 +0007  c3                              ret
+0x00007fe003004808 +0008  90                              nop
+0x00007fe003004809 +0009  90                              nop
+0x00007fe00300480a +000a  90                              nop
+0x00007fe00300480b +000b  90                              nop
+0x00007fe00300480c +000c  90                              nop
+0x00007fe00300480d +000d  90                              nop
+0x00007fe00300480e +000e  90                              nop
+0x00007fe00300480f +000f  90                              nop
+
+user32.dll!ReleaseDC
+address=0x7fe003004c00 offset=0x4c00 thunk-bytes=16 binding=syscall
+0x00007fe003004c00 +0000  b8 13 40 00 00                  mov      eax, 0x4013
+0x00007fe003004c05 +0005  0f 05                           syscall
+0x00007fe003004c07 +0007  c3                              ret
+0x00007fe003004c08 +0008  90                              nop
+0x00007fe003004c09 +0009  90                              nop
+0x00007fe003004c0a +000a  90                              nop
+0x00007fe003004c0b +000b  90                              nop
+0x00007fe003004c0c +000c  90                              nop
+0x00007fe003004c0d +000d  90                              nop
+0x00007fe003004c0e +000e  90                              nop
+0x00007fe003004c0f +000f  90                              nop
+
+user32.dll!GetSystemMetrics
+address=0x7fe003005000 offset=0x5000 thunk-bytes=16 binding=syscall
+0x00007fe003005000 +0000  b8 14 40 00 00                  mov      eax, 0x4014
+0x00007fe003005005 +0005  0f 05                           syscall
+0x00007fe003005007 +0007  c3                              ret
+0x00007fe003005008 +0008  90                              nop
+0x00007fe003005009 +0009  90                              nop
+0x00007fe00300500a +000a  90                              nop
+0x00007fe00300500b +000b  90                              nop
+0x00007fe00300500c +000c  90                              nop
+0x00007fe00300500d +000d  90                              nop
+0x00007fe00300500e +000e  90                              nop
+0x00007fe00300500f +000f  90                              nop
+
+user32.dll!MessageBoxW
+address=0x7fe003005400 offset=0x5400 thunk-bytes=16 binding=syscall
+0x00007fe003005400 +0000  b8 15 40 00 00                  mov      eax, 0x4015
+0x00007fe003005405 +0005  0f 05                           syscall
+0x00007fe003005407 +0007  c3                              ret
+0x00007fe003005408 +0008  90                              nop
+0x00007fe003005409 +0009  90                              nop
+0x00007fe00300540a +000a  90                              nop
+0x00007fe00300540b +000b  90                              nop
+0x00007fe00300540c +000c  90                              nop
+0x00007fe00300540d +000d  90                              nop
+0x00007fe00300540e +000e  90                              nop
+0x00007fe00300540f +000f  90                              nop
+
+user32.dll!SetTimer
+address=0x7fe003005800 offset=0x5800 thunk-bytes=16 binding=syscall
+0x00007fe003005800 +0000  b8 16 40 00 00                  mov      eax, 0x4016
+0x00007fe003005805 +0005  0f 05                           syscall
+0x00007fe003005807 +0007  c3                              ret
+0x00007fe003005808 +0008  90                              nop
+0x00007fe003005809 +0009  90                              nop
+0x00007fe00300580a +000a  90                              nop
+0x00007fe00300580b +000b  90                              nop
+0x00007fe00300580c +000c  90                              nop
+0x00007fe00300580d +000d  90                              nop
+0x00007fe00300580e +000e  90                              nop
+0x00007fe00300580f +000f  90                              nop
+
+user32.dll!KillTimer
+address=0x7fe003005c00 offset=0x5c00 thunk-bytes=16 binding=syscall
+0x00007fe003005c00 +0000  b8 17 40 00 00                  mov      eax, 0x4017
+0x00007fe003005c05 +0005  0f 05                           syscall
+0x00007fe003005c07 +0007  c3                              ret
+0x00007fe003005c08 +0008  90                              nop
+0x00007fe003005c09 +0009  90                              nop
+0x00007fe003005c0a +000a  90                              nop
+0x00007fe003005c0b +000b  90                              nop
+0x00007fe003005c0c +000c  90                              nop
+0x00007fe003005c0d +000d  90                              nop
+0x00007fe003005c0e +000e  90                              nop
+0x00007fe003005c0f +000f  90                              nop
+
+user32.dll!GetWindowThreadProcessId
+address=0x7fe003006000 offset=0x6000 thunk-bytes=16 binding=syscall
+0x00007fe003006000 +0000  b8 18 40 00 00                  mov      eax, 0x4018
+0x00007fe003006005 +0005  0f 05                           syscall
+0x00007fe003006007 +0007  c3                              ret
+0x00007fe003006008 +0008  90                              nop
+0x00007fe003006009 +0009  90                              nop
+0x00007fe00300600a +000a  90                              nop
+0x00007fe00300600b +000b  90                              nop
+0x00007fe00300600c +000c  90                              nop
+0x00007fe00300600d +000d  90                              nop
+0x00007fe00300600e +000e  90                              nop
+0x00007fe00300600f +000f  90                              nop
+
+user32.dll!GetWindowTextLengthW
+address=0x7fe003006400 offset=0x6400 thunk-bytes=16 binding=syscall
+0x00007fe003006400 +0000  b8 19 40 00 00                  mov      eax, 0x4019
+0x00007fe003006405 +0005  0f 05                           syscall
+0x00007fe003006407 +0007  c3                              ret
+0x00007fe003006408 +0008  90                              nop
+0x00007fe003006409 +0009  90                              nop
+0x00007fe00300640a +000a  90                              nop
+0x00007fe00300640b +000b  90                              nop
+0x00007fe00300640c +000c  90                              nop
+0x00007fe00300640d +000d  90                              nop
+0x00007fe00300640e +000e  90                              nop
+0x00007fe00300640f +000f  90                              nop
+
+user32.dll!GetWindowTextW
+address=0x7fe003006800 offset=0x6800 thunk-bytes=16 binding=syscall
+0x00007fe003006800 +0000  b8 1a 40 00 00                  mov      eax, 0x401a
+0x00007fe003006805 +0005  0f 05                           syscall
+0x00007fe003006807 +0007  c3                              ret
+0x00007fe003006808 +0008  90                              nop
+0x00007fe003006809 +0009  90                              nop
+0x00007fe00300680a +000a  90                              nop
+0x00007fe00300680b +000b  90                              nop
+0x00007fe00300680c +000c  90                              nop
+0x00007fe00300680d +000d  90                              nop
+0x00007fe00300680e +000e  90                              nop
+0x00007fe00300680f +000f  90                              nop
+
+user32.dll!GetClassNameW
+address=0x7fe003006c00 offset=0x6c00 thunk-bytes=16 binding=syscall
+0x00007fe003006c00 +0000  b8 1b 40 00 00                  mov      eax, 0x401b
+0x00007fe003006c05 +0005  0f 05                           syscall
+0x00007fe003006c07 +0007  c3                              ret
+0x00007fe003006c08 +0008  90                              nop
+0x00007fe003006c09 +0009  90                              nop
+0x00007fe003006c0a +000a  90                              nop
+0x00007fe003006c0b +000b  90                              nop
+0x00007fe003006c0c +000c  90                              nop
+0x00007fe003006c0d +000d  90                              nop
+0x00007fe003006c0e +000e  90                              nop
+0x00007fe003006c0f +000f  90                              nop
+
+user32.dll!IsIconic
+address=0x7fe003007000 offset=0x7000 thunk-bytes=16 binding=syscall
+0x00007fe003007000 +0000  b8 1c 40 00 00                  mov      eax, 0x401c
+0x00007fe003007005 +0005  0f 05                           syscall
+0x00007fe003007007 +0007  c3                              ret
+0x00007fe003007008 +0008  90                              nop
+0x00007fe003007009 +0009  90                              nop
+0x00007fe00300700a +000a  90                              nop
+0x00007fe00300700b +000b  90                              nop
+0x00007fe00300700c +000c  90                              nop
+0x00007fe00300700d +000d  90                              nop
+0x00007fe00300700e +000e  90                              nop
+0x00007fe00300700f +000f  90                              nop
+
+user32.dll!IsZoomed
+address=0x7fe003007400 offset=0x7400 thunk-bytes=16 binding=syscall
+0x00007fe003007400 +0000  b8 1d 40 00 00                  mov      eax, 0x401d
+0x00007fe003007405 +0005  0f 05                           syscall
+0x00007fe003007407 +0007  c3                              ret
+0x00007fe003007408 +0008  90                              nop
+0x00007fe003007409 +0009  90                              nop
+0x00007fe00300740a +000a  90                              nop
+0x00007fe00300740b +000b  90                              nop
+0x00007fe00300740c +000c  90                              nop
+0x00007fe00300740d +000d  90                              nop
+0x00007fe00300740e +000e  90                              nop
+0x00007fe00300740f +000f  90                              nop
+
+user32.dll!GetWindowRect
+address=0x7fe003007800 offset=0x7800 thunk-bytes=16 binding=syscall
+0x00007fe003007800 +0000  b8 1e 40 00 00                  mov      eax, 0x401e
+0x00007fe003007805 +0005  0f 05                           syscall
+0x00007fe003007807 +0007  c3                              ret
+0x00007fe003007808 +0008  90                              nop
+0x00007fe003007809 +0009  90                              nop
+0x00007fe00300780a +000a  90                              nop
+0x00007fe00300780b +000b  90                              nop
+0x00007fe00300780c +000c  90                              nop
+0x00007fe00300780d +000d  90                              nop
+0x00007fe00300780e +000e  90                              nop
+0x00007fe00300780f +000f  90                              nop
+
+user32.dll!GetGUIThreadInfo
+address=0x7fe003007c00 offset=0x7c00 thunk-bytes=16 binding=syscall
+0x00007fe003007c00 +0000  b8 1f 40 00 00                  mov      eax, 0x401f
+0x00007fe003007c05 +0005  0f 05                           syscall
+0x00007fe003007c07 +0007  c3                              ret
+0x00007fe003007c08 +0008  90                              nop
+0x00007fe003007c09 +0009  90                              nop
+0x00007fe003007c0a +000a  90                              nop
+0x00007fe003007c0b +000b  90                              nop
+0x00007fe003007c0c +000c  90                              nop
+0x00007fe003007c0d +000d  90                              nop
+0x00007fe003007c0e +000e  90                              nop
+0x00007fe003007c0f +000f  90                              nop
+
+user32.dll!EnumWindows
+address=0x7fe003008000 offset=0x8000 thunk-bytes=16 binding=syscall
+0x00007fe003008000 +0000  b8 20 40 00 00                  mov      eax, 0x4020
+0x00007fe003008005 +0005  0f 05                           syscall
+0x00007fe003008007 +0007  c3                              ret
+0x00007fe003008008 +0008  90                              nop
+0x00007fe003008009 +0009  90                              nop
+0x00007fe00300800a +000a  90                              nop
+0x00007fe00300800b +000b  90                              nop
+0x00007fe00300800c +000c  90                              nop
+0x00007fe00300800d +000d  90                              nop
+0x00007fe00300800e +000e  90                              nop
+0x00007fe00300800f +000f  90                              nop
+
+user32.dll!FindWindowW
+address=0x7fe003008400 offset=0x8400 thunk-bytes=16 binding=syscall
+0x00007fe003008400 +0000  b8 21 40 00 00                  mov      eax, 0x4021
+0x00007fe003008405 +0005  0f 05                           syscall
+0x00007fe003008407 +0007  c3                              ret
+0x00007fe003008408 +0008  90                              nop
+0x00007fe003008409 +0009  90                              nop
+0x00007fe00300840a +000a  90                              nop
+0x00007fe00300840b +000b  90                              nop
+0x00007fe00300840c +000c  90                              nop
+0x00007fe00300840d +000d  90                              nop
+0x00007fe00300840e +000e  90                              nop
+0x00007fe00300840f +000f  90                              nop
+
+user32.dll!PostMessageW
+address=0x7fe003008800 offset=0x8800 thunk-bytes=16 binding=syscall
+0x00007fe003008800 +0000  b8 22 40 00 00                  mov      eax, 0x4022
+0x00007fe003008805 +0005  0f 05                           syscall
+0x00007fe003008807 +0007  c3                              ret
+0x00007fe003008808 +0008  90                              nop
+0x00007fe003008809 +0009  90                              nop
+0x00007fe00300880a +000a  90                              nop
+0x00007fe00300880b +000b  90                              nop
+0x00007fe00300880c +000c  90                              nop
+0x00007fe00300880d +000d  90                              nop
+0x00007fe00300880e +000e  90                              nop
+0x00007fe00300880f +000f  90                              nop
+
+section .idata
+; address=0x7fe003009000 size=0 protection=r
+; empty
+
+section .rdata
+; empty
+
+section .data
+; empty
+
+section .bss
+; empty

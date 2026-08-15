@@ -1,0 +1,1405 @@
+kernel32.dll / generated DLL memory image
+image-base=0x7fe000000000 image-bytes=102400
+export-slot-bytes=1024
+
+section .text
+; address=0x7fe000000000 size=102400 protection=rx
+
+kernel32.dll!GetLastError
+address=0x7fe000000000 offset=0x0 thunk-bytes=16 binding=syscall
+0x00007fe000000000 +0000  b8 00 10 00 00                  mov      eax, 0x1000
+0x00007fe000000005 +0005  0f 05                           syscall
+0x00007fe000000007 +0007  c3                              ret
+0x00007fe000000008 +0008  90                              nop
+0x00007fe000000009 +0009  90                              nop
+0x00007fe00000000a +000a  90                              nop
+0x00007fe00000000b +000b  90                              nop
+0x00007fe00000000c +000c  90                              nop
+0x00007fe00000000d +000d  90                              nop
+0x00007fe00000000e +000e  90                              nop
+0x00007fe00000000f +000f  90                              nop
+
+kernel32.dll!CreateFileA
+address=0x7fe000000400 offset=0x400 thunk-bytes=16 binding=syscall
+0x00007fe000000400 +0000  b8 01 10 00 00                  mov      eax, 0x1001
+0x00007fe000000405 +0005  0f 05                           syscall
+0x00007fe000000407 +0007  c3                              ret
+0x00007fe000000408 +0008  90                              nop
+0x00007fe000000409 +0009  90                              nop
+0x00007fe00000040a +000a  90                              nop
+0x00007fe00000040b +000b  90                              nop
+0x00007fe00000040c +000c  90                              nop
+0x00007fe00000040d +000d  90                              nop
+0x00007fe00000040e +000e  90                              nop
+0x00007fe00000040f +000f  90                              nop
+
+kernel32.dll!WriteFile
+address=0x7fe000000800 offset=0x800 thunk-bytes=16 binding=syscall
+0x00007fe000000800 +0000  b8 02 10 00 00                  mov      eax, 0x1002
+0x00007fe000000805 +0005  0f 05                           syscall
+0x00007fe000000807 +0007  c3                              ret
+0x00007fe000000808 +0008  90                              nop
+0x00007fe000000809 +0009  90                              nop
+0x00007fe00000080a +000a  90                              nop
+0x00007fe00000080b +000b  90                              nop
+0x00007fe00000080c +000c  90                              nop
+0x00007fe00000080d +000d  90                              nop
+0x00007fe00000080e +000e  90                              nop
+0x00007fe00000080f +000f  90                              nop
+
+kernel32.dll!ReadFile
+address=0x7fe000000c00 offset=0xc00 thunk-bytes=16 binding=syscall
+0x00007fe000000c00 +0000  b8 03 10 00 00                  mov      eax, 0x1003
+0x00007fe000000c05 +0005  0f 05                           syscall
+0x00007fe000000c07 +0007  c3                              ret
+0x00007fe000000c08 +0008  90                              nop
+0x00007fe000000c09 +0009  90                              nop
+0x00007fe000000c0a +000a  90                              nop
+0x00007fe000000c0b +000b  90                              nop
+0x00007fe000000c0c +000c  90                              nop
+0x00007fe000000c0d +000d  90                              nop
+0x00007fe000000c0e +000e  90                              nop
+0x00007fe000000c0f +000f  90                              nop
+
+kernel32.dll!ReadProcessMemory
+address=0x7fe000001000 offset=0x1000 thunk-bytes=16 binding=syscall
+0x00007fe000001000 +0000  b8 04 10 00 00                  mov      eax, 0x1004
+0x00007fe000001005 +0005  0f 05                           syscall
+0x00007fe000001007 +0007  c3                              ret
+0x00007fe000001008 +0008  90                              nop
+0x00007fe000001009 +0009  90                              nop
+0x00007fe00000100a +000a  90                              nop
+0x00007fe00000100b +000b  90                              nop
+0x00007fe00000100c +000c  90                              nop
+0x00007fe00000100d +000d  90                              nop
+0x00007fe00000100e +000e  90                              nop
+0x00007fe00000100f +000f  90                              nop
+
+kernel32.dll!WriteProcessMemory
+address=0x7fe000001400 offset=0x1400 thunk-bytes=16 binding=syscall
+0x00007fe000001400 +0000  b8 05 10 00 00                  mov      eax, 0x1005
+0x00007fe000001405 +0005  0f 05                           syscall
+0x00007fe000001407 +0007  c3                              ret
+0x00007fe000001408 +0008  90                              nop
+0x00007fe000001409 +0009  90                              nop
+0x00007fe00000140a +000a  90                              nop
+0x00007fe00000140b +000b  90                              nop
+0x00007fe00000140c +000c  90                              nop
+0x00007fe00000140d +000d  90                              nop
+0x00007fe00000140e +000e  90                              nop
+0x00007fe00000140f +000f  90                              nop
+
+kernel32.dll!VirtualAlloc
+address=0x7fe000001800 offset=0x1800 thunk-bytes=16 binding=syscall
+0x00007fe000001800 +0000  b8 06 10 00 00                  mov      eax, 0x1006
+0x00007fe000001805 +0005  0f 05                           syscall
+0x00007fe000001807 +0007  c3                              ret
+0x00007fe000001808 +0008  90                              nop
+0x00007fe000001809 +0009  90                              nop
+0x00007fe00000180a +000a  90                              nop
+0x00007fe00000180b +000b  90                              nop
+0x00007fe00000180c +000c  90                              nop
+0x00007fe00000180d +000d  90                              nop
+0x00007fe00000180e +000e  90                              nop
+0x00007fe00000180f +000f  90                              nop
+
+kernel32.dll!VirtualAllocEx
+address=0x7fe000001c00 offset=0x1c00 thunk-bytes=16 binding=syscall
+0x00007fe000001c00 +0000  b8 07 10 00 00                  mov      eax, 0x1007
+0x00007fe000001c05 +0005  0f 05                           syscall
+0x00007fe000001c07 +0007  c3                              ret
+0x00007fe000001c08 +0008  90                              nop
+0x00007fe000001c09 +0009  90                              nop
+0x00007fe000001c0a +000a  90                              nop
+0x00007fe000001c0b +000b  90                              nop
+0x00007fe000001c0c +000c  90                              nop
+0x00007fe000001c0d +000d  90                              nop
+0x00007fe000001c0e +000e  90                              nop
+0x00007fe000001c0f +000f  90                              nop
+
+kernel32.dll!VirtualFree
+address=0x7fe000002000 offset=0x2000 thunk-bytes=16 binding=syscall
+0x00007fe000002000 +0000  b8 08 10 00 00                  mov      eax, 0x1008
+0x00007fe000002005 +0005  0f 05                           syscall
+0x00007fe000002007 +0007  c3                              ret
+0x00007fe000002008 +0008  90                              nop
+0x00007fe000002009 +0009  90                              nop
+0x00007fe00000200a +000a  90                              nop
+0x00007fe00000200b +000b  90                              nop
+0x00007fe00000200c +000c  90                              nop
+0x00007fe00000200d +000d  90                              nop
+0x00007fe00000200e +000e  90                              nop
+0x00007fe00000200f +000f  90                              nop
+
+kernel32.dll!VirtualFreeEx
+address=0x7fe000002400 offset=0x2400 thunk-bytes=16 binding=syscall
+0x00007fe000002400 +0000  b8 09 10 00 00                  mov      eax, 0x1009
+0x00007fe000002405 +0005  0f 05                           syscall
+0x00007fe000002407 +0007  c3                              ret
+0x00007fe000002408 +0008  90                              nop
+0x00007fe000002409 +0009  90                              nop
+0x00007fe00000240a +000a  90                              nop
+0x00007fe00000240b +000b  90                              nop
+0x00007fe00000240c +000c  90                              nop
+0x00007fe00000240d +000d  90                              nop
+0x00007fe00000240e +000e  90                              nop
+0x00007fe00000240f +000f  90                              nop
+
+kernel32.dll!VirtualProtect
+address=0x7fe000002800 offset=0x2800 thunk-bytes=16 binding=syscall
+0x00007fe000002800 +0000  b8 0a 10 00 00                  mov      eax, 0x100a
+0x00007fe000002805 +0005  0f 05                           syscall
+0x00007fe000002807 +0007  c3                              ret
+0x00007fe000002808 +0008  90                              nop
+0x00007fe000002809 +0009  90                              nop
+0x00007fe00000280a +000a  90                              nop
+0x00007fe00000280b +000b  90                              nop
+0x00007fe00000280c +000c  90                              nop
+0x00007fe00000280d +000d  90                              nop
+0x00007fe00000280e +000e  90                              nop
+0x00007fe00000280f +000f  90                              nop
+
+kernel32.dll!VirtualProtectEx
+address=0x7fe000002c00 offset=0x2c00 thunk-bytes=16 binding=syscall
+0x00007fe000002c00 +0000  b8 0b 10 00 00                  mov      eax, 0x100b
+0x00007fe000002c05 +0005  0f 05                           syscall
+0x00007fe000002c07 +0007  c3                              ret
+0x00007fe000002c08 +0008  90                              nop
+0x00007fe000002c09 +0009  90                              nop
+0x00007fe000002c0a +000a  90                              nop
+0x00007fe000002c0b +000b  90                              nop
+0x00007fe000002c0c +000c  90                              nop
+0x00007fe000002c0d +000d  90                              nop
+0x00007fe000002c0e +000e  90                              nop
+0x00007fe000002c0f +000f  90                              nop
+
+kernel32.dll!VirtualQuery
+address=0x7fe000003000 offset=0x3000 thunk-bytes=16 binding=syscall
+0x00007fe000003000 +0000  b8 0c 10 00 00                  mov      eax, 0x100c
+0x00007fe000003005 +0005  0f 05                           syscall
+0x00007fe000003007 +0007  c3                              ret
+0x00007fe000003008 +0008  90                              nop
+0x00007fe000003009 +0009  90                              nop
+0x00007fe00000300a +000a  90                              nop
+0x00007fe00000300b +000b  90                              nop
+0x00007fe00000300c +000c  90                              nop
+0x00007fe00000300d +000d  90                              nop
+0x00007fe00000300e +000e  90                              nop
+0x00007fe00000300f +000f  90                              nop
+
+kernel32.dll!VirtualQueryEx
+address=0x7fe000003400 offset=0x3400 thunk-bytes=16 binding=syscall
+0x00007fe000003400 +0000  b8 0d 10 00 00                  mov      eax, 0x100d
+0x00007fe000003405 +0005  0f 05                           syscall
+0x00007fe000003407 +0007  c3                              ret
+0x00007fe000003408 +0008  90                              nop
+0x00007fe000003409 +0009  90                              nop
+0x00007fe00000340a +000a  90                              nop
+0x00007fe00000340b +000b  90                              nop
+0x00007fe00000340c +000c  90                              nop
+0x00007fe00000340d +000d  90                              nop
+0x00007fe00000340e +000e  90                              nop
+0x00007fe00000340f +000f  90                              nop
+
+kernel32.dll!GetCurrentThread
+address=0x7fe000003800 offset=0x3800 thunk-bytes=16 binding=syscall
+0x00007fe000003800 +0000  b8 0e 10 00 00                  mov      eax, 0x100e
+0x00007fe000003805 +0005  0f 05                           syscall
+0x00007fe000003807 +0007  c3                              ret
+0x00007fe000003808 +0008  90                              nop
+0x00007fe000003809 +0009  90                              nop
+0x00007fe00000380a +000a  90                              nop
+0x00007fe00000380b +000b  90                              nop
+0x00007fe00000380c +000c  90                              nop
+0x00007fe00000380d +000d  90                              nop
+0x00007fe00000380e +000e  90                              nop
+0x00007fe00000380f +000f  90                              nop
+
+kernel32.dll!GetCurrentThreadId
+address=0x7fe000003c00 offset=0x3c00 thunk-bytes=16 binding=syscall
+0x00007fe000003c00 +0000  b8 0f 10 00 00                  mov      eax, 0x100f
+0x00007fe000003c05 +0005  0f 05                           syscall
+0x00007fe000003c07 +0007  c3                              ret
+0x00007fe000003c08 +0008  90                              nop
+0x00007fe000003c09 +0009  90                              nop
+0x00007fe000003c0a +000a  90                              nop
+0x00007fe000003c0b +000b  90                              nop
+0x00007fe000003c0c +000c  90                              nop
+0x00007fe000003c0d +000d  90                              nop
+0x00007fe000003c0e +000e  90                              nop
+0x00007fe000003c0f +000f  90                              nop
+
+kernel32.dll!GetThreadId
+address=0x7fe000004000 offset=0x4000 thunk-bytes=16 binding=syscall
+0x00007fe000004000 +0000  b8 10 10 00 00                  mov      eax, 0x1010
+0x00007fe000004005 +0005  0f 05                           syscall
+0x00007fe000004007 +0007  c3                              ret
+0x00007fe000004008 +0008  90                              nop
+0x00007fe000004009 +0009  90                              nop
+0x00007fe00000400a +000a  90                              nop
+0x00007fe00000400b +000b  90                              nop
+0x00007fe00000400c +000c  90                              nop
+0x00007fe00000400d +000d  90                              nop
+0x00007fe00000400e +000e  90                              nop
+0x00007fe00000400f +000f  90                              nop
+
+kernel32.dll!OpenThread
+address=0x7fe000004400 offset=0x4400 thunk-bytes=16 binding=syscall
+0x00007fe000004400 +0000  b8 11 10 00 00                  mov      eax, 0x1011
+0x00007fe000004405 +0005  0f 05                           syscall
+0x00007fe000004407 +0007  c3                              ret
+0x00007fe000004408 +0008  90                              nop
+0x00007fe000004409 +0009  90                              nop
+0x00007fe00000440a +000a  90                              nop
+0x00007fe00000440b +000b  90                              nop
+0x00007fe00000440c +000c  90                              nop
+0x00007fe00000440d +000d  90                              nop
+0x00007fe00000440e +000e  90                              nop
+0x00007fe00000440f +000f  90                              nop
+
+kernel32.dll!SuspendThread
+address=0x7fe000004800 offset=0x4800 thunk-bytes=16 binding=syscall
+0x00007fe000004800 +0000  b8 12 10 00 00                  mov      eax, 0x1012
+0x00007fe000004805 +0005  0f 05                           syscall
+0x00007fe000004807 +0007  c3                              ret
+0x00007fe000004808 +0008  90                              nop
+0x00007fe000004809 +0009  90                              nop
+0x00007fe00000480a +000a  90                              nop
+0x00007fe00000480b +000b  90                              nop
+0x00007fe00000480c +000c  90                              nop
+0x00007fe00000480d +000d  90                              nop
+0x00007fe00000480e +000e  90                              nop
+0x00007fe00000480f +000f  90                              nop
+
+kernel32.dll!ResumeThread
+address=0x7fe000004c00 offset=0x4c00 thunk-bytes=16 binding=syscall
+0x00007fe000004c00 +0000  b8 13 10 00 00                  mov      eax, 0x1013
+0x00007fe000004c05 +0005  0f 05                           syscall
+0x00007fe000004c07 +0007  c3                              ret
+0x00007fe000004c08 +0008  90                              nop
+0x00007fe000004c09 +0009  90                              nop
+0x00007fe000004c0a +000a  90                              nop
+0x00007fe000004c0b +000b  90                              nop
+0x00007fe000004c0c +000c  90                              nop
+0x00007fe000004c0d +000d  90                              nop
+0x00007fe000004c0e +000e  90                              nop
+0x00007fe000004c0f +000f  90                              nop
+
+kernel32.dll!GetExitCodeThread
+address=0x7fe000005000 offset=0x5000 thunk-bytes=16 binding=syscall
+0x00007fe000005000 +0000  b8 14 10 00 00                  mov      eax, 0x1014
+0x00007fe000005005 +0005  0f 05                           syscall
+0x00007fe000005007 +0007  c3                              ret
+0x00007fe000005008 +0008  90                              nop
+0x00007fe000005009 +0009  90                              nop
+0x00007fe00000500a +000a  90                              nop
+0x00007fe00000500b +000b  90                              nop
+0x00007fe00000500c +000c  90                              nop
+0x00007fe00000500d +000d  90                              nop
+0x00007fe00000500e +000e  90                              nop
+0x00007fe00000500f +000f  90                              nop
+
+kernel32.dll!GetThreadContext
+address=0x7fe000005400 offset=0x5400 thunk-bytes=16 binding=syscall
+0x00007fe000005400 +0000  b8 15 10 00 00                  mov      eax, 0x1015
+0x00007fe000005405 +0005  0f 05                           syscall
+0x00007fe000005407 +0007  c3                              ret
+0x00007fe000005408 +0008  90                              nop
+0x00007fe000005409 +0009  90                              nop
+0x00007fe00000540a +000a  90                              nop
+0x00007fe00000540b +000b  90                              nop
+0x00007fe00000540c +000c  90                              nop
+0x00007fe00000540d +000d  90                              nop
+0x00007fe00000540e +000e  90                              nop
+0x00007fe00000540f +000f  90                              nop
+
+kernel32.dll!SetThreadContext
+address=0x7fe000005800 offset=0x5800 thunk-bytes=16 binding=syscall
+0x00007fe000005800 +0000  b8 16 10 00 00                  mov      eax, 0x1016
+0x00007fe000005805 +0005  0f 05                           syscall
+0x00007fe000005807 +0007  c3                              ret
+0x00007fe000005808 +0008  90                              nop
+0x00007fe000005809 +0009  90                              nop
+0x00007fe00000580a +000a  90                              nop
+0x00007fe00000580b +000b  90                              nop
+0x00007fe00000580c +000c  90                              nop
+0x00007fe00000580d +000d  90                              nop
+0x00007fe00000580e +000e  90                              nop
+0x00007fe00000580f +000f  90                              nop
+
+kernel32.dll!GetCurrentProcess
+address=0x7fe000005c00 offset=0x5c00 thunk-bytes=16 binding=syscall
+0x00007fe000005c00 +0000  b8 17 10 00 00                  mov      eax, 0x1017
+0x00007fe000005c05 +0005  0f 05                           syscall
+0x00007fe000005c07 +0007  c3                              ret
+0x00007fe000005c08 +0008  90                              nop
+0x00007fe000005c09 +0009  90                              nop
+0x00007fe000005c0a +000a  90                              nop
+0x00007fe000005c0b +000b  90                              nop
+0x00007fe000005c0c +000c  90                              nop
+0x00007fe000005c0d +000d  90                              nop
+0x00007fe000005c0e +000e  90                              nop
+0x00007fe000005c0f +000f  90                              nop
+
+kernel32.dll!GetCurrentProcessId
+address=0x7fe000006000 offset=0x6000 thunk-bytes=16 binding=syscall
+0x00007fe000006000 +0000  b8 18 10 00 00                  mov      eax, 0x1018
+0x00007fe000006005 +0005  0f 05                           syscall
+0x00007fe000006007 +0007  c3                              ret
+0x00007fe000006008 +0008  90                              nop
+0x00007fe000006009 +0009  90                              nop
+0x00007fe00000600a +000a  90                              nop
+0x00007fe00000600b +000b  90                              nop
+0x00007fe00000600c +000c  90                              nop
+0x00007fe00000600d +000d  90                              nop
+0x00007fe00000600e +000e  90                              nop
+0x00007fe00000600f +000f  90                              nop
+
+kernel32.dll!GetProcessId
+address=0x7fe000006400 offset=0x6400 thunk-bytes=16 binding=syscall
+0x00007fe000006400 +0000  b8 19 10 00 00                  mov      eax, 0x1019
+0x00007fe000006405 +0005  0f 05                           syscall
+0x00007fe000006407 +0007  c3                              ret
+0x00007fe000006408 +0008  90                              nop
+0x00007fe000006409 +0009  90                              nop
+0x00007fe00000640a +000a  90                              nop
+0x00007fe00000640b +000b  90                              nop
+0x00007fe00000640c +000c  90                              nop
+0x00007fe00000640d +000d  90                              nop
+0x00007fe00000640e +000e  90                              nop
+0x00007fe00000640f +000f  90                              nop
+
+kernel32.dll!OpenProcess
+address=0x7fe000006800 offset=0x6800 thunk-bytes=16 binding=syscall
+0x00007fe000006800 +0000  b8 1a 10 00 00                  mov      eax, 0x101a
+0x00007fe000006805 +0005  0f 05                           syscall
+0x00007fe000006807 +0007  c3                              ret
+0x00007fe000006808 +0008  90                              nop
+0x00007fe000006809 +0009  90                              nop
+0x00007fe00000680a +000a  90                              nop
+0x00007fe00000680b +000b  90                              nop
+0x00007fe00000680c +000c  90                              nop
+0x00007fe00000680d +000d  90                              nop
+0x00007fe00000680e +000e  90                              nop
+0x00007fe00000680f +000f  90                              nop
+
+kernel32.dll!TerminateProcess
+address=0x7fe000006c00 offset=0x6c00 thunk-bytes=16 binding=syscall
+0x00007fe000006c00 +0000  b8 1b 10 00 00                  mov      eax, 0x101b
+0x00007fe000006c05 +0005  0f 05                           syscall
+0x00007fe000006c07 +0007  c3                              ret
+0x00007fe000006c08 +0008  90                              nop
+0x00007fe000006c09 +0009  90                              nop
+0x00007fe000006c0a +000a  90                              nop
+0x00007fe000006c0b +000b  90                              nop
+0x00007fe000006c0c +000c  90                              nop
+0x00007fe000006c0d +000d  90                              nop
+0x00007fe000006c0e +000e  90                              nop
+0x00007fe000006c0f +000f  90                              nop
+
+kernel32.dll!CreateProcessA
+address=0x7fe000007000 offset=0x7000 thunk-bytes=16 binding=syscall
+0x00007fe000007000 +0000  b8 1c 10 00 00                  mov      eax, 0x101c
+0x00007fe000007005 +0005  0f 05                           syscall
+0x00007fe000007007 +0007  c3                              ret
+0x00007fe000007008 +0008  90                              nop
+0x00007fe000007009 +0009  90                              nop
+0x00007fe00000700a +000a  90                              nop
+0x00007fe00000700b +000b  90                              nop
+0x00007fe00000700c +000c  90                              nop
+0x00007fe00000700d +000d  90                              nop
+0x00007fe00000700e +000e  90                              nop
+0x00007fe00000700f +000f  90                              nop
+
+kernel32.dll!CreateProcessW
+address=0x7fe000007400 offset=0x7400 thunk-bytes=16 binding=syscall
+0x00007fe000007400 +0000  b8 1d 10 00 00                  mov      eax, 0x101d
+0x00007fe000007405 +0005  0f 05                           syscall
+0x00007fe000007407 +0007  c3                              ret
+0x00007fe000007408 +0008  90                              nop
+0x00007fe000007409 +0009  90                              nop
+0x00007fe00000740a +000a  90                              nop
+0x00007fe00000740b +000b  90                              nop
+0x00007fe00000740c +000c  90                              nop
+0x00007fe00000740d +000d  90                              nop
+0x00007fe00000740e +000e  90                              nop
+0x00007fe00000740f +000f  90                              nop
+
+kernel32.dll!DuplicateHandle
+address=0x7fe000007800 offset=0x7800 thunk-bytes=16 binding=syscall
+0x00007fe000007800 +0000  b8 1e 10 00 00                  mov      eax, 0x101e
+0x00007fe000007805 +0005  0f 05                           syscall
+0x00007fe000007807 +0007  c3                              ret
+0x00007fe000007808 +0008  90                              nop
+0x00007fe000007809 +0009  90                              nop
+0x00007fe00000780a +000a  90                              nop
+0x00007fe00000780b +000b  90                              nop
+0x00007fe00000780c +000c  90                              nop
+0x00007fe00000780d +000d  90                              nop
+0x00007fe00000780e +000e  90                              nop
+0x00007fe00000780f +000f  90                              nop
+
+kernel32.dll!CreateFileMappingA
+address=0x7fe000007c00 offset=0x7c00 thunk-bytes=16 binding=syscall
+0x00007fe000007c00 +0000  b8 1f 10 00 00                  mov      eax, 0x101f
+0x00007fe000007c05 +0005  0f 05                           syscall
+0x00007fe000007c07 +0007  c3                              ret
+0x00007fe000007c08 +0008  90                              nop
+0x00007fe000007c09 +0009  90                              nop
+0x00007fe000007c0a +000a  90                              nop
+0x00007fe000007c0b +000b  90                              nop
+0x00007fe000007c0c +000c  90                              nop
+0x00007fe000007c0d +000d  90                              nop
+0x00007fe000007c0e +000e  90                              nop
+0x00007fe000007c0f +000f  90                              nop
+
+kernel32.dll!CreateFileMappingW
+address=0x7fe000008000 offset=0x8000 thunk-bytes=16 binding=syscall
+0x00007fe000008000 +0000  b8 20 10 00 00                  mov      eax, 0x1020
+0x00007fe000008005 +0005  0f 05                           syscall
+0x00007fe000008007 +0007  c3                              ret
+0x00007fe000008008 +0008  90                              nop
+0x00007fe000008009 +0009  90                              nop
+0x00007fe00000800a +000a  90                              nop
+0x00007fe00000800b +000b  90                              nop
+0x00007fe00000800c +000c  90                              nop
+0x00007fe00000800d +000d  90                              nop
+0x00007fe00000800e +000e  90                              nop
+0x00007fe00000800f +000f  90                              nop
+
+kernel32.dll!OpenFileMappingA
+address=0x7fe000008400 offset=0x8400 thunk-bytes=16 binding=syscall
+0x00007fe000008400 +0000  b8 21 10 00 00                  mov      eax, 0x1021
+0x00007fe000008405 +0005  0f 05                           syscall
+0x00007fe000008407 +0007  c3                              ret
+0x00007fe000008408 +0008  90                              nop
+0x00007fe000008409 +0009  90                              nop
+0x00007fe00000840a +000a  90                              nop
+0x00007fe00000840b +000b  90                              nop
+0x00007fe00000840c +000c  90                              nop
+0x00007fe00000840d +000d  90                              nop
+0x00007fe00000840e +000e  90                              nop
+0x00007fe00000840f +000f  90                              nop
+
+kernel32.dll!MapViewOfFile
+address=0x7fe000008800 offset=0x8800 thunk-bytes=16 binding=syscall
+0x00007fe000008800 +0000  b8 22 10 00 00                  mov      eax, 0x1022
+0x00007fe000008805 +0005  0f 05                           syscall
+0x00007fe000008807 +0007  c3                              ret
+0x00007fe000008808 +0008  90                              nop
+0x00007fe000008809 +0009  90                              nop
+0x00007fe00000880a +000a  90                              nop
+0x00007fe00000880b +000b  90                              nop
+0x00007fe00000880c +000c  90                              nop
+0x00007fe00000880d +000d  90                              nop
+0x00007fe00000880e +000e  90                              nop
+0x00007fe00000880f +000f  90                              nop
+
+kernel32.dll!UnmapViewOfFile
+address=0x7fe000008c00 offset=0x8c00 thunk-bytes=16 binding=syscall
+0x00007fe000008c00 +0000  b8 23 10 00 00                  mov      eax, 0x1023
+0x00007fe000008c05 +0005  0f 05                           syscall
+0x00007fe000008c07 +0007  c3                              ret
+0x00007fe000008c08 +0008  90                              nop
+0x00007fe000008c09 +0009  90                              nop
+0x00007fe000008c0a +000a  90                              nop
+0x00007fe000008c0b +000b  90                              nop
+0x00007fe000008c0c +000c  90                              nop
+0x00007fe000008c0d +000d  90                              nop
+0x00007fe000008c0e +000e  90                              nop
+0x00007fe000008c0f +000f  90                              nop
+
+kernel32.dll!CloseHandle
+address=0x7fe000009000 offset=0x9000 thunk-bytes=16 binding=syscall
+0x00007fe000009000 +0000  b8 24 10 00 00                  mov      eax, 0x1024
+0x00007fe000009005 +0005  0f 05                           syscall
+0x00007fe000009007 +0007  c3                              ret
+0x00007fe000009008 +0008  90                              nop
+0x00007fe000009009 +0009  90                              nop
+0x00007fe00000900a +000a  90                              nop
+0x00007fe00000900b +000b  90                              nop
+0x00007fe00000900c +000c  90                              nop
+0x00007fe00000900d +000d  90                              nop
+0x00007fe00000900e +000e  90                              nop
+0x00007fe00000900f +000f  90                              nop
+
+kernel32.dll!Sleep
+address=0x7fe000009400 offset=0x9400 thunk-bytes=16 binding=syscall
+0x00007fe000009400 +0000  b8 25 10 00 00                  mov      eax, 0x1025
+0x00007fe000009405 +0005  0f 05                           syscall
+0x00007fe000009407 +0007  c3                              ret
+0x00007fe000009408 +0008  90                              nop
+0x00007fe000009409 +0009  90                              nop
+0x00007fe00000940a +000a  90                              nop
+0x00007fe00000940b +000b  90                              nop
+0x00007fe00000940c +000c  90                              nop
+0x00007fe00000940d +000d  90                              nop
+0x00007fe00000940e +000e  90                              nop
+0x00007fe00000940f +000f  90                              nop
+
+kernel32.dll!WaitForSingleObject
+address=0x7fe000009800 offset=0x9800 thunk-bytes=16 binding=syscall
+0x00007fe000009800 +0000  b8 26 10 00 00                  mov      eax, 0x1026
+0x00007fe000009805 +0005  0f 05                           syscall
+0x00007fe000009807 +0007  c3                              ret
+0x00007fe000009808 +0008  90                              nop
+0x00007fe000009809 +0009  90                              nop
+0x00007fe00000980a +000a  90                              nop
+0x00007fe00000980b +000b  90                              nop
+0x00007fe00000980c +000c  90                              nop
+0x00007fe00000980d +000d  90                              nop
+0x00007fe00000980e +000e  90                              nop
+0x00007fe00000980f +000f  90                              nop
+
+kernel32.dll!GetExitCodeProcess
+address=0x7fe000009c00 offset=0x9c00 thunk-bytes=16 binding=syscall
+0x00007fe000009c00 +0000  b8 27 10 00 00                  mov      eax, 0x1027
+0x00007fe000009c05 +0005  0f 05                           syscall
+0x00007fe000009c07 +0007  c3                              ret
+0x00007fe000009c08 +0008  90                              nop
+0x00007fe000009c09 +0009  90                              nop
+0x00007fe000009c0a +000a  90                              nop
+0x00007fe000009c0b +000b  90                              nop
+0x00007fe000009c0c +000c  90                              nop
+0x00007fe000009c0d +000d  90                              nop
+0x00007fe000009c0e +000e  90                              nop
+0x00007fe000009c0f +000f  90                              nop
+
+kernel32.dll!GetModuleHandleW
+address=0x7fe00000a000 offset=0xa000 thunk-bytes=16 binding=syscall
+0x00007fe00000a000 +0000  b8 28 10 00 00                  mov      eax, 0x1028
+0x00007fe00000a005 +0005  0f 05                           syscall
+0x00007fe00000a007 +0007  c3                              ret
+0x00007fe00000a008 +0008  90                              nop
+0x00007fe00000a009 +0009  90                              nop
+0x00007fe00000a00a +000a  90                              nop
+0x00007fe00000a00b +000b  90                              nop
+0x00007fe00000a00c +000c  90                              nop
+0x00007fe00000a00d +000d  90                              nop
+0x00007fe00000a00e +000e  90                              nop
+0x00007fe00000a00f +000f  90                              nop
+
+kernel32.dll!GetModuleHandleA
+address=0x7fe00000a400 offset=0xa400 thunk-bytes=16 binding=syscall
+0x00007fe00000a400 +0000  b8 29 10 00 00                  mov      eax, 0x1029
+0x00007fe00000a405 +0005  0f 05                           syscall
+0x00007fe00000a407 +0007  c3                              ret
+0x00007fe00000a408 +0008  90                              nop
+0x00007fe00000a409 +0009  90                              nop
+0x00007fe00000a40a +000a  90                              nop
+0x00007fe00000a40b +000b  90                              nop
+0x00007fe00000a40c +000c  90                              nop
+0x00007fe00000a40d +000d  90                              nop
+0x00007fe00000a40e +000e  90                              nop
+0x00007fe00000a40f +000f  90                              nop
+
+kernel32.dll!GetModuleHandleExW
+address=0x7fe00000a800 offset=0xa800 thunk-bytes=16 binding=syscall
+0x00007fe00000a800 +0000  b8 2a 10 00 00                  mov      eax, 0x102a
+0x00007fe00000a805 +0005  0f 05                           syscall
+0x00007fe00000a807 +0007  c3                              ret
+0x00007fe00000a808 +0008  90                              nop
+0x00007fe00000a809 +0009  90                              nop
+0x00007fe00000a80a +000a  90                              nop
+0x00007fe00000a80b +000b  90                              nop
+0x00007fe00000a80c +000c  90                              nop
+0x00007fe00000a80d +000d  90                              nop
+0x00007fe00000a80e +000e  90                              nop
+0x00007fe00000a80f +000f  90                              nop
+
+kernel32.dll!GetModuleHandleExA
+address=0x7fe00000ac00 offset=0xac00 thunk-bytes=16 binding=syscall
+0x00007fe00000ac00 +0000  b8 2b 10 00 00                  mov      eax, 0x102b
+0x00007fe00000ac05 +0005  0f 05                           syscall
+0x00007fe00000ac07 +0007  c3                              ret
+0x00007fe00000ac08 +0008  90                              nop
+0x00007fe00000ac09 +0009  90                              nop
+0x00007fe00000ac0a +000a  90                              nop
+0x00007fe00000ac0b +000b  90                              nop
+0x00007fe00000ac0c +000c  90                              nop
+0x00007fe00000ac0d +000d  90                              nop
+0x00007fe00000ac0e +000e  90                              nop
+0x00007fe00000ac0f +000f  90                              nop
+
+kernel32.dll!GetProcAddress
+address=0x7fe00000b000 offset=0xb000 thunk-bytes=16 binding=syscall
+0x00007fe00000b000 +0000  b8 2c 10 00 00                  mov      eax, 0x102c
+0x00007fe00000b005 +0005  0f 05                           syscall
+0x00007fe00000b007 +0007  c3                              ret
+0x00007fe00000b008 +0008  90                              nop
+0x00007fe00000b009 +0009  90                              nop
+0x00007fe00000b00a +000a  90                              nop
+0x00007fe00000b00b +000b  90                              nop
+0x00007fe00000b00c +000c  90                              nop
+0x00007fe00000b00d +000d  90                              nop
+0x00007fe00000b00e +000e  90                              nop
+0x00007fe00000b00f +000f  90                              nop
+
+kernel32.dll!CreateThread
+address=0x7fe00000b400 offset=0xb400 thunk-bytes=16 binding=syscall
+0x00007fe00000b400 +0000  b8 2d 10 00 00                  mov      eax, 0x102d
+0x00007fe00000b405 +0005  0f 05                           syscall
+0x00007fe00000b407 +0007  c3                              ret
+0x00007fe00000b408 +0008  90                              nop
+0x00007fe00000b409 +0009  90                              nop
+0x00007fe00000b40a +000a  90                              nop
+0x00007fe00000b40b +000b  90                              nop
+0x00007fe00000b40c +000c  90                              nop
+0x00007fe00000b40d +000d  90                              nop
+0x00007fe00000b40e +000e  90                              nop
+0x00007fe00000b40f +000f  90                              nop
+
+kernel32.dll!CreateRemoteThread
+address=0x7fe00000b800 offset=0xb800 thunk-bytes=16 binding=syscall
+0x00007fe00000b800 +0000  b8 2e 10 00 00                  mov      eax, 0x102e
+0x00007fe00000b805 +0005  0f 05                           syscall
+0x00007fe00000b807 +0007  c3                              ret
+0x00007fe00000b808 +0008  90                              nop
+0x00007fe00000b809 +0009  90                              nop
+0x00007fe00000b80a +000a  90                              nop
+0x00007fe00000b80b +000b  90                              nop
+0x00007fe00000b80c +000c  90                              nop
+0x00007fe00000b80d +000d  90                              nop
+0x00007fe00000b80e +000e  90                              nop
+0x00007fe00000b80f +000f  90                              nop
+
+kernel32.dll!TerminateThread
+address=0x7fe00000bc00 offset=0xbc00 thunk-bytes=16 binding=syscall
+0x00007fe00000bc00 +0000  b8 2f 10 00 00                  mov      eax, 0x102f
+0x00007fe00000bc05 +0005  0f 05                           syscall
+0x00007fe00000bc07 +0007  c3                              ret
+0x00007fe00000bc08 +0008  90                              nop
+0x00007fe00000bc09 +0009  90                              nop
+0x00007fe00000bc0a +000a  90                              nop
+0x00007fe00000bc0b +000b  90                              nop
+0x00007fe00000bc0c +000c  90                              nop
+0x00007fe00000bc0d +000d  90                              nop
+0x00007fe00000bc0e +000e  90                              nop
+0x00007fe00000bc0f +000f  90                              nop
+
+kernel32.dll!ExitThread
+address=0x7fe00000c000 offset=0xc000 thunk-bytes=16 binding=syscall
+0x00007fe00000c000 +0000  b8 30 10 00 00                  mov      eax, 0x1030
+0x00007fe00000c005 +0005  0f 05                           syscall
+0x00007fe00000c007 +0007  c3                              ret
+0x00007fe00000c008 +0008  90                              nop
+0x00007fe00000c009 +0009  90                              nop
+0x00007fe00000c00a +000a  90                              nop
+0x00007fe00000c00b +000b  90                              nop
+0x00007fe00000c00c +000c  90                              nop
+0x00007fe00000c00d +000d  90                              nop
+0x00007fe00000c00e +000e  90                              nop
+0x00007fe00000c00f +000f  90                              nop
+
+kernel32.dll!LoadLibraryA
+address=0x7fe00000c400 offset=0xc400 thunk-bytes=16 binding=syscall
+0x00007fe00000c400 +0000  b8 31 10 00 00                  mov      eax, 0x1031
+0x00007fe00000c405 +0005  0f 05                           syscall
+0x00007fe00000c407 +0007  c3                              ret
+0x00007fe00000c408 +0008  90                              nop
+0x00007fe00000c409 +0009  90                              nop
+0x00007fe00000c40a +000a  90                              nop
+0x00007fe00000c40b +000b  90                              nop
+0x00007fe00000c40c +000c  90                              nop
+0x00007fe00000c40d +000d  90                              nop
+0x00007fe00000c40e +000e  90                              nop
+0x00007fe00000c40f +000f  90                              nop
+
+kernel32.dll!LoadLibraryW
+address=0x7fe00000c800 offset=0xc800 thunk-bytes=16 binding=syscall
+0x00007fe00000c800 +0000  b8 32 10 00 00                  mov      eax, 0x1032
+0x00007fe00000c805 +0005  0f 05                           syscall
+0x00007fe00000c807 +0007  c3                              ret
+0x00007fe00000c808 +0008  90                              nop
+0x00007fe00000c809 +0009  90                              nop
+0x00007fe00000c80a +000a  90                              nop
+0x00007fe00000c80b +000b  90                              nop
+0x00007fe00000c80c +000c  90                              nop
+0x00007fe00000c80d +000d  90                              nop
+0x00007fe00000c80e +000e  90                              nop
+0x00007fe00000c80f +000f  90                              nop
+
+kernel32.dll!FreeLibrary
+address=0x7fe00000cc00 offset=0xcc00 thunk-bytes=16 binding=syscall
+0x00007fe00000cc00 +0000  b8 33 10 00 00                  mov      eax, 0x1033
+0x00007fe00000cc05 +0005  0f 05                           syscall
+0x00007fe00000cc07 +0007  c3                              ret
+0x00007fe00000cc08 +0008  90                              nop
+0x00007fe00000cc09 +0009  90                              nop
+0x00007fe00000cc0a +000a  90                              nop
+0x00007fe00000cc0b +000b  90                              nop
+0x00007fe00000cc0c +000c  90                              nop
+0x00007fe00000cc0d +000d  90                              nop
+0x00007fe00000cc0e +000e  90                              nop
+0x00007fe00000cc0f +000f  90                              nop
+
+kernel32.dll!CreateToolhelp32Snapshot
+address=0x7fe00000d000 offset=0xd000 thunk-bytes=16 binding=syscall
+0x00007fe00000d000 +0000  b8 34 10 00 00                  mov      eax, 0x1034
+0x00007fe00000d005 +0005  0f 05                           syscall
+0x00007fe00000d007 +0007  c3                              ret
+0x00007fe00000d008 +0008  90                              nop
+0x00007fe00000d009 +0009  90                              nop
+0x00007fe00000d00a +000a  90                              nop
+0x00007fe00000d00b +000b  90                              nop
+0x00007fe00000d00c +000c  90                              nop
+0x00007fe00000d00d +000d  90                              nop
+0x00007fe00000d00e +000e  90                              nop
+0x00007fe00000d00f +000f  90                              nop
+
+kernel32.dll!Process32FirstW
+address=0x7fe00000d400 offset=0xd400 thunk-bytes=16 binding=syscall
+0x00007fe00000d400 +0000  b8 35 10 00 00                  mov      eax, 0x1035
+0x00007fe00000d405 +0005  0f 05                           syscall
+0x00007fe00000d407 +0007  c3                              ret
+0x00007fe00000d408 +0008  90                              nop
+0x00007fe00000d409 +0009  90                              nop
+0x00007fe00000d40a +000a  90                              nop
+0x00007fe00000d40b +000b  90                              nop
+0x00007fe00000d40c +000c  90                              nop
+0x00007fe00000d40d +000d  90                              nop
+0x00007fe00000d40e +000e  90                              nop
+0x00007fe00000d40f +000f  90                              nop
+
+kernel32.dll!Process32First
+address=0x7fe00000d800 offset=0xd800 thunk-bytes=16 binding=syscall
+0x00007fe00000d800 +0000  b8 36 10 00 00                  mov      eax, 0x1036
+0x00007fe00000d805 +0005  0f 05                           syscall
+0x00007fe00000d807 +0007  c3                              ret
+0x00007fe00000d808 +0008  90                              nop
+0x00007fe00000d809 +0009  90                              nop
+0x00007fe00000d80a +000a  90                              nop
+0x00007fe00000d80b +000b  90                              nop
+0x00007fe00000d80c +000c  90                              nop
+0x00007fe00000d80d +000d  90                              nop
+0x00007fe00000d80e +000e  90                              nop
+0x00007fe00000d80f +000f  90                              nop
+
+kernel32.dll!Process32NextW
+address=0x7fe00000dc00 offset=0xdc00 thunk-bytes=16 binding=syscall
+0x00007fe00000dc00 +0000  b8 37 10 00 00                  mov      eax, 0x1037
+0x00007fe00000dc05 +0005  0f 05                           syscall
+0x00007fe00000dc07 +0007  c3                              ret
+0x00007fe00000dc08 +0008  90                              nop
+0x00007fe00000dc09 +0009  90                              nop
+0x00007fe00000dc0a +000a  90                              nop
+0x00007fe00000dc0b +000b  90                              nop
+0x00007fe00000dc0c +000c  90                              nop
+0x00007fe00000dc0d +000d  90                              nop
+0x00007fe00000dc0e +000e  90                              nop
+0x00007fe00000dc0f +000f  90                              nop
+
+kernel32.dll!Process32Next
+address=0x7fe00000e000 offset=0xe000 thunk-bytes=16 binding=syscall
+0x00007fe00000e000 +0000  b8 38 10 00 00                  mov      eax, 0x1038
+0x00007fe00000e005 +0005  0f 05                           syscall
+0x00007fe00000e007 +0007  c3                              ret
+0x00007fe00000e008 +0008  90                              nop
+0x00007fe00000e009 +0009  90                              nop
+0x00007fe00000e00a +000a  90                              nop
+0x00007fe00000e00b +000b  90                              nop
+0x00007fe00000e00c +000c  90                              nop
+0x00007fe00000e00d +000d  90                              nop
+0x00007fe00000e00e +000e  90                              nop
+0x00007fe00000e00f +000f  90                              nop
+
+kernel32.dll!Module32FirstW
+address=0x7fe00000e400 offset=0xe400 thunk-bytes=16 binding=syscall
+0x00007fe00000e400 +0000  b8 39 10 00 00                  mov      eax, 0x1039
+0x00007fe00000e405 +0005  0f 05                           syscall
+0x00007fe00000e407 +0007  c3                              ret
+0x00007fe00000e408 +0008  90                              nop
+0x00007fe00000e409 +0009  90                              nop
+0x00007fe00000e40a +000a  90                              nop
+0x00007fe00000e40b +000b  90                              nop
+0x00007fe00000e40c +000c  90                              nop
+0x00007fe00000e40d +000d  90                              nop
+0x00007fe00000e40e +000e  90                              nop
+0x00007fe00000e40f +000f  90                              nop
+
+kernel32.dll!Module32First
+address=0x7fe00000e800 offset=0xe800 thunk-bytes=16 binding=syscall
+0x00007fe00000e800 +0000  b8 3a 10 00 00                  mov      eax, 0x103a
+0x00007fe00000e805 +0005  0f 05                           syscall
+0x00007fe00000e807 +0007  c3                              ret
+0x00007fe00000e808 +0008  90                              nop
+0x00007fe00000e809 +0009  90                              nop
+0x00007fe00000e80a +000a  90                              nop
+0x00007fe00000e80b +000b  90                              nop
+0x00007fe00000e80c +000c  90                              nop
+0x00007fe00000e80d +000d  90                              nop
+0x00007fe00000e80e +000e  90                              nop
+0x00007fe00000e80f +000f  90                              nop
+
+kernel32.dll!Module32NextW
+address=0x7fe00000ec00 offset=0xec00 thunk-bytes=16 binding=syscall
+0x00007fe00000ec00 +0000  b8 3b 10 00 00                  mov      eax, 0x103b
+0x00007fe00000ec05 +0005  0f 05                           syscall
+0x00007fe00000ec07 +0007  c3                              ret
+0x00007fe00000ec08 +0008  90                              nop
+0x00007fe00000ec09 +0009  90                              nop
+0x00007fe00000ec0a +000a  90                              nop
+0x00007fe00000ec0b +000b  90                              nop
+0x00007fe00000ec0c +000c  90                              nop
+0x00007fe00000ec0d +000d  90                              nop
+0x00007fe00000ec0e +000e  90                              nop
+0x00007fe00000ec0f +000f  90                              nop
+
+kernel32.dll!Module32Next
+address=0x7fe00000f000 offset=0xf000 thunk-bytes=16 binding=syscall
+0x00007fe00000f000 +0000  b8 3c 10 00 00                  mov      eax, 0x103c
+0x00007fe00000f005 +0005  0f 05                           syscall
+0x00007fe00000f007 +0007  c3                              ret
+0x00007fe00000f008 +0008  90                              nop
+0x00007fe00000f009 +0009  90                              nop
+0x00007fe00000f00a +000a  90                              nop
+0x00007fe00000f00b +000b  90                              nop
+0x00007fe00000f00c +000c  90                              nop
+0x00007fe00000f00d +000d  90                              nop
+0x00007fe00000f00e +000e  90                              nop
+0x00007fe00000f00f +000f  90                              nop
+
+kernel32.dll!Thread32First
+address=0x7fe00000f400 offset=0xf400 thunk-bytes=16 binding=syscall
+0x00007fe00000f400 +0000  b8 3d 10 00 00                  mov      eax, 0x103d
+0x00007fe00000f405 +0005  0f 05                           syscall
+0x00007fe00000f407 +0007  c3                              ret
+0x00007fe00000f408 +0008  90                              nop
+0x00007fe00000f409 +0009  90                              nop
+0x00007fe00000f40a +000a  90                              nop
+0x00007fe00000f40b +000b  90                              nop
+0x00007fe00000f40c +000c  90                              nop
+0x00007fe00000f40d +000d  90                              nop
+0x00007fe00000f40e +000e  90                              nop
+0x00007fe00000f40f +000f  90                              nop
+
+kernel32.dll!Thread32Next
+address=0x7fe00000f800 offset=0xf800 thunk-bytes=16 binding=syscall
+0x00007fe00000f800 +0000  b8 3e 10 00 00                  mov      eax, 0x103e
+0x00007fe00000f805 +0005  0f 05                           syscall
+0x00007fe00000f807 +0007  c3                              ret
+0x00007fe00000f808 +0008  90                              nop
+0x00007fe00000f809 +0009  90                              nop
+0x00007fe00000f80a +000a  90                              nop
+0x00007fe00000f80b +000b  90                              nop
+0x00007fe00000f80c +000c  90                              nop
+0x00007fe00000f80d +000d  90                              nop
+0x00007fe00000f80e +000e  90                              nop
+0x00007fe00000f80f +000f  90                              nop
+
+kernel32.dll!Heap32ListFirst
+address=0x7fe00000fc00 offset=0xfc00 thunk-bytes=16 binding=syscall
+0x00007fe00000fc00 +0000  b8 3f 10 00 00                  mov      eax, 0x103f
+0x00007fe00000fc05 +0005  0f 05                           syscall
+0x00007fe00000fc07 +0007  c3                              ret
+0x00007fe00000fc08 +0008  90                              nop
+0x00007fe00000fc09 +0009  90                              nop
+0x00007fe00000fc0a +000a  90                              nop
+0x00007fe00000fc0b +000b  90                              nop
+0x00007fe00000fc0c +000c  90                              nop
+0x00007fe00000fc0d +000d  90                              nop
+0x00007fe00000fc0e +000e  90                              nop
+0x00007fe00000fc0f +000f  90                              nop
+
+kernel32.dll!Heap32ListNext
+address=0x7fe000010000 offset=0x10000 thunk-bytes=16 binding=syscall
+0x00007fe000010000 +0000  b8 40 10 00 00                  mov      eax, 0x1040
+0x00007fe000010005 +0005  0f 05                           syscall
+0x00007fe000010007 +0007  c3                              ret
+0x00007fe000010008 +0008  90                              nop
+0x00007fe000010009 +0009  90                              nop
+0x00007fe00001000a +000a  90                              nop
+0x00007fe00001000b +000b  90                              nop
+0x00007fe00001000c +000c  90                              nop
+0x00007fe00001000d +000d  90                              nop
+0x00007fe00001000e +000e  90                              nop
+0x00007fe00001000f +000f  90                              nop
+
+kernel32.dll!Heap32First
+address=0x7fe000010400 offset=0x10400 thunk-bytes=16 binding=syscall
+0x00007fe000010400 +0000  b8 41 10 00 00                  mov      eax, 0x1041
+0x00007fe000010405 +0005  0f 05                           syscall
+0x00007fe000010407 +0007  c3                              ret
+0x00007fe000010408 +0008  90                              nop
+0x00007fe000010409 +0009  90                              nop
+0x00007fe00001040a +000a  90                              nop
+0x00007fe00001040b +000b  90                              nop
+0x00007fe00001040c +000c  90                              nop
+0x00007fe00001040d +000d  90                              nop
+0x00007fe00001040e +000e  90                              nop
+0x00007fe00001040f +000f  90                              nop
+
+kernel32.dll!Heap32Next
+address=0x7fe000010800 offset=0x10800 thunk-bytes=16 binding=syscall
+0x00007fe000010800 +0000  b8 42 10 00 00                  mov      eax, 0x1042
+0x00007fe000010805 +0005  0f 05                           syscall
+0x00007fe000010807 +0007  c3                              ret
+0x00007fe000010808 +0008  90                              nop
+0x00007fe000010809 +0009  90                              nop
+0x00007fe00001080a +000a  90                              nop
+0x00007fe00001080b +000b  90                              nop
+0x00007fe00001080c +000c  90                              nop
+0x00007fe00001080d +000d  90                              nop
+0x00007fe00001080e +000e  90                              nop
+0x00007fe00001080f +000f  90                              nop
+
+kernel32.dll!IsWow64Process
+address=0x7fe000010c00 offset=0x10c00 thunk-bytes=16 binding=syscall
+0x00007fe000010c00 +0000  b8 43 10 00 00                  mov      eax, 0x1043
+0x00007fe000010c05 +0005  0f 05                           syscall
+0x00007fe000010c07 +0007  c3                              ret
+0x00007fe000010c08 +0008  90                              nop
+0x00007fe000010c09 +0009  90                              nop
+0x00007fe000010c0a +000a  90                              nop
+0x00007fe000010c0b +000b  90                              nop
+0x00007fe000010c0c +000c  90                              nop
+0x00007fe000010c0d +000d  90                              nop
+0x00007fe000010c0e +000e  90                              nop
+0x00007fe000010c0f +000f  90                              nop
+
+kernel32.dll!GetProcessHeap
+address=0x7fe000011000 offset=0x11000 thunk-bytes=16 binding=syscall
+0x00007fe000011000 +0000  b8 44 10 00 00                  mov      eax, 0x1044
+0x00007fe000011005 +0005  0f 05                           syscall
+0x00007fe000011007 +0007  c3                              ret
+0x00007fe000011008 +0008  90                              nop
+0x00007fe000011009 +0009  90                              nop
+0x00007fe00001100a +000a  90                              nop
+0x00007fe00001100b +000b  90                              nop
+0x00007fe00001100c +000c  90                              nop
+0x00007fe00001100d +000d  90                              nop
+0x00007fe00001100e +000e  90                              nop
+0x00007fe00001100f +000f  90                              nop
+
+kernel32.dll!HeapCreate
+address=0x7fe000011400 offset=0x11400 thunk-bytes=16 binding=syscall
+0x00007fe000011400 +0000  b8 45 10 00 00                  mov      eax, 0x1045
+0x00007fe000011405 +0005  0f 05                           syscall
+0x00007fe000011407 +0007  c3                              ret
+0x00007fe000011408 +0008  90                              nop
+0x00007fe000011409 +0009  90                              nop
+0x00007fe00001140a +000a  90                              nop
+0x00007fe00001140b +000b  90                              nop
+0x00007fe00001140c +000c  90                              nop
+0x00007fe00001140d +000d  90                              nop
+0x00007fe00001140e +000e  90                              nop
+0x00007fe00001140f +000f  90                              nop
+
+kernel32.dll!HeapDestroy
+address=0x7fe000011800 offset=0x11800 thunk-bytes=16 binding=syscall
+0x00007fe000011800 +0000  b8 46 10 00 00                  mov      eax, 0x1046
+0x00007fe000011805 +0005  0f 05                           syscall
+0x00007fe000011807 +0007  c3                              ret
+0x00007fe000011808 +0008  90                              nop
+0x00007fe000011809 +0009  90                              nop
+0x00007fe00001180a +000a  90                              nop
+0x00007fe00001180b +000b  90                              nop
+0x00007fe00001180c +000c  90                              nop
+0x00007fe00001180d +000d  90                              nop
+0x00007fe00001180e +000e  90                              nop
+0x00007fe00001180f +000f  90                              nop
+
+kernel32.dll!HeapAlloc
+address=0x7fe000011c00 offset=0x11c00 thunk-bytes=16 binding=syscall
+0x00007fe000011c00 +0000  b8 47 10 00 00                  mov      eax, 0x1047
+0x00007fe000011c05 +0005  0f 05                           syscall
+0x00007fe000011c07 +0007  c3                              ret
+0x00007fe000011c08 +0008  90                              nop
+0x00007fe000011c09 +0009  90                              nop
+0x00007fe000011c0a +000a  90                              nop
+0x00007fe000011c0b +000b  90                              nop
+0x00007fe000011c0c +000c  90                              nop
+0x00007fe000011c0d +000d  90                              nop
+0x00007fe000011c0e +000e  90                              nop
+0x00007fe000011c0f +000f  90                              nop
+
+kernel32.dll!HeapFree
+address=0x7fe000012000 offset=0x12000 thunk-bytes=16 binding=syscall
+0x00007fe000012000 +0000  b8 48 10 00 00                  mov      eax, 0x1048
+0x00007fe000012005 +0005  0f 05                           syscall
+0x00007fe000012007 +0007  c3                              ret
+0x00007fe000012008 +0008  90                              nop
+0x00007fe000012009 +0009  90                              nop
+0x00007fe00001200a +000a  90                              nop
+0x00007fe00001200b +000b  90                              nop
+0x00007fe00001200c +000c  90                              nop
+0x00007fe00001200d +000d  90                              nop
+0x00007fe00001200e +000e  90                              nop
+0x00007fe00001200f +000f  90                              nop
+
+kernel32.dll!HeapReAlloc
+address=0x7fe000012400 offset=0x12400 thunk-bytes=16 binding=syscall
+0x00007fe000012400 +0000  b8 49 10 00 00                  mov      eax, 0x1049
+0x00007fe000012405 +0005  0f 05                           syscall
+0x00007fe000012407 +0007  c3                              ret
+0x00007fe000012408 +0008  90                              nop
+0x00007fe000012409 +0009  90                              nop
+0x00007fe00001240a +000a  90                              nop
+0x00007fe00001240b +000b  90                              nop
+0x00007fe00001240c +000c  90                              nop
+0x00007fe00001240d +000d  90                              nop
+0x00007fe00001240e +000e  90                              nop
+0x00007fe00001240f +000f  90                              nop
+
+kernel32.dll!HeapSize
+address=0x7fe000012800 offset=0x12800 thunk-bytes=16 binding=syscall
+0x00007fe000012800 +0000  b8 4a 10 00 00                  mov      eax, 0x104a
+0x00007fe000012805 +0005  0f 05                           syscall
+0x00007fe000012807 +0007  c3                              ret
+0x00007fe000012808 +0008  90                              nop
+0x00007fe000012809 +0009  90                              nop
+0x00007fe00001280a +000a  90                              nop
+0x00007fe00001280b +000b  90                              nop
+0x00007fe00001280c +000c  90                              nop
+0x00007fe00001280d +000d  90                              nop
+0x00007fe00001280e +000e  90                              nop
+0x00007fe00001280f +000f  90                              nop
+
+kernel32.dll!GetCurrentDirectoryW
+address=0x7fe000012c00 offset=0x12c00 thunk-bytes=16 binding=syscall
+0x00007fe000012c00 +0000  b8 4b 10 00 00                  mov      eax, 0x104b
+0x00007fe000012c05 +0005  0f 05                           syscall
+0x00007fe000012c07 +0007  c3                              ret
+0x00007fe000012c08 +0008  90                              nop
+0x00007fe000012c09 +0009  90                              nop
+0x00007fe000012c0a +000a  90                              nop
+0x00007fe000012c0b +000b  90                              nop
+0x00007fe000012c0c +000c  90                              nop
+0x00007fe000012c0d +000d  90                              nop
+0x00007fe000012c0e +000e  90                              nop
+0x00007fe000012c0f +000f  90                              nop
+
+kernel32.dll!GetCurrentDirectoryA
+address=0x7fe000013000 offset=0x13000 thunk-bytes=16 binding=syscall
+0x00007fe000013000 +0000  b8 4c 10 00 00                  mov      eax, 0x104c
+0x00007fe000013005 +0005  0f 05                           syscall
+0x00007fe000013007 +0007  c3                              ret
+0x00007fe000013008 +0008  90                              nop
+0x00007fe000013009 +0009  90                              nop
+0x00007fe00001300a +000a  90                              nop
+0x00007fe00001300b +000b  90                              nop
+0x00007fe00001300c +000c  90                              nop
+0x00007fe00001300d +000d  90                              nop
+0x00007fe00001300e +000e  90                              nop
+0x00007fe00001300f +000f  90                              nop
+
+kernel32.dll!SetCurrentDirectoryA
+address=0x7fe000013400 offset=0x13400 thunk-bytes=16 binding=syscall
+0x00007fe000013400 +0000  b8 4d 10 00 00                  mov      eax, 0x104d
+0x00007fe000013405 +0005  0f 05                           syscall
+0x00007fe000013407 +0007  c3                              ret
+0x00007fe000013408 +0008  90                              nop
+0x00007fe000013409 +0009  90                              nop
+0x00007fe00001340a +000a  90                              nop
+0x00007fe00001340b +000b  90                              nop
+0x00007fe00001340c +000c  90                              nop
+0x00007fe00001340d +000d  90                              nop
+0x00007fe00001340e +000e  90                              nop
+0x00007fe00001340f +000f  90                              nop
+
+kernel32.dll!SetCurrentDirectoryW
+address=0x7fe000013800 offset=0x13800 thunk-bytes=16 binding=syscall
+0x00007fe000013800 +0000  b8 4e 10 00 00                  mov      eax, 0x104e
+0x00007fe000013805 +0005  0f 05                           syscall
+0x00007fe000013807 +0007  c3                              ret
+0x00007fe000013808 +0008  90                              nop
+0x00007fe000013809 +0009  90                              nop
+0x00007fe00001380a +000a  90                              nop
+0x00007fe00001380b +000b  90                              nop
+0x00007fe00001380c +000c  90                              nop
+0x00007fe00001380d +000d  90                              nop
+0x00007fe00001380e +000e  90                              nop
+0x00007fe00001380f +000f  90                              nop
+
+kernel32.dll!GetEnvironmentVariableA
+address=0x7fe000013c00 offset=0x13c00 thunk-bytes=16 binding=syscall
+0x00007fe000013c00 +0000  b8 4f 10 00 00                  mov      eax, 0x104f
+0x00007fe000013c05 +0005  0f 05                           syscall
+0x00007fe000013c07 +0007  c3                              ret
+0x00007fe000013c08 +0008  90                              nop
+0x00007fe000013c09 +0009  90                              nop
+0x00007fe000013c0a +000a  90                              nop
+0x00007fe000013c0b +000b  90                              nop
+0x00007fe000013c0c +000c  90                              nop
+0x00007fe000013c0d +000d  90                              nop
+0x00007fe000013c0e +000e  90                              nop
+0x00007fe000013c0f +000f  90                              nop
+
+kernel32.dll!GetEnvironmentVariableW
+address=0x7fe000014000 offset=0x14000 thunk-bytes=16 binding=syscall
+0x00007fe000014000 +0000  b8 50 10 00 00                  mov      eax, 0x1050
+0x00007fe000014005 +0005  0f 05                           syscall
+0x00007fe000014007 +0007  c3                              ret
+0x00007fe000014008 +0008  90                              nop
+0x00007fe000014009 +0009  90                              nop
+0x00007fe00001400a +000a  90                              nop
+0x00007fe00001400b +000b  90                              nop
+0x00007fe00001400c +000c  90                              nop
+0x00007fe00001400d +000d  90                              nop
+0x00007fe00001400e +000e  90                              nop
+0x00007fe00001400f +000f  90                              nop
+
+kernel32.dll!SetEnvironmentVariableA
+address=0x7fe000014400 offset=0x14400 thunk-bytes=16 binding=syscall
+0x00007fe000014400 +0000  b8 51 10 00 00                  mov      eax, 0x1051
+0x00007fe000014405 +0005  0f 05                           syscall
+0x00007fe000014407 +0007  c3                              ret
+0x00007fe000014408 +0008  90                              nop
+0x00007fe000014409 +0009  90                              nop
+0x00007fe00001440a +000a  90                              nop
+0x00007fe00001440b +000b  90                              nop
+0x00007fe00001440c +000c  90                              nop
+0x00007fe00001440d +000d  90                              nop
+0x00007fe00001440e +000e  90                              nop
+0x00007fe00001440f +000f  90                              nop
+
+kernel32.dll!SetEnvironmentVariableW
+address=0x7fe000014800 offset=0x14800 thunk-bytes=16 binding=syscall
+0x00007fe000014800 +0000  b8 52 10 00 00                  mov      eax, 0x1052
+0x00007fe000014805 +0005  0f 05                           syscall
+0x00007fe000014807 +0007  c3                              ret
+0x00007fe000014808 +0008  90                              nop
+0x00007fe000014809 +0009  90                              nop
+0x00007fe00001480a +000a  90                              nop
+0x00007fe00001480b +000b  90                              nop
+0x00007fe00001480c +000c  90                              nop
+0x00007fe00001480d +000d  90                              nop
+0x00007fe00001480e +000e  90                              nop
+0x00007fe00001480f +000f  90                              nop
+
+kernel32.dll!FindFirstFileA
+address=0x7fe000014c00 offset=0x14c00 thunk-bytes=16 binding=syscall
+0x00007fe000014c00 +0000  b8 53 10 00 00                  mov      eax, 0x1053
+0x00007fe000014c05 +0005  0f 05                           syscall
+0x00007fe000014c07 +0007  c3                              ret
+0x00007fe000014c08 +0008  90                              nop
+0x00007fe000014c09 +0009  90                              nop
+0x00007fe000014c0a +000a  90                              nop
+0x00007fe000014c0b +000b  90                              nop
+0x00007fe000014c0c +000c  90                              nop
+0x00007fe000014c0d +000d  90                              nop
+0x00007fe000014c0e +000e  90                              nop
+0x00007fe000014c0f +000f  90                              nop
+
+kernel32.dll!FindNextFileA
+address=0x7fe000015000 offset=0x15000 thunk-bytes=16 binding=syscall
+0x00007fe000015000 +0000  b8 54 10 00 00                  mov      eax, 0x1054
+0x00007fe000015005 +0005  0f 05                           syscall
+0x00007fe000015007 +0007  c3                              ret
+0x00007fe000015008 +0008  90                              nop
+0x00007fe000015009 +0009  90                              nop
+0x00007fe00001500a +000a  90                              nop
+0x00007fe00001500b +000b  90                              nop
+0x00007fe00001500c +000c  90                              nop
+0x00007fe00001500d +000d  90                              nop
+0x00007fe00001500e +000e  90                              nop
+0x00007fe00001500f +000f  90                              nop
+
+kernel32.dll!FindClose
+address=0x7fe000015400 offset=0x15400 thunk-bytes=16 binding=syscall
+0x00007fe000015400 +0000  b8 55 10 00 00                  mov      eax, 0x1055
+0x00007fe000015405 +0005  0f 05                           syscall
+0x00007fe000015407 +0007  c3                              ret
+0x00007fe000015408 +0008  90                              nop
+0x00007fe000015409 +0009  90                              nop
+0x00007fe00001540a +000a  90                              nop
+0x00007fe00001540b +000b  90                              nop
+0x00007fe00001540c +000c  90                              nop
+0x00007fe00001540d +000d  90                              nop
+0x00007fe00001540e +000e  90                              nop
+0x00007fe00001540f +000f  90                              nop
+
+kernel32.dll!SearchPathA
+address=0x7fe000015800 offset=0x15800 thunk-bytes=16 binding=syscall
+0x00007fe000015800 +0000  b8 56 10 00 00                  mov      eax, 0x1056
+0x00007fe000015805 +0005  0f 05                           syscall
+0x00007fe000015807 +0007  c3                              ret
+0x00007fe000015808 +0008  90                              nop
+0x00007fe000015809 +0009  90                              nop
+0x00007fe00001580a +000a  90                              nop
+0x00007fe00001580b +000b  90                              nop
+0x00007fe00001580c +000c  90                              nop
+0x00007fe00001580d +000d  90                              nop
+0x00007fe00001580e +000e  90                              nop
+0x00007fe00001580f +000f  90                              nop
+
+kernel32.dll!ExitProcess
+address=0x7fe000015c00 offset=0x15c00 thunk-bytes=16 binding=syscall
+0x00007fe000015c00 +0000  b8 57 10 00 00                  mov      eax, 0x1057
+0x00007fe000015c05 +0005  0f 05                           syscall
+0x00007fe000015c07 +0007  c3                              ret
+0x00007fe000015c08 +0008  90                              nop
+0x00007fe000015c09 +0009  90                              nop
+0x00007fe000015c0a +000a  90                              nop
+0x00007fe000015c0b +000b  90                              nop
+0x00007fe000015c0c +000c  90                              nop
+0x00007fe000015c0d +000d  90                              nop
+0x00007fe000015c0e +000e  90                              nop
+0x00007fe000015c0f +000f  90                              nop
+
+kernel32.dll!GetStdHandle
+address=0x7fe000016000 offset=0x16000 thunk-bytes=16 binding=syscall
+0x00007fe000016000 +0000  b8 58 10 00 00                  mov      eax, 0x1058
+0x00007fe000016005 +0005  0f 05                           syscall
+0x00007fe000016007 +0007  c3                              ret
+0x00007fe000016008 +0008  90                              nop
+0x00007fe000016009 +0009  90                              nop
+0x00007fe00001600a +000a  90                              nop
+0x00007fe00001600b +000b  90                              nop
+0x00007fe00001600c +000c  90                              nop
+0x00007fe00001600d +000d  90                              nop
+0x00007fe00001600e +000e  90                              nop
+0x00007fe00001600f +000f  90                              nop
+
+kernel32.dll!SetStdHandle
+address=0x7fe000016400 offset=0x16400 thunk-bytes=16 binding=syscall
+0x00007fe000016400 +0000  b8 59 10 00 00                  mov      eax, 0x1059
+0x00007fe000016405 +0005  0f 05                           syscall
+0x00007fe000016407 +0007  c3                              ret
+0x00007fe000016408 +0008  90                              nop
+0x00007fe000016409 +0009  90                              nop
+0x00007fe00001640a +000a  90                              nop
+0x00007fe00001640b +000b  90                              nop
+0x00007fe00001640c +000c  90                              nop
+0x00007fe00001640d +000d  90                              nop
+0x00007fe00001640e +000e  90                              nop
+0x00007fe00001640f +000f  90                              nop
+
+kernel32.dll!GetConsoleMode
+address=0x7fe000016800 offset=0x16800 thunk-bytes=16 binding=syscall
+0x00007fe000016800 +0000  b8 5a 10 00 00                  mov      eax, 0x105a
+0x00007fe000016805 +0005  0f 05                           syscall
+0x00007fe000016807 +0007  c3                              ret
+0x00007fe000016808 +0008  90                              nop
+0x00007fe000016809 +0009  90                              nop
+0x00007fe00001680a +000a  90                              nop
+0x00007fe00001680b +000b  90                              nop
+0x00007fe00001680c +000c  90                              nop
+0x00007fe00001680d +000d  90                              nop
+0x00007fe00001680e +000e  90                              nop
+0x00007fe00001680f +000f  90                              nop
+
+kernel32.dll!SetConsoleMode
+address=0x7fe000016c00 offset=0x16c00 thunk-bytes=16 binding=syscall
+0x00007fe000016c00 +0000  b8 5b 10 00 00                  mov      eax, 0x105b
+0x00007fe000016c05 +0005  0f 05                           syscall
+0x00007fe000016c07 +0007  c3                              ret
+0x00007fe000016c08 +0008  90                              nop
+0x00007fe000016c09 +0009  90                              nop
+0x00007fe000016c0a +000a  90                              nop
+0x00007fe000016c0b +000b  90                              nop
+0x00007fe000016c0c +000c  90                              nop
+0x00007fe000016c0d +000d  90                              nop
+0x00007fe000016c0e +000e  90                              nop
+0x00007fe000016c0f +000f  90                              nop
+
+kernel32.dll!FillConsoleOutputCharacterA
+address=0x7fe000017000 offset=0x17000 thunk-bytes=16 binding=syscall
+0x00007fe000017000 +0000  b8 5c 10 00 00                  mov      eax, 0x105c
+0x00007fe000017005 +0005  0f 05                           syscall
+0x00007fe000017007 +0007  c3                              ret
+0x00007fe000017008 +0008  90                              nop
+0x00007fe000017009 +0009  90                              nop
+0x00007fe00001700a +000a  90                              nop
+0x00007fe00001700b +000b  90                              nop
+0x00007fe00001700c +000c  90                              nop
+0x00007fe00001700d +000d  90                              nop
+0x00007fe00001700e +000e  90                              nop
+0x00007fe00001700f +000f  90                              nop
+
+kernel32.dll!FillConsoleOutputAttribute
+address=0x7fe000017400 offset=0x17400 thunk-bytes=16 binding=syscall
+0x00007fe000017400 +0000  b8 5d 10 00 00                  mov      eax, 0x105d
+0x00007fe000017405 +0005  0f 05                           syscall
+0x00007fe000017407 +0007  c3                              ret
+0x00007fe000017408 +0008  90                              nop
+0x00007fe000017409 +0009  90                              nop
+0x00007fe00001740a +000a  90                              nop
+0x00007fe00001740b +000b  90                              nop
+0x00007fe00001740c +000c  90                              nop
+0x00007fe00001740d +000d  90                              nop
+0x00007fe00001740e +000e  90                              nop
+0x00007fe00001740f +000f  90                              nop
+
+kernel32.dll!SetConsoleTextAttribute
+address=0x7fe000017800 offset=0x17800 thunk-bytes=16 binding=syscall
+0x00007fe000017800 +0000  b8 5e 10 00 00                  mov      eax, 0x105e
+0x00007fe000017805 +0005  0f 05                           syscall
+0x00007fe000017807 +0007  c3                              ret
+0x00007fe000017808 +0008  90                              nop
+0x00007fe000017809 +0009  90                              nop
+0x00007fe00001780a +000a  90                              nop
+0x00007fe00001780b +000b  90                              nop
+0x00007fe00001780c +000c  90                              nop
+0x00007fe00001780d +000d  90                              nop
+0x00007fe00001780e +000e  90                              nop
+0x00007fe00001780f +000f  90                              nop
+
+kernel32.dll!SetConsoleCursorPosition
+address=0x7fe000017c00 offset=0x17c00 thunk-bytes=16 binding=syscall
+0x00007fe000017c00 +0000  b8 5f 10 00 00                  mov      eax, 0x105f
+0x00007fe000017c05 +0005  0f 05                           syscall
+0x00007fe000017c07 +0007  c3                              ret
+0x00007fe000017c08 +0008  90                              nop
+0x00007fe000017c09 +0009  90                              nop
+0x00007fe000017c0a +000a  90                              nop
+0x00007fe000017c0b +000b  90                              nop
+0x00007fe000017c0c +000c  90                              nop
+0x00007fe000017c0d +000d  90                              nop
+0x00007fe000017c0e +000e  90                              nop
+0x00007fe000017c0f +000f  90                              nop
+
+kernel32.dll!CreatePipe
+address=0x7fe000018000 offset=0x18000 thunk-bytes=16 binding=syscall
+0x00007fe000018000 +0000  b8 60 10 00 00                  mov      eax, 0x1060
+0x00007fe000018005 +0005  0f 05                           syscall
+0x00007fe000018007 +0007  c3                              ret
+0x00007fe000018008 +0008  90                              nop
+0x00007fe000018009 +0009  90                              nop
+0x00007fe00001800a +000a  90                              nop
+0x00007fe00001800b +000b  90                              nop
+0x00007fe00001800c +000c  90                              nop
+0x00007fe00001800d +000d  90                              nop
+0x00007fe00001800e +000e  90                              nop
+0x00007fe00001800f +000f  90                              nop
+
+kernel32.dll!SetHandleInformation
+address=0x7fe000018400 offset=0x18400 thunk-bytes=16 binding=syscall
+0x00007fe000018400 +0000  b8 61 10 00 00                  mov      eax, 0x1061
+0x00007fe000018405 +0005  0f 05                           syscall
+0x00007fe000018407 +0007  c3                              ret
+0x00007fe000018408 +0008  90                              nop
+0x00007fe000018409 +0009  90                              nop
+0x00007fe00001840a +000a  90                              nop
+0x00007fe00001840b +000b  90                              nop
+0x00007fe00001840c +000c  90                              nop
+0x00007fe00001840d +000d  90                              nop
+0x00007fe00001840e +000e  90                              nop
+0x00007fe00001840f +000f  90                              nop
+
+kernel32.dll!CreateFileW
+address=0x7fe000018800 offset=0x18800 thunk-bytes=16 binding=syscall
+0x00007fe000018800 +0000  b8 62 10 00 00                  mov      eax, 0x1062
+0x00007fe000018805 +0005  0f 05                           syscall
+0x00007fe000018807 +0007  c3                              ret
+0x00007fe000018808 +0008  90                              nop
+0x00007fe000018809 +0009  90                              nop
+0x00007fe00001880a +000a  90                              nop
+0x00007fe00001880b +000b  90                              nop
+0x00007fe00001880c +000c  90                              nop
+0x00007fe00001880d +000d  90                              nop
+0x00007fe00001880e +000e  90                              nop
+0x00007fe00001880f +000f  90                              nop
+
+section .idata
+; address=0x7fe000019000 size=0 protection=r
+; empty
+
+section .rdata
+; empty
+
+section .data
+; empty
+
+section .bss
+; empty

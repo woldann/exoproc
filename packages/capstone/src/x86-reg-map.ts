@@ -1,4 +1,4 @@
-import { x86_reg } from './types/x86_reg.js';
+import { x86_reg } from 'bun-capstone-abi';
 
 /**
  * Mapping from Capstone x86 register IDs to standard Win32 CONTEXT register names.

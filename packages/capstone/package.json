@@ -47,6 +47,7 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
+    "bun-capstone-abi": "workspace:*",
     "bun-xffi": "workspace:*"
   }
 }
