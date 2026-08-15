@@ -63,7 +63,7 @@
     "lint:fix": "eslint \"packages/*/src/**/*.ts\" \"scripts/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.ts\" \"examples/**/*.tsx\" --cache --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "typecheck": "bun x tsc --noEmit -p tests/tsconfig.json",
+    "typecheck": "bun run build && bun x tsc --noEmit -p tests/tsconfig.json",
     "prepare": "husky",
     "postinstall": "bun run download-deps",
     "changeset": "changeset",
