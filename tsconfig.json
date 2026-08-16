@@ -40,6 +40,7 @@
     "baseUrl": ".",
     "paths": {
       "exoproc-utils": ["packages/utils/src/index.ts"],
+      "exoproc-asm": ["packages/asm/src/index.ts"],
       "bun-xffi": ["packages/xffi/src/index.ts"],
       "exoproc-accessors": ["packages/accessors/src/index.ts"],
       "exoproc-dummy": ["packages/dummy/src/index.ts"],
@@ -50,7 +51,10 @@
       "bun-nhook": ["packages/nhook/src/index.ts"],
       "bun-minhook": ["packages/minhook/src/index.ts"],
       "bun-nshm": ["packages/nshm/src/index.ts"],
+      "bun-thunks": ["packages/thunks/src/index.ts"],
+      "bun-thunks/machine-code": ["packages/thunks/src/machine-code.ts"],
       "exoproc": ["packages/exoproc/src/index.ts"],
+      "exoproc/asm": ["packages/exoproc/src/asm.ts"],
       "@exoproc/win32-abi": ["packages/win32-abi/src/index.ts"],
       "@exoproc/simulate": ["packages/simulate/src/index.ts"],
       "@exoproc/simulate/files": [
@@ -60,6 +64,7 @@
   },
   "files": [],
   "references": [
+    { "path": "./packages/asm" },
     { "path": "./packages/utils" },
     { "path": "./packages/xffi" },
     { "path": "./packages/winapi" },
@@ -68,6 +73,7 @@
     { "path": "./packages/capstone" },
     { "path": "./packages/nthread" },
     { "path": "./packages/nshm" },
+    { "path": "./packages/thunks" },
     { "path": "./packages/accessors" },
     { "path": "./packages/nhook" },
     { "path": "./packages/minhook" },

@@ -14,5 +14,9 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"],
-  "references": [{ "path": "../win32-abi" }, { "path": "../capstone-abi" }]
+  "references": [
+    { "path": "../asm" },
+    { "path": "../win32-abi" },
+    { "path": "../capstone-abi" }
+  ]
 }

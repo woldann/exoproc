@@ -8,6 +8,7 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "references": [
+    { "path": "../asm" },
     { "path": "../capstone" },
     { "path": "../xffi" },
     { "path": "../minhook" },

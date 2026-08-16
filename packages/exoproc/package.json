@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./asm": {
+      "types": "./dist/asm.d.ts",
+      "import": "./dist/asm.js"
     }
   },
   "type": "module",
@@ -53,6 +57,7 @@
     "bun-minhook": "workspace:*",
     "bun-nshm": "workspace:*",
     "bun-capstone": "workspace:*",
+    "exoproc-asm": "workspace:*",
     "exoproc-utils": "workspace:*"
   }
 }
