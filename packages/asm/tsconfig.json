@@ -2,6 +2,5 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": { "paths": {}, "outDir": "./dist", "rootDir": "./src" },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"],
-  "references": [{ "path": "../asm" }, { "path": "../xffi" }]
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

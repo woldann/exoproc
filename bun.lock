@@ -108,6 +108,10 @@
         "@types/bun": "latest",
       },
     },
+    "packages/asm": {
+      "name": "exoproc-asm",
+      "version": "0.1.0",
+    },
     "packages/capstone": {
       "name": "bun-capstone",
       "version": "0.1.0",
@@ -142,6 +146,7 @@
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
         "exoproc-accessors": "workspace:*",
+        "exoproc-asm": "workspace:*",
         "exoproc-utils": "workspace:*",
       },
     },
@@ -191,6 +196,7 @@
       "dependencies": {
         "@exoproc/win32-abi": "workspace:*",
         "bun-capstone-abi": "workspace:*",
+        "exoproc-asm": "workspace:*",
         "expect": "^30.4.1",
       },
       "devDependencies": {
@@ -204,6 +210,7 @@
       "version": "0.1.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
+        "exoproc-asm": "workspace:*",
       },
     },
     "packages/utils": {
@@ -1635,6 +1642,8 @@
     "exoproc": ["exoproc@workspace:packages/exoproc"],
 
     "exoproc-accessors": ["exoproc-accessors@workspace:packages/accessors"],
+
+    "exoproc-asm": ["exoproc-asm@workspace:packages/asm"],
 
     "exoproc-dummy": ["exoproc-dummy@workspace:packages/dummy"],
 

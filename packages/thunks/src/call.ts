@@ -1,247 +1,304 @@
 import {
-  createPendingMachineCode,
+  MemoryFreeType,
+  MemoryProtection,
   normalizeType,
   resolveAddress,
-  MemoryProtection,
-  type CFunction,
   type CMachineCode,
   type CTypeOrString,
   type ICallableMemoryAccessor,
 } from 'bun-xffi';
-import { CALL_REGISTER_SLOTS } from './asm.js';
-import { callMachineCode, fixedCallMachineCode } from './call-bytes.js';
+import { CALL_REGISTER_SLOTS } from './abi.js';
+import { createCallThunk } from './call-bytes.js';
 import {
-  captureArgsMachineCode,
-  fixedCaptureArgsMachineCode,
+  createCaptureAdapterThunk,
+  createCaptureArgsThunk,
 } from './capture-args.js';
+import { installMachineCode } from './registry.js';
+import type {
+  AllocateCallPayloadOptions,
+  AllocatedCallPayload,
+  InstallCallThunkOptions,
+  InstallCaptureArgsThunkOptions,
+  InstallCaptureHookThunkOptions,
+  InstalledCallThunk,
+  InstalledCaptureArgsThunk,
+  InstalledCaptureHookThunk,
+  ThunkSignature,
+} from './types.js';
 
-/**
- * Picks the variant mask for a real target signature: bit i is set when
- * argument i (of the first 4) is a float/double, so it lands in XMM_i instead
- * of the GPR pair. Arguments beyond the first 4 need no such distinction.
- */
-export function maskFromArgTypes(argTypes: readonly CTypeOrString[]): number {
-  let mask = 0;
-  for (let i = 0; i < CALL_REGISTER_SLOTS && i < argTypes.length; i++) {
-    const norm = normalizeType(argTypes[i]);
-    if (norm === 'f32' || norm === 'f64') mask |= 1 << i;
-  }
-  return mask;
-}
+const PACKED_CALL_HEADER_SIZE = 24;
 
-/**
- * Picks the right variant for `target` directly (mask from `target.args`,
- * signature tagged with `target.returns`) so calling code doesn't have to
- * derive the mask or the return-tagged signature itself. Reuses one of the
- * 32 globally-cached variants as-is when `target.returns` normalizes to
- * exactly `u64` or `f64` (the two defaults); otherwise builds one more
- * precisely-tagged wrapper, still reusing that variant's already-built bytes
- * rather than regenerating them.
- */
-export function callMachineCodeFor(
-  target: Pick<CFunction, 'args' | 'returns'>,
-): CMachineCode {
-  const mask = maskFromArgTypes(target.args);
-  const norm = normalizeType(target.returns);
-  const isFloat = norm === 'f32' || norm === 'f64';
-  const base = callMachineCode(mask, isFloat ? 'float' : 'int');
-  if (normalizeType(base.returns) === norm) return base;
-  return createPendingMachineCode(
-    [target.returns, ['ptr', 'u64', 'ptr']],
-    base.bytes,
-  );
-}
-
-/**
- * Like {@link callMachineCodeFor}, but bakes `target.ptr` and
- * `target.args.length` into the machine code itself instead of taking them
- * as runtime arguments -- for a real `CFunction` they're already fixed, so
- * the resulting thunk only takes one argument (the args buffer) rather than
- * three. Cached globally by `target.ptr` + argument count (see
- * {@link fixedCallMachineCode}), so calling this again for the same target
- * returns the same object rather than re-emitting the same bytes.
- */
-export function fixedCallMachineCodeFor(
-  target: Pick<CFunction, 'ptr' | 'args' | 'returns'>,
-): CMachineCode {
-  const mask = maskFromArgTypes(target.args);
-  const functionPointer = BigInt(resolveAddress(target.ptr));
-  return fixedCallMachineCode(
-    functionPointer,
-    target.args.length,
-    mask,
-    target.returns,
-  );
-}
-
-/**
- * Picks the mask for `argTypes` and builds the {@link captureArgsMachineCode}
- * for it -- so callers describe the signature they want to capture the same
- * way they'd describe any other target (a plain `CTypeOrString[]`) instead
- * of computing a mask by hand.
- */
-export function captureArgsMachineCodeFor(
-  argTypes: readonly CTypeOrString[],
-): CMachineCode {
-  const mask = maskFromArgTypes(argTypes);
-  return captureArgsMachineCode(argTypes.length, mask);
-}
-
-/**
- * Packs call arguments into the flat 8-byte-per-slot buffer the call
- * machine code reads `args` from (at least `CALL_REGISTER_SLOTS` slots, even
- * if fewer real arguments are given).
- */
-export function packArgs(
+/** Packs values into the call dispatcher's flat, eight-byte-per-slot format. */
+export function packCallArgs(
   values: readonly (number | bigint)[],
-  argTypes: readonly CTypeOrString[],
+  types: readonly CTypeOrString[],
 ): Buffer {
+  if (values.length !== types.length) {
+    throw new RangeError(
+      `values/types length mismatch: ${values.length} values for ${types.length} types`,
+    );
+  }
+
   const slotCount = Math.max(values.length, CALL_REGISTER_SLOTS);
-  const buf = Buffer.alloc(slotCount * 8);
+  const buffer = Buffer.alloc(slotCount * 8);
   for (let i = 0; i < values.length; i++) {
-    const norm = normalizeType(argTypes[i]);
-    const v = values[i]!;
-    if (norm === 'f32') buf.writeFloatLE(Number(v), i * 8);
-    else if (norm === 'f64') buf.writeDoubleLE(Number(v), i * 8);
-    else buf.writeBigUInt64LE(BigInt(v), i * 8);
+    const declaredType = types[i];
+    const value = values[i];
+    if (declaredType === undefined || value === undefined) {
+      throw new RangeError(`missing value or type at argument slot ${i}`);
+    }
+    const type = normalizeType(declaredType);
+    if (type === 'f32') buffer.writeFloatLE(Number(value), i * 8);
+    else if (type === 'f64') buffer.writeDoubleLE(Number(value), i * 8);
+    else {
+      buffer.writeBigUInt64LE(BigInt.asUintN(64, BigInt(value)), i * 8);
+    }
   }
-  return buf;
+  return buffer;
 }
 
-const CHAINED_HEADER_SIZE = 24; // targetPtr + targetArgCount + self-pointer, 8 bytes each
-
-// Per-accessor (the injected address is only meaningful within that one
-// process), per-(mask,category) cache -- built the first time
-// chainedCallMachineCode is called for a given (accessor, mask, category),
-// reused after that so repeat calls don't re-inject callMachineCode into the
-// same process over and over. WeakMap on the accessor so entries don't
-// outlive it.
-const chainedCache = new WeakMap<
-  ICallableMemoryAccessor,
-  Map<string, CMachineCode>
->();
-
-/**
- * Injects a `callMachineCode(mask, category)` instance into `accessor`'s
- * process, then builds a {@link fixedCallMachineCode} bound to that (now
- * known) remote address with argCount=3, mask=0 -- i.e. a *single-argument*
- * thunk that, given the buffer {@link packChainedArgs} builds, can call any
- * function matching `(mask, category)` through that one argument alone. Two
- * genuinely separate `CMachineCode`s, never fused into one blob: inject the
- * returned one the normal way via `accessor.machineCode(...)`.
- *
- * `mask`/`category` here describe the *real* target eventually reached
- * through this chain -- e.g. a target whose 2nd argument is a `double` needs
- * `mask` with bit 1 set, same as calling `callMachineCode(mask, ...)`
- * directly would. Don't confuse this with the *outer* fixed thunk's own
- * mask, which is always 0 regardless: its 3 logical arguments (the inner
- * callMachineCode's `ptr, u64, ptr` signature) are never float, so there's
- * exactly one correct choice for that one.
- */
-export async function chainedCallMachineCode(
+function createPayloadHandle(
   accessor: ICallableMemoryAccessor,
-  mask: number,
-  category: 'int' | 'float' = 'int',
-): Promise<CMachineCode> {
-  let perAccessor = chainedCache.get(accessor);
-  if (!perAccessor) {
-    perAccessor = new Map();
-    chainedCache.set(accessor, perAccessor);
-  }
-  const key = `${mask}_${category}`;
-  let cached = perAccessor.get(key);
-  if (!cached) {
-    const inner = callMachineCode(mask, category);
-    const innerAddr = await accessor.machineCode(inner);
-    const returns: CTypeOrString = category === 'float' ? 'f64' : 'u64';
-    cached = fixedCallMachineCode(BigInt(innerAddr), 3, 0, returns);
-    perAccessor.set(key, cached);
-  }
-  return cached;
+  address: number,
+  byteLength: number,
+  callArgs: readonly (number | bigint)[],
+): AllocatedCallPayload {
+  let disposed = false;
+  let disposal: Promise<void> | undefined;
+  return {
+    address,
+    byteLength,
+    callArgs,
+    get isDisposed(): boolean {
+      return disposed;
+    },
+    dispose(): Promise<void> {
+      if (disposed) return Promise.resolve();
+      if (disposal) return disposal;
+
+      disposal = (async () => {
+        const freed = await accessor.free(address, 0, MemoryFreeType.RELEASE);
+        if (!freed) {
+          throw new Error(
+            `Failed to free call payload at 0x${address.toString(16)}`,
+          );
+        }
+        disposed = true;
+      })().catch((error: unknown) => {
+        disposal = undefined;
+        throw error;
+      });
+      return disposal;
+    },
+  };
 }
 
-/**
- * Builds the single combined buffer {@link chainedCallMachineCode}'s thunk
- * expects as its one argument: `[targetPointer, targetArgCount,
- * selfPointer, ...packArgs(values, argTypes)]`, where `selfPointer` is this
- * same buffer's own remote address + `CHAINED_HEADER_SIZE` rather than a
- * pointer into a separate allocation -- one buffer holds everything the
- * inner `callMachineCode` needs (the target's ptr/argCount/argsPtr) *and*
- * the real arguments themselves, since `argsPtr` only needs to point at
- * where the real args happen to start, which is always exactly
- * `CHAINED_HEADER_SIZE` bytes in, regardless of how many of them there are.
- * Allocates and writes it remotely (via `accessor`); returns the address to
- * pass as `chainedCallMachineCode`'s single argument.
- */
-export async function packChainedArgs(
+async function allocatePayload(
   accessor: ICallableMemoryAccessor,
-  targetPointer: bigint,
-  values: readonly (number | bigint)[],
-  argTypes: readonly CTypeOrString[],
-): Promise<number> {
-  const realArgsBuf = packArgs(values, argTypes);
-  const addr = Number(
+  bytes: Buffer,
+  callArgsForAddress: (address: number) => readonly (number | bigint)[],
+): Promise<AllocatedCallPayload> {
+  const address = Number(
     resolveAddress(
-      await accessor.alloc(
-        CHAINED_HEADER_SIZE + realArgsBuf.length,
-        null,
-        MemoryProtection.READWRITE,
-      ),
+      await accessor.alloc(bytes.length, null, MemoryProtection.READWRITE),
     ),
   );
 
-  const header = Buffer.alloc(CHAINED_HEADER_SIZE);
-  header.writeBigUInt64LE(BigInt.asUintN(64, targetPointer), 0);
-  header.writeBigUInt64LE(BigInt(values.length), 8);
-  header.writeBigUInt64LE(BigInt(addr + CHAINED_HEADER_SIZE), 16);
-  await accessor.write(addr, Buffer.concat([header, realArgsBuf]));
+  try {
+    await accessor.write(address, bytes);
+  } catch (error) {
+    await accessor.free(address, 0, MemoryFreeType.RELEASE);
+    throw error;
+  }
 
-  return addr;
+  return createPayloadHandle(
+    accessor,
+    address,
+    bytes.length,
+    callArgsForAddress(address),
+  );
 }
 
-// Per-accessor, per-(argCount,mask) cache -- the injected captureArgsMachineCode
-// instance is reusable across as many different targetAddresses as callers
-// want (it takes targetAddress as its own trailing argument), so this only
-// needs to inject it once per (accessor, argCount, mask), not once per
-// targetAddress.
-const chainedCaptureCache = new WeakMap<
-  ICallableMemoryAccessor,
-  Map<string, number>
->();
+function requireTarget(
+  mode: 'dynamic' | 'packed',
+  target: AllocateCallPayloadOptions['target'],
+): number {
+  if (target === undefined) {
+    throw new TypeError(`${mode} call payloads require a target address`);
+  }
+  return Number(resolveAddress(target));
+}
+
+async function allocateForInstalledCall(
+  accessor: ICallableMemoryAccessor,
+  mode: InstalledCallThunk['mode'],
+  signature: ThunkSignature,
+  options: AllocateCallPayloadOptions,
+): Promise<AllocatedCallPayload> {
+  const args = packCallArgs(options.values, signature.args);
+
+  if (mode === 'bound') {
+    if (options.target !== undefined) {
+      throw new TypeError('bound call payloads must not provide a target');
+    }
+    return allocatePayload(accessor, args, (address) => [address]);
+  }
+
+  const target = requireTarget(mode, options.target);
+  if (mode === 'dynamic') {
+    return allocatePayload(accessor, args, (address) => [
+      target,
+      BigInt(signature.args.length),
+      address,
+    ]);
+  }
+
+  const totalLength = PACKED_CALL_HEADER_SIZE + args.length;
+  const allocationAddress = Number(
+    resolveAddress(
+      await accessor.alloc(totalLength, null, MemoryProtection.READWRITE),
+    ),
+  );
+  const header = Buffer.alloc(PACKED_CALL_HEADER_SIZE);
+  header.writeBigUInt64LE(BigInt.asUintN(64, BigInt(target)), 0);
+  header.writeBigUInt64LE(BigInt(signature.args.length), 8);
+  header.writeBigUInt64LE(
+    BigInt(allocationAddress + PACKED_CALL_HEADER_SIZE),
+    16,
+  );
+  const bytes = Buffer.concat([header, args]);
+
+  try {
+    await accessor.write(allocationAddress, bytes);
+  } catch (error) {
+    await accessor.free(allocationAddress, 0, MemoryFreeType.RELEASE);
+    throw error;
+  }
+
+  return createPayloadHandle(accessor, allocationAddress, bytes.length, [
+    allocationAddress,
+  ]);
+}
 
 /**
- * Injects a `captureArgsMachineCode(argCount, mask)` instance into
- * `accessor`'s process (reused across calls for the same `(accessor,
- * argCount, mask)` regardless of `targetAddress`), then builds a
- * {@link fixedCaptureArgsMachineCode} bound to that address and
- * `targetAddress` -- i.e. the actual thunk to wire into a jump-based hook
- * for one specific hook site, entered exactly like the real `argCount`
- * -argument function being captured. Two genuinely separate `CMachineCode`s,
- * never fused into one blob.
+ * Installs the call dispatcher in dynamic, bound-target, or one-pointer packed
+ * mode. Binding is configuration of the same call primitive, not a separate
+ * public machine-code family.
  */
-export async function chainedCaptureArgsMachineCode(
+export async function installCallThunk(
   accessor: ICallableMemoryAccessor,
-  targetAddress: bigint,
-  argCount: number,
-  mask: number,
-): Promise<CMachineCode> {
-  let perAccessor = chainedCaptureCache.get(accessor);
-  if (!perAccessor) {
-    perAccessor = new Map();
-    chainedCaptureCache.set(accessor, perAccessor);
-  }
-  const key = `${argCount}_${mask}`;
-  let innerAddr = perAccessor.get(key);
-  if (innerAddr === undefined) {
-    innerAddr = await accessor.machineCode(
-      captureArgsMachineCode(argCount, mask),
+  options: InstallCallThunkOptions,
+): Promise<InstalledCallThunk> {
+  const signature: ThunkSignature = {
+    returns: options.signature.returns,
+    args: [...options.signature.args],
+  };
+
+  let machineCode: CMachineCode;
+  if (options.mode === 'dynamic') {
+    machineCode = createCallThunk({
+      signature,
+      invokeStyle: options.invokeStyle,
+    });
+  } else if (options.mode === 'bound') {
+    machineCode = createCallThunk({
+      signature,
+      functionPointer: BigInt(resolveAddress(options.target)),
+      argCount: BigInt(signature.args.length),
+      argsRegister: 'rcx',
+      invokeStyle: options.invokeStyle,
+    });
+  } else {
+    const inner = await installMachineCode(
+      accessor,
+      createCallThunk({ signature }),
     );
-    perAccessor.set(key, innerAddr);
+    machineCode = createCallThunk({
+      signature: {
+        returns: signature.returns,
+        args: ['ptr', 'u64', 'ptr'],
+      },
+      functionPointer: BigInt(inner.address),
+      argCount: 3n,
+      argsRegister: 'rcx',
+    });
   }
-  return fixedCaptureArgsMachineCode(
-    targetAddress,
-    BigInt(innerAddr),
-    argCount,
-    mask,
+
+  const installed = await installMachineCode(accessor, machineCode);
+  return {
+    ...installed,
+    mode: options.mode,
+    signature,
+    allocatePayload: (payloadOptions) =>
+      allocateForInstalledCall(
+        accessor,
+        options.mode,
+        signature,
+        payloadOptions,
+      ),
+  };
+}
+
+/** Installs the reusable `(...args, destination) => destination` collector. */
+export async function installCaptureArgsThunk(
+  accessor: ICallableMemoryAccessor,
+  options: InstallCaptureArgsThunkOptions,
+): Promise<InstalledCaptureArgsThunk> {
+  const args = [...options.args];
+  const installed = await installMachineCode(
+    accessor,
+    createCaptureArgsThunk(args),
   );
+  return { ...installed, args };
+}
+
+function signaturesMatch(
+  left: readonly CTypeOrString[],
+  right: readonly CTypeOrString[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (type, index) => normalizeType(type) === normalizeType(right[index]),
+    )
+  );
+}
+
+/**
+ * Installs the fixed-destination adapter used as a jump-hook landing point,
+ * automatically installing/reusing its collector unless one is supplied.
+ */
+export async function installCaptureHookThunk(
+  accessor: ICallableMemoryAccessor,
+  options: InstallCaptureHookThunkOptions,
+): Promise<InstalledCaptureHookThunk> {
+  const args = [...options.args];
+  const collector =
+    options.collector ?? (await installCaptureArgsThunk(accessor, { args }));
+
+  if (collector.accessor !== accessor) {
+    throw new TypeError('collector was installed through a different accessor');
+  }
+  if (!signaturesMatch(collector.args, args)) {
+    throw new TypeError(
+      'collector argument signature does not match hook args',
+    );
+  }
+
+  const destination = Number(resolveAddress(options.destination));
+  const installed = await installMachineCode(
+    accessor,
+    createCaptureAdapterThunk({
+      args,
+      destination: BigInt(destination),
+      collectorAddress: BigInt(collector.address),
+    }),
+  );
+
+  return {
+    ...installed,
+    args,
+    destination,
+    collector,
+  };
 }

@@ -53,6 +53,7 @@
   "dependencies": {
     "@exoproc/win32-abi": "workspace:*",
     "bun-capstone-abi": "workspace:*",
+    "exoproc-asm": "workspace:*",
     "expect": "^30.4.1"
   },
   "devDependencies": {

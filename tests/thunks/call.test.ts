@@ -11,28 +11,41 @@ import {
 import { createAccessor } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 import {
-  callMachineCode,
-  callMachineCodeFor,
-  fixedCallMachineCodeFor,
-  chainedCallMachineCode,
-  packChainedArgs,
-  captureArgsMachineCodeFor,
-  chainedCaptureArgsMachineCode,
+  installCallThunk,
+  installCaptureArgsThunk,
+  installCaptureHookThunk,
+  packCallArgs,
+  type ThunkSignature,
+} from 'bun-thunks';
+import {
+  buildCallBytes,
+  createCallThunk,
+  gprForSlot,
   maskFromArgTypes,
-  packArgs,
-  Reg,
-  movRegFromXmm,
-  movXmmFromReg,
-  movRegFromSibDisp8,
-  movMemDisp8FromReg,
-  regRegOp,
+  xmmForSlot,
   CALL_REGISTER_SLOTS,
   CALL_VARIANT_COUNT,
-} from 'bun-thunks';
+} from 'bun-thunks/machine-code';
+import { X64Assembler, qword } from 'exoproc/asm';
 
 type IndirectAccessor = Awaited<ReturnType<typeof createAccessor>>;
 
-const GPR_FOR_SLOT: readonly Reg[] = [Reg.RCX, Reg.RDX, Reg.R8, Reg.R9];
+// Builds a target ABI shape whose first four register classes match `mask`.
+// Extra arguments are raw u64 stack slots; only the first four positions need
+// a GPR-vs-XMM distinction in the Win64 ABI.
+function targetForMask(
+  mask: number,
+  argCount = CALL_REGISTER_SLOTS,
+  returns: CTypeOrString = 'u64',
+): ThunkSignature {
+  const args: CTypeOrString[] = [];
+  for (let i = 0; i < argCount; i++) {
+    args.push(
+      i < CALL_REGISTER_SLOTS && mask & (1 << i) ? CType.f64 : CType.u64,
+    );
+  }
+  return { returns, args };
+}
 
 // A hand-assembled (not TCC-compiled) "callee" that XORs together the raw
 // 8-byte bit pattern of every argument it received -- the first 4 read from
@@ -52,46 +65,29 @@ const GPR_FOR_SLOT: readonly Reg[] = [Reg.RCX, Reg.RDX, Reg.R8, Reg.R9];
 function buildChecksumProbeBytes(
   mask: number,
   stackTestArgCount: number,
-): number[] {
-  const bytes: number[] = [];
-  const emit = (chunk: readonly number[]): void => {
-    bytes.push(...chunk);
-  };
-
-  emit(regRegOp(0x31, Reg.RAX, Reg.RAX)); // rax = 0
+): Uint8Array {
+  const assembler = new X64Assembler();
+  assembler.xor('rax', 'rax');
 
   for (let slot = 0; slot < CALL_REGISTER_SLOTS; slot++) {
     if (mask & (1 << slot)) {
-      emit(movRegFromXmm(Reg.R10, slot)); // r10 = raw bits of xmm_slot
-      emit(regRegOp(0x31, Reg.RAX, Reg.R10));
+      assembler.movq('r10', xmmForSlot(slot));
+      assembler.xor('rax', 'r10');
     } else {
-      emit(regRegOp(0x31, Reg.RAX, GPR_FOR_SLOT[slot]!));
+      assembler.xor('rax', gprForSlot(slot));
     }
   }
 
-  for (let j = 0; j < stackTestArgCount; j++) {
-    // mov r10, [rsp + 0x28 + j*8] -- RSP as its own "index" is the standard
-    // SIB encoding for "no index, base=RSP" (index field 100 is reserved to
-    // mean "none", which is coincidentally RSP's own register number).
-    emit(movRegFromSibDisp8(Reg.R10, Reg.RSP, Reg.RSP, 1, 0x28 + j * 8));
-    emit(regRegOp(0x31, Reg.RAX, Reg.R10));
+  for (let index = 0; index < stackTestArgCount; index++) {
+    assembler.mov('r10', qword('rsp', 0x28 + index * 8));
+    assembler.xor('rax', 'r10');
   }
 
-  // outputPtr is the argument right after the last test value -- always a
-  // stack arg here, at logical position (4 + stackTestArgCount).
-  emit(
-    movRegFromSibDisp8(
-      Reg.R11,
-      Reg.RSP,
-      Reg.RSP,
-      1,
-      0x28 + stackTestArgCount * 8,
-    ),
-  );
-  emit(movMemDisp8FromReg(Reg.R11, 0, Reg.RAX)); // [outputPtr] = checksum
-
-  bytes.push(0xc3); // ret
-  return bytes;
+  // outputPtr is the argument immediately after the test values.
+  assembler.mov('r11', qword('rsp', 0x28 + stackTestArgCount * 8));
+  assembler.mov(qword('r11'), 'rax');
+  assembler.ret();
+  return assembler.finish();
 }
 
 // Raw 8-byte patterns (as bigints), including real IEEE-754 bit patterns for
@@ -107,13 +103,20 @@ function rawBitsOf(value: number | bigint, isFloat: boolean): bigint {
 // Injects the checksum probe and the call machine code for `mask`, packs
 // `values` plus a trailing output-buffer pointer into the args buffer,
 // invokes the probe through it, and reads the checksum back from that
-// output buffer.
+// output buffer. `invokeStyle` defaults to 'call'; 'jump' exercises the
+// true-tail-call shape (no `ret` in the generated caller at all) -- since
+// accessor.call() itself is a normal synchronous call/return, a broken
+// tail-jmp (bad return-address relocation, clobbered RBX, wrong stack
+// alignment) would corrupt the caller's own stack/registers or crash Wine
+// outright, not just produce a wrong checksum -- so a correct checksum here
+// is a fairly strong end-to-end proof the relocation is right.
 async function callProbeThroughCallBytes(
   accessor: IndirectAccessor,
   mask: number,
   values: readonly (number | bigint)[],
   argTypes: readonly CTypeOrString[],
   stackTestArgCount: number,
+  invokeStyle: 'call' | 'jump' = 'call',
 ): Promise<bigint> {
   const probe = createPendingMachineCode(
     ['u64', []],
@@ -121,19 +124,20 @@ async function callProbeThroughCallBytes(
   );
   const probeAddr = await accessor.machineCode(probe);
 
-  const caller = callMachineCode(mask);
-  const callerAddr = await accessor.machineCode(caller);
-  const callerFn: CFunction = createCFunction(callerAddr, [
-    'u64',
-    ['ptr', 'u64', 'ptr'],
-  ]);
-
   const outputAddr = Number(
     await accessor.alloc(8, null, MemoryProtection.READWRITE),
   );
   const allValues = [...values, outputAddr];
   const allTypes = [...argTypes, 'ptr' as CTypeOrString];
-  const argsBuf = packArgs(allValues, allTypes);
+  const caller = await installCallThunk(accessor, {
+    mode: 'dynamic',
+    signature: targetForMask(mask, allValues.length),
+    invokeStyle,
+  });
+  // This helper intentionally varies the dispatch mask independently of the
+  // packed values' real types, so it packs manually instead of using the
+  // installed handle's signature-driven allocatePayload convenience.
+  const argsBuf = packCallArgs(allValues, allTypes);
   const argsAddr = await accessor.alloc(
     argsBuf.length,
     null,
@@ -141,17 +145,15 @@ async function callProbeThroughCallBytes(
   );
   await accessor.write(argsAddr, argsBuf);
 
-  await accessor.call(callerFn, probeAddr, BigInt(allValues.length), argsAddr);
+  await accessor.call(caller.fn, probeAddr, BigInt(allValues.length), argsAddr);
   const resultBuf = await accessor.read(outputAddr, 8);
   return resultBuf.readBigUInt64LE(0);
 }
 
-// Same probe/checksum setup as callProbeThroughCallBytes, but invoked
-// through chainedCallMachineCode's single-argument composed thunk instead of
-// calling callMachineCode directly -- exercises that `mask` really does
-// still control the *real* target's (the probe's) own register/XMM
-// assignment even though it's now reached through fixedCallMachineCode ->
-// callMachineCode indirection, not a hardcoded/ignored value.
+// Same probe/checksum setup as callProbeThroughCallBytes, but invoked through
+// installCallThunk's packed one-pointer mode. This exercises that the target
+// signature still controls the real probe's register/XMM assignment through
+// the composed outer/inner dispatchers.
 async function callProbeThroughChain(
   accessor: IndirectAccessor,
   mask: number,
@@ -165,25 +167,28 @@ async function callProbeThroughChain(
   );
   const probeAddr = await accessor.machineCode(probe);
 
-  const chained = await chainedCallMachineCode(accessor, mask);
-  const chainedAddr = await accessor.machineCode(chained);
-  const chainedFn: CFunction = createCFunction(chainedAddr, ['u64', ['ptr']]);
-
   const outputAddr = Number(
     await accessor.alloc(8, null, MemoryProtection.READWRITE),
   );
   const allValues = [...values, outputAddr];
   const allTypes = [...argTypes, 'ptr' as CTypeOrString];
-  const combinedAddr = await packChainedArgs(
-    accessor,
-    BigInt(probeAddr),
-    allValues,
-    allTypes,
-  );
+  const chained = await installCallThunk(accessor, {
+    mode: 'packed',
+    signature: { returns: 'u64', args: allTypes },
+  });
+  expect(maskFromArgTypes(allTypes)).toBe(mask);
+  const payload = await chained.allocatePayload({
+    target: probeAddr,
+    values: allValues,
+  });
 
-  await accessor.call(chainedFn, combinedAddr);
-  const resultBuf = await accessor.read(outputAddr, 8);
-  return resultBuf.readBigUInt64LE(0);
+  try {
+    await accessor.call(chained.fn, ...payload.callArgs);
+    const resultBuf = await accessor.read(outputAddr, 8);
+    return resultBuf.readBigUInt64LE(0);
+  } finally {
+    await payload.dispose();
+  }
 }
 
 describe('thunks > call (cross-process, thread-hijack backend)', () => {
@@ -198,7 +203,7 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
       // A) All 16 register-slot variants: fixed values/types (2 ints, 2 real
       // double bit patterns), same packed bytes every iteration -- only the
       // *variant* (which register, GPR or XMM, carries each slot) changes
-      // across masks. Since packArgs' output doesn't depend on mask at all,
+      // across masks. Since packCallArgs' output doesn't depend on mask at all,
       // the expected checksum is one constant: a wrong register/XMM
       // assignment for any mask would show up as a mismatch against it.
       const rawValues = [11n, 1.5, 222n, 2.5] as const;
@@ -240,58 +245,107 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
         source: `return arg0 + arg1 * 2 + arg2 * 3 + arg3 * 4 + arg4 * 5 + arg5 * 6;`,
       });
       const allInt6Addr = await accessor.machineCode(allInt6);
-      // callMachineCodeFor derives both the mask (from allInt6.args -- all
-      // int, so mask 0) and the return-tagged signature (allInt6.returns)
-      // directly from the target, instead of the caller working those out.
-      const caller0 = callMachineCodeFor(allInt6);
-      const caller0Addr = await accessor.machineCode(caller0);
-      const caller0Fn: CFunction = createCFunction(caller0Addr, [
-        'i64',
-        ['ptr', 'u64', 'ptr'],
-      ]);
       const allInt6Values = [1n, 2n, 3n, 4n, 5n, 6n];
-      const argsBuf = packArgs(allInt6Values, allInt6.args);
-      const argsAddr = await accessor.alloc(
-        argsBuf.length,
-        null,
-        MemoryProtection.READWRITE,
-      );
-      await accessor.write(argsAddr, argsBuf);
+      const caller0 = await installCallThunk(accessor, {
+        mode: 'dynamic',
+        signature: allInt6,
+      });
+      const dynamicPayload = await caller0.allocatePayload({
+        target: allInt6Addr,
+        values: allInt6Values,
+      });
       const resultB = await accessor.call(
-        caller0Fn,
-        allInt6Addr,
-        BigInt(allInt6Values.length),
-        argsAddr,
+        caller0.fn,
+        ...dynamicPayload.callArgs,
       );
       expect(resultB).toBe(91n);
 
-      // B2) Same target as B, but through fixedCallMachineCodeFor -- ptr and
-      // argCount get baked into the bytes as immediates instead of being
-      // read from RCX/RDX at entry, so the thunk takes only the args buffer
-      // (one argument) rather than all three. Reuses B's already-packed
-      // argsAddr, since the args buffer layout is identical either way.
-      //
-      // Must target allInt6Addr (the *remote*, post-injection address), not
-      // allInt6.ptr (cmachinecode()'s *local* JIT address in this process) --
-      // baking in the wrong one means the generated "call <local_addr>"
-      // executes inside the remote process, jumping to whatever garbage
-      // happens to live at that address there.
-      const allInt6Remote: CFunction = createCFunction(allInt6Addr, [
-        allInt6.returns,
-        [...allInt6.args],
+      // B2) Same target in bound mode: the explicitly supplied *remote*
+      // address and argCount are baked into the bytes, so the installed thunk
+      // only takes one payload pointer. The API never reads allInt6.ptr, which
+      // is cmachinecode()'s local JIT address and invalid in the target process.
+      const [boundCaller, concurrentBoundCaller] = await Promise.all([
+        installCallThunk(accessor, {
+          mode: 'bound',
+          signature: allInt6,
+          target: allInt6Addr,
+        }),
+        installCallThunk(accessor, {
+          mode: 'bound',
+          signature: allInt6,
+          target: allInt6Addr,
+        }),
       ]);
-      const fixedCaller = fixedCallMachineCodeFor(allInt6Remote);
-      expect(fixedCallMachineCodeFor(allInt6Remote)).toBe(fixedCaller); // cached by (ptr, argCount, mask, returns)
-      const fixedCallerAddr = await accessor.machineCode(fixedCaller);
-      const fixedCallerFn: CFunction = createCFunction(fixedCallerAddr, [
-        'i64',
-        ['ptr'],
-      ]);
-      const resultB2 = await accessor.call(fixedCallerFn, argsAddr);
+      expect(concurrentBoundCaller.address).toBe(boundCaller.address);
+      const boundPayload = await boundCaller.allocatePayload({
+        values: allInt6Values,
+      });
+      const resultB2 = await accessor.call(
+        boundCaller.fn,
+        ...boundPayload.callArgs,
+      );
       expect(resultB2).toBe(91n);
 
+      // B3) buildCallBytes's functionPointer operand as an *explicit*
+      // register (`r8`) instead of the natural `rcx`/fixed-bigint
+      // choices used above. There's no auto-assignment -- the caller (here,
+      // the test itself) names every register directly: functionPointer
+      // reads from R8 (expected to already be set at entry, not part of the
+      // Win64 argument list at all), argCount from RCX, args from RDX --
+      // its own two real parameters landing in the first two slots exactly
+      // as if functionPointer had never existed as a parameter. Proven
+      // end-to-end via a tiny relay stub that pre-loads R8 with allInt6Addr
+      // and tail-jumps in, leaving RCX/RDX (the caller's real argCount/args
+      // arguments) completely untouched -- exactly the composition this
+      // operand shape exists for (some other generated code handing off a
+      // value already sitting in a register, rather than through the
+      // standard entry ABI).
+      const explicitRegCaller = createPendingMachineCode(
+        ['i64', ['u64', 'ptr']],
+        buildCallBytes('r8', 'rcx', 'rdx', 0),
+      );
+      const explicitRegCallerAddr =
+        await accessor.machineCode(explicitRegCaller);
+      const relayAssembler = new X64Assembler();
+      relayAssembler.mov('r8', BigInt(allInt6Addr));
+      relayAssembler.mov('r11', BigInt(explicitRegCallerAddr));
+      relayAssembler.jmpRegister('r11');
+      const relay = createPendingMachineCode(
+        ['i64', ['u64', 'ptr']],
+        relayAssembler.finish(),
+      );
+      const relayAddr = await accessor.machineCode(relay);
+      const relayFn: CFunction = createCFunction(relayAddr, [
+        'i64',
+        ['u64', 'ptr'],
+      ]);
+      const resultB3 = await accessor.call(
+        relayFn,
+        BigInt(allInt6Values.length),
+        dynamicPayload.address,
+      );
+      expect(resultB3).toBe(91n);
+      expect(() =>
+        createCallThunk({
+          signature: targetForMask(0),
+          functionPointer: 1n,
+        }),
+      ).toThrow('callable ABI register placement');
+      expect(() => buildCallBytes(1n, -1n, 'rcx', 0)).toThrow(
+        'argCount must be non-negative',
+      );
+      expect(() => buildCallBytes('rcx', 'rax', 'rdx', 0)).toThrow(
+        'overwritten by the call-thunk prologue',
+      );
+
+      expect(dynamicPayload.isDisposed).toBe(false);
+      await Promise.all([dynamicPayload.dispose(), dynamicPayload.dispose()]);
+      expect(dynamicPayload.isDisposed).toBe(true);
+      await dynamicPayload.dispose();
+      await boundPayload.dispose();
+
       // C) Stack-arg path (positions 4 and 5) with real double bit patterns,
-      // via the checksum probe -- proves packArgs' float packing plus the
+      // via the checksum probe -- proves packCallArgs' float packing plus the
       // raw 8-byte stack copy survive floats intact beyond the first 4 slots
       // (independent of TCC's double-parameter limitation).
       const stackValues = [1n, 2n, 3n, 4n, 1.5, 2.5];
@@ -316,76 +370,107 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
       );
       expect(resultC).toBe(expectedC);
 
-      // D) The 'float' category, exercised for real via a hand-assembled
-      // probe rather than a TCC-compiled target -- TCC turns out to also
-      // mishandle "int parameter + double return" (confirmed independently
-      // by calling such a function directly, bypassing the call machine
-      // code entirely: still wrong), so it can't be trusted here any more
-      // than for double *parameters* (see the CLAUDE.md gotcha). The probe
-      // just echoes its raw RCX bits into XMM0 ("movq xmm0, rcx; ret"); we
-      // pack the exact IEEE-754 bit pattern of 10.5 as a plain u64 (mask 0,
-      // delivered via RCX, not XMM), so a correct round trip proves both
-      // that the call machine code leaves XMM0 untouched after its own
-      // cleanup and that the 'float' category's signature makes the caller
-      // read it back as a double correctly.
-      const echoAsDoubleBytes = [...movXmmFromReg(0, Reg.RCX), 0xc3];
+      // C2) invokeStyle: 'jump' -- safe only for argCount<=4. The thunk
+      // restores its original RSP/RBX before jumping, so the target sees the
+      // original return address and caller shadow space. Staged overflow args
+      // would be discarded by that required restore, so signature-aware APIs
+      // reject >4. This four-argument probe proves the supported tail-call
+      // shape and the following calls prove the thread remains usable.
+      const jumpProbeAssembler = new X64Assembler();
+      jumpProbeAssembler.mov('rax', 'rcx');
+      jumpProbeAssembler.xor('rax', 'rdx');
+      jumpProbeAssembler.xor('rax', 'r8');
+      jumpProbeAssembler.xor('rax', 'r9');
+      jumpProbeAssembler.ret();
+      const jumpProbeBytes = jumpProbeAssembler.finish();
+      const jumpProbe = createPendingMachineCode(['u64', []], jumpProbeBytes);
+      const jumpProbeAddr = await accessor.machineCode(jumpProbe);
+      const jumpCaller = await installCallThunk(accessor, {
+        mode: 'dynamic',
+        signature: targetForMask(0),
+        invokeStyle: 'jump',
+      });
+      const jumpPayload = await jumpCaller.allocatePayload({
+        target: jumpProbeAddr,
+        values: [1n, 2n, 3n, 4n],
+      });
+      const resultC2 = await accessor.call(
+        jumpCaller.fn,
+        ...jumpPayload.callArgs,
+      );
+      expect(resultC2).toBe(1n ^ 2n ^ 3n ^ 4n);
+      await jumpPayload.dispose();
+      await expect(
+        installCallThunk(accessor, {
+          mode: 'dynamic',
+          signature: targetForMask(0, 5),
+          invokeStyle: 'jump',
+        }),
+      ).rejects.toThrow('at most 4 arguments');
+
+      // D) returns: 'f64', exercised for real via a hand-assembled probe
+      // rather than a TCC-compiled target -- TCC turns out to also mishandle
+      // "int parameter + double return" (confirmed independently by calling
+      // such a function directly, bypassing the call machine code entirely:
+      // still wrong), so it can't be trusted here any more than for double
+      // *parameters* (see the CLAUDE.md gotcha). The probe just echoes its
+      // raw RCX bits into XMM0 ("movq xmm0, rcx; ret"); we pack the exact
+      // IEEE-754 bit pattern of 10.5 as a plain u64 (mask 0, delivered via
+      // RCX, not XMM), so a correct round trip proves both that the call
+      // machine code leaves XMM0 untouched after its own cleanup and that
+      // `returns: 'f64'`'s signature makes the caller read it back as a
+      // double correctly.
+      const echoAsDoubleAssembler = new X64Assembler();
+      echoAsDoubleAssembler.movq('xmm0', 'rcx');
+      echoAsDoubleAssembler.ret();
+      const echoAsDoubleBytes = echoAsDoubleAssembler.finish();
       const echoAsDouble = createPendingMachineCode(
         ['u64', []],
         echoAsDoubleBytes,
       );
       const echoAsDoubleAddr = await accessor.machineCode(echoAsDouble);
 
-      const mask0Float = callMachineCode(0, 'float');
-      // A target that merely *declares* returns='f64' (never actually
-      // invoked) should still resolve to that exact same global object --
-      // proving the identity-reuse path, not just the "returns differs,
-      // build a thin one-off" path B already exercises.
-      const declaredFloatTarget = {
-        args: [CType.u64] as CTypeOrString[],
+      const floatSignature: ThunkSignature = {
         returns: CType.f64,
+        args: [CType.u64],
       };
-      expect(callMachineCodeFor(declaredFloatTarget)).toBe(mask0Float);
-
-      const mask0FloatAddr = await accessor.machineCode(mask0Float);
-      const echoFn: CFunction = createCFunction(mask0FloatAddr, [
-        'f64',
-        ['ptr', 'u64', 'ptr'],
-      ]);
+      const echoCaller = await installCallThunk(accessor, {
+        mode: 'dynamic',
+        signature: floatSignature,
+      });
       const doubleBits = rawBitsOf(10.5, true);
-      const doubleArgsBuf = packArgs([doubleBits], [CType.u64]);
-      const doubleArgsAddr = await accessor.alloc(
-        doubleArgsBuf.length,
-        null,
-        MemoryProtection.READWRITE,
-      );
-      await accessor.write(doubleArgsAddr, doubleArgsBuf);
+      const doublePayload = await echoCaller.allocatePayload({
+        target: echoAsDoubleAddr,
+        values: [doubleBits],
+      });
       const resultD = await accessor.call(
-        echoFn,
-        echoAsDoubleAddr,
-        1n,
-        doubleArgsAddr,
+        echoCaller.fn,
+        ...doublePayload.callArgs,
       );
       expect(resultD).toBe(10.5);
+      await doublePayload.dispose();
 
-      // E) Identity stability: repeated requests for the same (mask,
-      // category) always return the exact same object -- built lazily on
-      // first request, then cached globally, not rebuilt every call. The int
-      // and float categories for the same mask also share their underlying
-      // byte array (only the wrapper's `returns` tag differs).
-      expect(callMachineCode(5)).toBe(callMachineCode(5));
-      expect(callMachineCode(5, 'float')).toBe(callMachineCode(5, 'float'));
-      expect(callMachineCode(5)).not.toBe(callMachineCode(5, 'float'));
-      expect(callMachineCode(5, 'float').bytes).toBe(
-        callMachineCode(5, 'int').bytes,
+      // E) The registry canonicalizes bytes separately from typed wrappers:
+      // equal bytes+signature are identity-stable, while another return type
+      // gets its own stable wrapper over the same canonical byte array.
+      const mask5Int = createCallThunk({ signature: targetForMask(5) });
+      const mask5Float = createCallThunk({
+        signature: targetForMask(5, 4, 'f64'),
+      });
+      expect(createCallThunk({ signature: targetForMask(5) })).toBe(mask5Int);
+      expect(createCallThunk({ signature: targetForMask(5, 4, 'f64') })).toBe(
+        mask5Float,
       );
+      expect(mask5Float).not.toBe(mask5Int);
+      expect(mask5Float.bytes).toBe(mask5Int.bytes);
 
-      // F) chainedCallMachineCode: a single-argument thunk (fixedCallMachineCode
-      // bound to an injected callMachineCode instance) that, given the
-      // combined [ptr, argCount, selfPointer, ...args] buffer packChainedArgs
-      // builds, can call any function matching (mask, category). Mixed
-      // int/float mask (same shape as A) proves `mask` still controls the
-      // *real* target's own register/XMM assignment through the extra
-      // indirection -- not silently ignored/hardcoded somewhere in the chain.
+      // F) Packed call mode: a single-argument outer thunk bound to an
+      // installed dynamic dispatcher. Its combined [ptr, argCount,
+      // selfPointer, ...args] payload can call any
+      // function matching (mask, returns). Mixed int/float mask (same shape
+      // as A) proves `mask` still controls the *real* target's own
+      // register/XMM assignment through the extra indirection -- not
+      // silently ignored/hardcoded somewhere in the chain.
       const chainRawValues = [7n, 3.5, 99n, 4.5] as const;
       const chainArgTypes: CTypeOrString[] = [
         CType.i64,
@@ -409,7 +494,7 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
       expect(chainResult).toBe(chainExpected);
 
       // G) Same chain, >4 args -- proves argCount (packed into the combined
-      // buffer's header) correctly reaches the inner callMachineCode's own
+      // buffer's header) correctly reaches the inner dispatcher's own
       // stack-arg copy loop, not just the first 4 register/XMM slots.
       const chainStackValues = [1n, 2n, 3n, 4n, 1.5, 2.5];
       const chainStackTypes: CTypeOrString[] = [
@@ -433,20 +518,30 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
       );
       expect(chainResultStack).toBe(chainExpectedStack);
 
-      // H) Identity/caching: chainedCallMachineCode(accessor, mask, category)
-      // returns the same object for the same (accessor, mask, category) --
-      // meaning it does NOT re-inject the inner callMachineCode into the
-      // process on every call.
-      const chained0 = await chainedCallMachineCode(accessor, 0);
-      const chained0Again = await chainedCallMachineCode(accessor, 0);
-      expect(chained0Again).toBe(chained0);
-      const chained0Float = await chainedCallMachineCode(accessor, 0, 'float');
-      expect(chained0Float).not.toBe(chained0);
+      // H) Installation caching is per accessor and byte sequence. Repeated
+      // packed installs get the same remote address; a different typed return
+      // view can share that address while keeping its own CMachineCode wrapper.
+      const chained0 = await installCallThunk(accessor, {
+        mode: 'packed',
+        signature: targetForMask(0),
+      });
+      const chained0Again = await installCallThunk(accessor, {
+        mode: 'packed',
+        signature: targetForMask(0),
+      });
+      expect(chained0Again.address).toBe(chained0.address);
+      expect(chained0Again.machineCode).toBe(chained0.machineCode);
+      const chained0Float = await installCallThunk(accessor, {
+        mode: 'packed',
+        signature: targetForMask(0, 4, 'f64'),
+      });
+      expect(chained0Float.address).toBe(chained0.address);
+      expect(chained0Float.machineCode).not.toBe(chained0.machineCode);
 
       // I) A 5-argument call through the chain -- 4 register/XMM slots (mixed
       // int/float, same mask as F) plus 1 real stack argument, so this single
       // call exercises the register dispatch and the stack-arg copy loop
-      // together. packChainedArgs' combined buffer here is 8 slots, not 7:
+      // together. The packed call payload here is 8 slots, not 7:
       // targetPointer + targetArgCount + selfPointer (3 header slots -- see
       // the CLAUDE.md writeup for why the self-pointer slot can't be folded
       // away) + the 5 real arguments.
@@ -473,12 +568,10 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
       );
       expect(fiveArgResult).toBe(fiveArgExpected);
 
-      // J) captureArgsMachineCodeFor: an ordinary function (called normally,
-      // with real typed args, not through any of the call-machine-code
-      // plumbing above) that writes its first argCount arguments to a target
-      // address -- now taken as its own trailing argument (argument #argCount)
-      // rather than baked in, so this one instance is reusable across as many
-      // target addresses as callers want. 6 real args: 4 register/XMM slots
+      // J) installCaptureArgsThunk installs an ordinary function that writes
+      // its incoming arguments to a trailing destination pointer, reusable
+      // across as many destination addresses as callers want. Six real args:
+      // 4 register/XMM slots
       // (mixed int/float, same mask as F/I) plus 2 real stack args (one of
       // them float too), then the target address as a 7th trailing argument
       // (itself landing on the stack, since slot 6 >= 4) -- proves both the
@@ -504,16 +597,17 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
           MemoryProtection.READWRITE,
         ),
       );
-      const capture = captureArgsMachineCodeFor(captureTypes);
-      expect(captureArgsMachineCodeFor(captureTypes)).toBe(capture); // cached by (argCount, mask)
-      const captureAddr = await accessor.machineCode(capture);
-      const captureFn: CFunction = createCFunction(captureAddr, [
-        'ptr',
-        [...captureTypes, 'ptr'],
-      ]);
+      const capture = await installCaptureArgsThunk(accessor, {
+        args: captureTypes,
+      });
+      const captureAgain = await installCaptureArgsThunk(accessor, {
+        args: captureTypes,
+      });
+      expect(captureAgain.address).toBe(capture.address);
+      expect(captureAgain.machineCode).toBe(capture.machineCode);
 
       const captureResult = await accessor.call(
-        captureFn,
+        capture.fn,
         ...captureValues,
         targetAddr,
       );
@@ -531,20 +625,17 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
         expect(capturedBuf.readBigUInt64LE(i * 8)).toBe(expectedBits);
       }
 
-      // K) chainedCaptureArgsMachineCode: the actual jump-hook thunk --
-      // targetAddress is baked in, so from an outside caller's perspective
+      // K) installCaptureHookThunk: the fixed-destination jump-hook adapter.
+      // The destination is baked in, so from an outside caller's perspective
       // this has *exactly* the real function's own signature (argCount args,
       // no trailing target-address argument), matching how a jump-hook
-      // landing point must look. Two argCount shapes:
-      //  - argCount=2 (< 4): targetAddress lands in a register (GPR_FOR_SLOT[2]
-      //    = R8) the 2 real args never use -- a plain register-set + tail-jmp,
-      //    no stack touched.
-      //  - argCount=6 (>= 4): targetAddress would land one stack slot past
-      //    what the real caller allocated -- needs the full
-      //    reserve/relocate/call path in buildFixedCaptureArgsBytes.
-      // Both mix int/float in the first 4 slots to prove mask still works
-      // through the wrapper, and both check the returned address plus every
-      // captured slot's exact bit pattern.
+      // landing point must look. The cases cover argCount=2's register-only
+      // tail-jump plus 4/5/6/13-argument stack-frame adapters. The larger cases
+      // prove the adapter calls its collector, restores RSP/RBX, and supports
+      // offsets/frame sizes beyond signed disp8/imm8. A normal collector call
+      // immediately after every adapter invocation verifies the thread remains
+      // usable. Mixed int/float cases also prove the first-four mask survives
+      // the composition.
       const chainedCaptureCases: {
         types: CTypeOrString[];
         values: (number | bigint)[];
@@ -554,6 +645,16 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
           types: [CType.i64, CType.f64],
           values: [42n, 6.5],
           isFloatBySlot: [false, true],
+        },
+        {
+          types: [CType.i64, CType.f64, CType.i64, CType.f64],
+          values: [10n, 1.5, 20n, 2.5],
+          isFloatBySlot: [false, true, false, true],
+        },
+        {
+          types: [CType.i64, CType.f64, CType.i64, CType.f64, CType.i64],
+          values: [10n, 1.5, 20n, 2.5, 30n],
+          isFloatBySlot: [false, true, false, true, false],
         },
         {
           types: [
@@ -567,9 +668,13 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
           values: [11n, 1.25, 22n, 2.25, 33n, 3.25],
           isFloatBySlot: [false, true, false, true, false, true],
         },
+        {
+          types: Array.from({ length: 13 }, () => CType.i64),
+          values: Array.from({ length: 13 }, (_, index) => BigInt(index + 1)),
+          isFloatBySlot: Array.from({ length: 13 }, () => false),
+        },
       ];
       for (const { types, values, isFloatBySlot } of chainedCaptureCases) {
-        const mask = maskFromArgTypes(types);
         const chainedTargetAddr = Number(
           await accessor.alloc(
             types.length * 8,
@@ -577,20 +682,26 @@ describe('thunks > call (cross-process, thread-hijack backend)', () => {
             MemoryProtection.READWRITE,
           ),
         );
-        const chainedCapture = await chainedCaptureArgsMachineCode(
-          accessor,
-          BigInt(chainedTargetAddr),
-          types.length,
-          mask,
-        );
-        const chainedCaptureAddr = await accessor.machineCode(chainedCapture);
-        const chainedCaptureFn: CFunction = createCFunction(
-          chainedCaptureAddr,
-          ['ptr', [...types]],
+        const reusableCollector = await installCaptureArgsThunk(accessor, {
+          args: types,
+        });
+        const chainedCapture = await installCaptureHookThunk(accessor, {
+          args: types,
+          destination: chainedTargetAddr,
+          collector: reusableCollector,
+        });
+        expect(chainedCapture.collector.address).toBe(
+          reusableCollector.address,
         );
 
-        const chainedResult = await accessor.call(chainedCaptureFn, ...values);
+        const chainedResult = await accessor.call(chainedCapture.fn, ...values);
         expect(Number(chainedResult)).toBe(chainedTargetAddr);
+        const followUpResult = await accessor.call(
+          reusableCollector.fn,
+          ...values,
+          chainedTargetAddr,
+        );
+        expect(Number(followUpResult)).toBe(chainedTargetAddr);
 
         const chainedBuf = await accessor.read(
           chainedTargetAddr,
