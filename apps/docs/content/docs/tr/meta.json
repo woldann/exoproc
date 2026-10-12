@@ -1,0 +1,16 @@
+{
+  "title": "Dokümantasyon",
+  "pages": [
+    "getting-started",
+    "safety",
+    "architecture",
+    "nthread",
+    "hooking",
+    "---Bileşenler---",
+    "packages",
+    "playground",
+    "development",
+    "troubleshooting",
+    "glossary"
+  ]
+}

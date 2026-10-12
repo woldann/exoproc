@@ -1,0 +1,63 @@
+{
+  "name": "exoproc-accessors",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.1.0",
+  "description": "Advanced host and middleware accessors for bun-xffi — orchestrating HostAccessor family (redirector/bootstrap) plus concrete indirect-call, memset/memcmp, file-transfer, process-cache, machineCode-pool, and scanner middleware.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.11"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "exoproc",
+    "windows",
+    "x64",
+    "accessor",
+    "middleware",
+    "host-accessor",
+    "indirect-call"
+  ],
+  "author": "Serkan",
+  "homepage": "https://github.com/woldann/exoproc#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/woldann/exoproc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/woldann/exoproc/issues"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "dependencies": {
+    "bun-xffi": "workspace:*",
+    "bun-winapi": "workspace:*",
+    "bun-nthread": "workspace:*",
+    "bun-nshm": "workspace:*",
+    "bun-njava": "workspace:*",
+    "bun-nhook": "workspace:*",
+    "exoproc-utils": "workspace:*"
+  }
+}

@@ -1,0 +1,31 @@
+export * from 'exoproc/remote';
+export {
+  loadScript,
+  findRepoRoot,
+  getDaemonState,
+  getDaemonEndpoint,
+  checkDaemonAlive,
+  ensureDaemon,
+  attachRemote,
+  detachRemote,
+  shutdownRemote,
+  listProcessesRemote,
+  evalRemote,
+  runRemote,
+  screenshotRemote,
+  fetchScreenshot,
+  probeEndpoint,
+  getTargetMode,
+  getAgentMappingPool,
+  loadAgentMappingPool,
+  getAgentJavaContext,
+  isMinecraftTarget,
+  ensureMinecraft,
+  getMinecraftMappings,
+  getMinecraftClient,
+  resetMinecraftClient,
+  DEFAULT_AGENT_PORT,
+  DEFAULT_NEPTUNE_PORT,
+} from 'exoproc/remote';
+import * as client from 'exoproc/remote';
+export default client;

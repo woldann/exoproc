@@ -1,0 +1,15 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "getting-started",
+    "safety",
+    "architecture",
+    "nthread",
+    "hooking",
+    "---Components---",
+    "packages",
+    "development",
+    "troubleshooting",
+    "glossary"
+  ]
+}

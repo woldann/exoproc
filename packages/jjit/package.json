@@ -1,0 +1,68 @@
+{
+  "name": "exoproc-jjit",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.1.0",
+  "description": "On-the-fly typed Java source synthesis, AST builder, ECJ compiler, and remapper for the Exoproc ecosystem.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./compiler": {
+      "types": "./dist/compiler.d.ts",
+      "import": "./dist/compiler.js"
+    },
+    "./remapper": {
+      "types": "./dist/remapper.d.ts",
+      "import": "./dist/remapper.js"
+    },
+    "./builder": {
+      "types": "./dist/builder.d.ts",
+      "import": "./dist/builder.js"
+    },
+    "./modifiers": {
+      "types": "./dist/modifiers.d.ts",
+      "import": "./dist/modifiers.js"
+    },
+    "./jar": {
+      "types": "./dist/jar.d.ts",
+      "import": "./dist/jar.js"
+    }
+  },
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.11"
+  },
+  "files": [
+    "dist",
+    "deps",
+    "LICENSE"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "exoproc",
+    "jjit",
+    "java",
+    "compiler",
+    "ecj",
+    "remapper",
+    "ast",
+    "builder",
+    "jar"
+  ],
+  "author": "Serkan",
+  "scripts": {
+    "build": "bun build ./src/index.ts ./src/compiler.ts ./src/remapper.ts ./src/builder.ts ./src/modifiers.ts ./src/jar.ts --outdir ./dist --target bun && tsc -p tsconfig.json --emitDeclarationOnly",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "exoproc-mappings": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

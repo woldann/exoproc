@@ -1,0 +1,369 @@
+import React, { useEffect, useState } from 'react';
+import { render, Box, Text, useApp } from 'ink';
+import { evalRemote } from '../client.js';
+import { INSPECT_STATE_SCRIPT as STATE_INSPECT_SCRIPT, CLOSE_SCREEN_SCRIPT, makeClickScript } from '../scripts/index.js';
+
+interface StepLog {
+  icon: string;
+  text: string;
+  color?: string;
+}
+
+interface GuiNavigateProps {
+  mode: 'click' | 'resume';
+  target?: string;
+}
+
+interface ButtonItem {
+  id: number;
+  text: string;
+  enabled: boolean;
+}
+
+interface ScreenState {
+  screenName: string;
+  canonicalClass: string;
+  inGame: boolean;
+  playerLoaded: boolean;
+  playerCoords?: { x: number; y: number; z: number };
+  buttons: ButtonItem[];
+}
+
+
+// Scripts are now imported from ../scripts/ (inspect-state.ts, click-button.ts, close-screen.ts)
+// STATE_INSPECT_SCRIPT (daemon eval), makeClickScript (daemon eval + nashorn), CLOSE_SCREEN_SCRIPT (daemon eval + nashorn)
+
+
+
+
+async function fetchScreenState(): Promise<ScreenState> {
+  const resp = await evalRemote(STATE_INSPECT_SCRIPT);
+  if (!resp.success) {
+    throw new Error(resp.error || 'Failed to communicate with Minecraft');
+  }
+
+  let screenName = 'None';
+  let canonicalClass = 'null';
+  let playerLoaded = false;
+  let playerCoords: { x: number; y: number; z: number } | undefined;
+  const buttons: ButtonItem[] = [];
+
+  for (const log of resp.logs) {
+    if (log.startsWith('RESULT:STATE|')) {
+      const parts = log.split('|');
+      screenName = parts[1] || 'None';
+      canonicalClass = parts[2] || 'null';
+      playerLoaded = parts[3] === 'true';
+      if (playerLoaded) {
+        playerCoords = {
+          x: parseFloat(parts[4] || '0'),
+          y: parseFloat(parts[5] || '0'),
+          z: parseFloat(parts[6] || '0'),
+        };
+      }
+    } else if (log.startsWith('RESULT:BTN|')) {
+      const parts = log.split('|');
+      buttons.push({
+        id: parseInt(parts[1] || '0', 10),
+        text: parts[2] || '',
+        enabled: parts[3] === 'true',
+      });
+    }
+  }
+
+  return {
+    screenName,
+    canonicalClass,
+    inGame: playerLoaded,
+    playerLoaded,
+    playerCoords,
+    buttons,
+  };
+}
+
+async function executeClick(target: string | number): Promise<{ success: boolean; id?: number; text?: string; error?: string }> {
+  const code = makeClickScript(target);
+  const resp = await evalRemote(code);
+  if (!resp.success) {
+    return { success: false, error: resp.error || 'Click evaluation failed' };
+  }
+
+  for (const log of resp.logs) {
+    if (log.startsWith('RESULT:CLICK|')) {
+      try {
+        const jsonStr = log.substring('RESULT:CLICK|'.length);
+        const data = JSON.parse(jsonStr);
+        return data;
+      } catch {}
+    }
+  }
+  return { success: false, error: 'No response from click executor' };
+}
+
+async function executeCloseScreen(): Promise<void> {
+  await evalRemote(CLOSE_SCREEN_SCRIPT);
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export const GuiNavigateView: React.FC<GuiNavigateProps> = ({ mode, target }) => {
+  const { exit } = useApp();
+  const [logs, setLogs] = useState<StepLog[]>([]);
+  const [status, setStatus] = useState<'running' | 'success' | 'error'>('running');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [availableButtons, setAvailableButtons] = useState<ButtonItem[]>([]);
+
+  const addLog = (icon: string, text: string, color?: string) => {
+    setLogs((prev) => [...prev, { icon, text, color }]);
+  };
+
+  useEffect(() => {
+    let unmounted = false;
+
+    async function run() {
+      try {
+        addLog('🔍', 'Checking Minecraft client and current screen state...', 'cyan');
+        const state = await fetchScreenState();
+
+        if (mode === 'click') {
+          if (!target) {
+            throw new Error('Please specify a button ID or button label to click.');
+          }
+
+          if (state.screenName === 'None') {
+            throw new Error('No GUI screen is currently open (Minecraft is in-game HUD).');
+          }
+
+          addLog('🖥️', `Active Screen: ${state.screenName}`, 'white');
+          addLog('⏳', `Dispatching click on button "${target}"...`, 'yellow');
+
+          const clickRes = await executeClick(target);
+          if (!clickRes.success) {
+            setAvailableButtons(state.buttons);
+            throw new Error(clickRes.error || `Button "${target}" could not be clicked`);
+          }
+
+          addLog('✓', `Clicked [${clickRes.id}] "${clickRes.text || target}" successfully on Minecraft thread!`, 'green');
+          await sleep(600);
+
+          const nextState = await fetchScreenState();
+          addLog('🔄', `Transitioned to: ${nextState.screenName} (${nextState.buttons.length} buttons)`, 'cyan');
+
+          setStatus('success');
+          setTimeout(() => exit(), 500);
+          return;
+        }
+
+        // --- RESUME / AUTO-NAVIGATION MODE ---
+        addLog('🚀', 'Autonomous Game Navigator initiated: Returning to live gameplay...', 'magenta');
+
+        // Check if player is already loaded in-game with no screen open
+        if (state.playerLoaded && state.screenName === 'None') {
+          addLog('🟢', `Already in game! Player HUD active at (${state.playerCoords?.x}, ${state.playerCoords?.y}, ${state.playerCoords?.z})`, 'green');
+          setStatus('success');
+          setTimeout(() => exit(), 500);
+          return;
+        }
+
+        // Loop through screens until in-game world is reached
+        let attempts = 0;
+        const maxAttempts = 20;
+
+        while (attempts < maxAttempts && !unmounted) {
+          attempts++;
+          const current = await fetchScreenState();
+
+          // 1. Live player & world active!
+          if (current.playerLoaded && current.screenName === 'None') {
+            addLog('🌍', `✓ Successfully entered game world! Player ready at (${current.playerCoords?.x}, ${current.playerCoords?.y}, ${current.playerCoords?.z})`, 'green');
+            setStatus('success');
+            setTimeout(() => exit(), 600);
+            return;
+          }
+
+          // 2. Ingame Pause Menu (GuiIngameMenu) or open in-world GUI
+          if (current.screenName === 'GuiIngameMenu' || (current.playerLoaded && current.screenName !== 'None')) {
+            addLog('⏸️', `In-Game Menu open (${current.screenName}). Resuming game...`, 'yellow');
+            const hasBackBtn = current.buttons.some((b) => b.id === 4 || b.text.toLowerCase().includes('back to game'));
+            if (hasBackBtn) {
+              await executeClick(4);
+            } else {
+              await executeCloseScreen();
+            }
+            await sleep(800);
+            continue;
+          }
+
+          // 3. GuiMainMenu
+          if (current.screenName === 'GuiMainMenu') {
+            addLog('🧭', 'At Main Menu: Clicking "Singleplayer" (Button 1)...', 'cyan');
+            const clk = await executeClick(1);
+            if (!clk.success) {
+              throw new Error(`Failed to click Singleplayer: ${clk.error}`);
+            }
+            await sleep(1500);
+            continue;
+          }
+
+          // 4. GuiCreateWorld
+          if (current.screenName === 'GuiCreateWorld') {
+            addLog('🔨', 'At Create World: Triggering world creation & terrain generation (Button 0)...', 'magenta');
+            await executeClick(0);
+            addLog('⏳', 'Generating world and waiting for chunks & player spawn...', 'yellow');
+
+            // World creation takes 5-25 seconds; poll until player spawns
+            for (let wait = 0; wait < 35; wait++) {
+              await sleep(1000);
+              const check = await fetchScreenState();
+              if (check.playerLoaded && check.screenName === 'None') {
+                addLog('🌍', `✓ Terrain generated! Player spawned at (${check.playerCoords?.x}, ${check.playerCoords?.y}, ${check.playerCoords?.z})`, 'green');
+                setStatus('success');
+                setTimeout(() => exit(), 600);
+                return;
+              }
+            }
+            continue;
+          }
+
+          // 5. GuiSelectWorld
+          if (current.screenName === 'GuiSelectWorld') {
+            const playBtn = current.buttons.find((b) => b.id === 1 && b.text.toLowerCase().includes('play'));
+            if (playBtn && playBtn.enabled) {
+              addLog('🎮', 'At Select World: World found, clicking "Play Selected World" (Button 1)...', 'cyan');
+              await executeClick(1);
+              addLog('⏳', 'Loading selected world and waiting for player spawn...', 'yellow');
+              for (let wait = 0; wait < 35; wait++) {
+                await sleep(1000);
+                const check = await fetchScreenState();
+                if (check.playerLoaded && check.screenName === 'None') {
+                  addLog('🌍', `✓ World loaded! Player spawned at (${check.playerCoords?.x}, ${check.playerCoords?.y}, ${check.playerCoords?.z})`, 'green');
+                  setStatus('success');
+                  setTimeout(() => exit(), 600);
+                  return;
+                }
+              }
+            } else {
+              addLog('✨', 'At Select World: No world selected, clicking "Create New World" (Button 3)...', 'yellow');
+              await executeClick(3);
+            }
+            await sleep(1500);
+            continue;
+          }
+
+          // 6. Generic Screen: try to find a resume/done button or close screen
+          const doneBtn = current.buttons.find((b) => b.id === 200 || b.text.toLowerCase().includes('done') || b.text.toLowerCase().includes('back'));
+          if (doneBtn && doneBtn.enabled) {
+            addLog('↩️', `Navigating back from ${current.screenName} via "${doneBtn.text}"...`, 'gray');
+            await executeClick(doneBtn.id);
+            await sleep(1000);
+            continue;
+          }
+
+          // Fallback: close screen directly
+          addLog('⚠️', `Unknown screen "${current.screenName}", closing screen directly...`, 'yellow');
+          await executeCloseScreen();
+          await sleep(1000);
+        }
+
+        throw new Error('Navigation timed out without reaching active game screen.');
+      } catch (err: any) {
+        if (!unmounted) {
+          setStatus('error');
+          setErrorMessage(err.message || String(err));
+          setTimeout(() => exit(), 1500);
+        }
+      }
+    }
+
+    run();
+
+    return () => {
+      unmounted = true;
+    };
+  }, [mode, target]);
+
+  return (
+    <Box flexDirection="column" borderStyle="round" borderColor={status === 'error' ? 'red' : status === 'success' ? 'green' : 'cyan'} padding={1} width={76}>
+      <Box justifyContent="space-between" marginBottom={1}>
+        <Text bold color="cyan">🧭  Neptune GUI Navigator</Text>
+        <Text color="black" backgroundColor={status === 'error' ? 'red' : status === 'success' ? 'green' : 'yellow'}>
+          {' '}{status === 'error' ? 'ERROR' : status === 'success' ? 'COMPLETED' : 'NAVIGATING...'}{' '}
+        </Text>
+      </Box>
+
+      {/* Steps Log */}
+      <Box flexDirection="column" marginBottom={1}>
+        {logs.map((l, idx) => (
+          <Box key={idx}>
+            <Text bold color={l.color || 'white'}>{l.icon} </Text>
+            <Text color={l.color || 'white'}>{l.text}</Text>
+          </Box>
+        ))}
+      </Box>
+
+      {/* Available Buttons on failure */}
+      {availableButtons.length > 0 ? (
+        <Box flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1} marginBottom={1}>
+          <Text bold color="yellow">Available interactive buttons on this screen:</Text>
+          {availableButtons.map((b) => (
+            <Text key={b.id} color="gray">
+              • [{b.id.toString().padStart(2)}] "{b.text}" ({b.enabled ? 'Enabled' : 'Disabled'})
+            </Text>
+          ))}
+        </Box>
+      ) : null}
+
+      {/* Error Message */}
+      {errorMessage ? (
+        <Box borderStyle="single" borderColor="red" paddingX={1}>
+          <Text color="red">❌ {errorMessage}</Text>
+        </Box>
+      ) : null}
+    </Box>
+  );
+};
+
+async function main() {
+  const args = process.argv.slice(2);
+  const firstArg = args[0]?.trim();
+  const secondArg = args[1]?.trim();
+
+  // Mode detection
+  let mode: 'click' | 'resume' = 'resume';
+  let target: string | undefined;
+
+  if (!firstArg || firstArg === 'resume' || firstArg === 'game' || firstArg === 'oyun') {
+    mode = 'resume';
+  } else if (firstArg === 'click') {
+    mode = 'click';
+    target = secondArg || args.slice(1).join(' ');
+  } else if (firstArg === '--help' || firstArg === '-h') {
+    console.log(`
+🧭 Neptune GUI Navigator
+
+Usage:
+  bun run gui-navigate click <id|name>    Click a button by numeric ID or label text
+  bun run gui-navigate <id|name>          Shorthand to click a button
+  bun run gui-navigate resume             Auto-navigate back into live game / Singleplayer world
+  bun run gui-navigate game / oyun        Alias for resume
+
+Examples:
+  bun run gui-navigate click 1
+  bun run gui-navigate click "Singleplayer"
+  bun run gui-navigate "Create New World"
+  bun run gui-navigate resume
+`);
+    process.exit(0);
+  } else {
+    // If user passed a number or button text directly, treat as click
+    mode = 'click';
+    target = args.join(' ');
+  }
+
+  render(<GuiNavigateView mode={mode} target={target} />);
+}
+
+main().catch((err) => {
+  console.error('Fatal error:', err.message || err);
+  process.exit(1);
+});

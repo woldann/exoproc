@@ -1,0 +1,45 @@
+#!/bin/sh
+# Wine wrapper for the Windows bun binary.
+# Usage: bun-wine <bun args...>
+#   e.g. bun-wine test tests/ffi-core/stub.test.ts
+#        bun-wine run scripts/build.ts
+#        bun-wine x tsc --noEmit
+#
+# Transparently bundles TypeScript scripts via host bun to avoid Wine tsconfig EBADFD errors.
+# Usage: bun-wine <bun args...>
+#   e.g. bun-wine scripts/test-auto-matcher.ts
+#        bun-wine test tests/exoproc/detect.test.ts
+#        bun-wine test tests/ffi-core/stub.test.ts
+
+BUN_WIN_DIR="${BUN_WIN_DIR:-$HOME/Downloads/bun-windows-x64}"
+BUN_WIN_PATH="Z:$(echo "$BUN_WIN_DIR" | tr '/' '\\')"
+
+# JAVA_HOME: override the JRE/JDK bin directory added to PATH (default: the
+# Java 8 JRE installed at C:\Program Files\Java\jre1.8.0_501 -- see
+# packages/njava's CLAUDE.md scope). Lets `java`/`java.exe` be spawned by
+# bare name from tests instead of a hardcoded absolute path.
+JAVA_BIN_DIR="${JAVA_HOME:-C:\\Program Files\\Java\\jre1.8.0_501}\\bin"
+
+# Resolve "bun run <script>" if package.json has it, bypassing Wine EBADFD on package.json
+if [ "$1" = "run" ] && [ -n "$2" ] && [ -f "package.json" ]; then
+  SCRIPT_CMD=$(bun -e '
+    try {
+      const pkg = JSON.parse(require("fs").readFileSync("package.json", "utf8"));
+      const s = pkg.scripts?.[process.argv[1]];
+      if (s) {
+        const clean = s.replace(/^bun\s+(run\s+)?/, "").trim();
+        console.log(clean);
+      }
+    } catch {}
+  ' "$2" 2>/dev/null)
+  if [ -n "$SCRIPT_CMD" ]; then
+    shift 2
+    # shellcheck disable=SC2086
+    set -- $SCRIPT_CMD "$@"
+  fi
+fi
+
+STDERR_FILTER='(MESA-EGL|failed to create dri2|pci id for fd|EBADFD|NtQuerySystemInformation|PowerRegisterSuspendResumeNotification|AppPolicyGetThreadInitializationType|server_ioctl_sock|WSAIOW)'
+
+exec wine "$BUN_WIN_DIR/bun.exe" "$@" 2> >(grep -v -E "$STDERR_FILTER" >&2)
+

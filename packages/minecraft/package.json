@@ -1,0 +1,32 @@
+{
+  "name": "exoproc-minecraft",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.1.0",
+  "description": "High-level Minecraft runtime inspection, dynamic obfuscation matching, and reflection client for Bun using bun-njava.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.11"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "dependencies": {
+    "exoproc-mappings": "workspace:*",
+    "bun-njava": "workspace:*",
+    "bun-xffi": "workspace:*",
+    "exoproc-accessors": "workspace:*"
+  }
+}

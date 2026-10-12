@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {},
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/tui", "src/scripts"],
+  "references": [
+    { "path": "../asm" },
+    { "path": "../capstone" },
+    { "path": "../xffi" },
+    { "path": "../minhook" },
+    { "path": "../winapi" },
+    { "path": "../nhook" },
+    { "path": "../nthread" },
+    { "path": "../nshm" },
+    { "path": "../njava" },
+    { "path": "../accessors" },
+    { "path": "../utils" },
+    { "path": "../minecraft" },
+    { "path": "../njava-agent" },
+    { "path": "../jjit" },
+    { "path": "../njava-mappings" }
+  ]
+}

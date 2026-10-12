@@ -1,0 +1,53 @@
+{
+  "name": "exoproc-runtime",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.1.0",
+  "description": "Modular, identity-preserving hybrid/virtual/native Java runtime environment and class pool for the Exoproc / NJava ecosystem.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./runner": {
+      "types": "./dist/runner/index.d.ts",
+      "import": "./dist/runner/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.11"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "exoproc",
+    "njava",
+    "runtime",
+    "hybrid",
+    "virtual",
+    "reflection",
+    "pool",
+    "nashorn"
+  ],
+  "author": "Serkan",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun && tsc -p tsconfig.json --emitDeclarationOnly",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "exoproc-jjit": "workspace:*",
+    "exoproc-mappings": "workspace:*",
+    "exoproc-nashorn": "workspace:*",
+    "exoproc-utils": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

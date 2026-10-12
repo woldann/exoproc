@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "composite": false,
+    "noEmit": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noUncheckedIndexedAccess": false
+  },
+
+  "include": ["."]
+}

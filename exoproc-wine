@@ -1,0 +1,85 @@
+#!/bin/bash
+# Wine launcher wrapper for Exoproc Standalone Cockpit.
+# Automatically detects available browser and assigns an isolated CDP port to prevent collisions.
+# Usage: ./exoproc-wine [--port 9222] [args...]
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+STANDALONE_EXE="$SCRIPT_DIR/packages/exoproc/standalone/exoproc.exe"
+
+# 1. Detect command and flags
+IS_HEADLESS=0
+CLI_PORT=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --headless|--no-gui|--cli)
+      IS_HEADLESS=1
+      ;;
+    --port=*)
+      CLI_PORT="${arg#*=}"
+      ;;
+    *)
+      if [ -z "$CLI_PORT" ] && echo "$arg" | grep -qE '^[0-9]+$'; then
+        CLI_PORT="$arg"
+      fi
+      ;;
+  esac
+done
+
+# Suppress Wine fixme/stub noise for clean terminal output
+export WINEDEBUG="${WINEDEBUG:--all}"
+
+# 2. Port handling & existing browser check
+PORT_ALREADY_ACTIVE=0
+if [ -n "$CLI_PORT" ]; then
+  # Check if a browser / CDP is already listening on this custom port
+  if curl -s --max-time 0.2 "http://127.0.0.1:$CLI_PORT/json/version" >/dev/null 2>&1 || nc -z 127.0.0.1 "$CLI_PORT" 2>/dev/null; then
+    PORT_ALREADY_ACTIVE=1
+  fi
+else
+  # If no port explicitly requested, find the first free port (starting at 9222)
+  PORT=9222
+  while curl -s --max-time 0.2 "http://127.0.0.1:$PORT/json/version" >/dev/null 2>&1 || nc -z 127.0.0.1 "$PORT" 2>/dev/null; do
+    PORT=$((PORT + 1))
+  done
+  CLI_PORT="$PORT"
+fi
+
+# 3. Launch native Linux browser ONLY if not already running on that port and not in headless mode
+BROWSER_PID=""
+if [ "$IS_HEADLESS" -eq 0 ] && [ "$PORT_ALREADY_ACTIVE" -eq 0 ]; then
+  NATIVE_BROWSER=""
+  if command -v chromium >/dev/null 2>&1; then
+    NATIVE_BROWSER="chromium"
+  elif command -v google-chrome >/dev/null 2>&1; then
+    NATIVE_BROWSER="google-chrome"
+  elif command -v google-chrome-stable >/dev/null 2>&1; then
+    NATIVE_BROWSER="google-chrome-stable"
+  elif command -v brave-browser >/dev/null 2>&1; then
+    NATIVE_BROWSER="brave-browser"
+  fi
+
+  if [ -n "$NATIVE_BROWSER" ]; then
+    "$NATIVE_BROWSER" \
+      --app="http://localhost:8000/console?native=1" \
+      --user-data-dir="/tmp/exoproc-profile-$CLI_PORT" \
+      --remote-debugging-port="$CLI_PORT" \
+      --window-size=1280,820 \
+      --no-first-run \
+      --no-default-browser-check >/dev/null 2>&1 &
+    BROWSER_PID=$!
+    sleep 0.4
+  fi
+fi
+
+# Cleanup child browser on exit
+cleanup() {
+  if [ -n "$BROWSER_PID" ]; then
+    kill "$BROWSER_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+# 4. Run Exoproc Windows Binary with the assigned port argument
+wine "$STANDALONE_EXE" --port "$CLI_PORT" "$@" 2> >(grep -v -E "(MESA-EGL|failed to create dri2|pci id for fd)" >&2)
+exit $?

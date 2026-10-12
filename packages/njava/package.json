@@ -1,0 +1,63 @@
+{
+  "name": "bun-njava",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.1.0",
+  "description": "Cross-process JVM access (JavaVM/JNIEnv discovery) for Bun using thread redirection -- no DLL injection.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./reflection-parser": {
+      "types": "./dist/reflection-parser.d.ts",
+      "import": "./dist/reflection-parser.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3.11"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "exoproc",
+    "njava",
+    "jni",
+    "jvm",
+    "java",
+    "windows",
+    "x64",
+    "systems-instrumentation"
+  ],
+  "author": "Serkan",
+  "homepage": "https://github.com/woldann/exoproc#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/woldann/exoproc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/woldann/exoproc/issues"
+  },
+  "dependencies": {
+    "bun-winapi": "workspace:*",
+    "bun-xffi": "workspace:*",
+    "exoproc-utils": "workspace:*",
+    "exoproc-jjit": "workspace:*",
+    "njava-agent": "workspace:*"
+  }
+}

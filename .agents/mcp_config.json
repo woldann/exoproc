@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "exoproc": {
+      "command": "bun",
+      "args": ["run", "packages/exoproc-tool/src/mcp.ts"],
+      "cwd": "."
+    }
+  }
+}
