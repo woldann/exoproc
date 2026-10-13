@@ -3,13 +3,16 @@ import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const rootDir = join(import.meta.dirname, '..');
-const daemonPkgDir = join(rootDir, 'packages', 'exoproc-daemon');
-const standaloneDir = join(daemonPkgDir, 'standalone');
-const entryFile = existsSync(
-  join(rootDir, 'packages', 'exoproc', 'src', 'daemon', 'cli.ts'),
-)
-  ? join(rootDir, 'packages', 'exoproc', 'src', 'daemon', 'cli.ts')
-  : join(daemonPkgDir, 'src', 'cli.ts');
+const daemonPkgDir = join(rootDir, 'packages', 'exoproc');
+const standaloneDir = join(daemonPkgDir, 'dist', 'daemon', 'standalone');
+const entryFile = join(
+  rootDir,
+  'packages',
+  'exoproc',
+  'src',
+  'daemon',
+  'cli.ts',
+);
 const bundleFile = join(standaloneDir, 'exoproc-daemon.js');
 const exeFile = join(standaloneDir, 'exoproc-daemon.exe');
 

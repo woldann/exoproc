@@ -21,7 +21,7 @@ Before issuing gameplay commands, verify that the Exoproc API server is active:
 curl -s http://127.0.0.1:43370/status | jq
 
 # If the server is not running, launch it in the background:
-bun run --cwd packages/exoproc-tool dist/cli.js serve --port 43370 &
+bun run --cwd packages/exoproc dist/cli.js serve --port 43370 &
 ```
 
 > [!NOTE]
@@ -52,18 +52,18 @@ Exoproc features an autonomous graph-based pathfinder powered by `gui-navigation
 # Navigate to Video Settings:
 http POST http://127.0.0.1:43370/navigate target=video
 # Or using the exoproc-tool CLI:
-bun run --cwd packages/exoproc-tool dist/cli.js navigate video
+bun run --cwd packages/exoproc dist/cli.js navigate video
 
 # Navigate to Music & Sounds:
 http POST http://127.0.0.1:43370/navigate target=sounds
 # Or CLI:
-bun run --cwd packages/exoproc-tool dist/cli.js navigate sounds
+bun run --cwd packages/exoproc dist/cli.js navigate sounds
 
 # Navigate to Controls:
 http POST http://127.0.0.1:43370/navigate target=controls
 
 # Return to live gameplay (default target: InGame):
-bun run --cwd packages/exoproc-tool dist/cli.js navigate
+bun run --cwd packages/exoproc dist/cli.js navigate
 # Or with real-time SSE progress streaming:
 http --stream -b http://127.0.0.1:43370/navigate Accept:text/event-stream
 ```

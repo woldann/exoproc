@@ -131,8 +131,7 @@ describe('njava: Dynamic Java Agent Builder', () => {
   }, 45000);
 
   it('dumps agent JAR and class via service.dumpAgent', async () => {
-    const { service } =
-      await import('../../packages/exoproc-tool/src/service.js');
+    const { service } = await import('../../packages/exoproc/src/service.js');
     const dumpJar = await service.dumpAgent({
       path: '/tmp/test_dump_srv.jar',
       javaVersion: 8,

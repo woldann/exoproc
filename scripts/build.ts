@@ -136,27 +136,6 @@ function additionalExportEntries(
 }
 
 /**
- * Builds exoproc-tool package (both remote scripts and CLI commands into dist/)
- */
-function buildExoprocTool() {
-  const exoprocToolPath = join(PACKAGES_DIR, 'exoproc-tool');
-  const buildScript = join(exoprocToolPath, 'scripts', 'build.ts');
-
-  if (!existsSync(buildScript)) return;
-
-  log.info('Building exoproc-tool (scripts and commands)...');
-  const result = spawnSync('bun', ['run', buildScript], {
-    stdio: 'inherit',
-    cwd: exoprocToolPath,
-  });
-
-  if (result.status !== 0) {
-    log.fail('Failed to build exoproc-tool');
-    process.exit(1);
-  }
-}
-
-/**
  * Builds scripts in packages/exoproc/src/scripts into packages/exoproc/dist/scripts/
  */
 function buildExoprocScripts() {
@@ -325,9 +304,8 @@ async function buildAll() {
     }
   }
 
-  // Build exoproc scripts and exoproc-tool
+  // Build exoproc scripts
   buildExoprocScripts();
-  buildExoprocTool();
 
   buildExampleStyles();
   buildExampleClients();

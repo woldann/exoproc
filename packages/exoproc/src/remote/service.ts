@@ -4,9 +4,42 @@ import * as client from './client.js';
 import * as api from './api.js';
 import { guiNavigator } from './gui-navigator.js';
 
+let _directClient: any = null;
+async function getDirectClient() {
+  if (!_directClient) {
+    const { NeptuneClient } = await import('../client.js');
+    _directClient = new NeptuneClient();
+  }
+  return _directClient;
+}
+
 export class ExoprocService {
   // Status and Process Management
   async getStatus(): Promise<client.StatusResponse | null> {
+    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+      const endpoint = client.getDaemonEndpoint();
+      if (endpoint.port) {
+        const alive = await client.checkDaemonAlive(
+          endpoint.host,
+          endpoint.port,
+        );
+        if (alive) return alive;
+      }
+      const direct = await getDirectClient();
+      return {
+        alive: true,
+        attached: Boolean(direct.pid),
+        daemonPid: process.pid,
+        pid: direct.pid ?? null,
+        targetName: direct.processName ?? null,
+        windowTitle: direct.windowTitle ?? null,
+        profile: direct.activeProfile?.id ?? 'auto',
+        port: 0,
+        uptime: 0,
+        upgraded: direct.isUpgraded ?? false,
+        agentPort: direct.agentPort ?? null,
+      };
+    }
     try {
       const { host, port } = await client.ensureDaemon();
       return await client.checkDaemonAlive(host, port);
@@ -17,6 +50,24 @@ export class ExoprocService {
   }
 
   async listProcesses(): Promise<client.CandidateProcess[]> {
+    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+      const endpoint = client.getDaemonEndpoint();
+      if (endpoint.port) {
+        const alive = await client.checkDaemonAlive(
+          endpoint.host,
+          endpoint.port,
+        );
+        if (alive) return await client.listProcessesRemote();
+      }
+      const direct = await getDirectClient();
+      const procs = await direct.listProcesses();
+      return procs.map((p: any) => ({
+        pid: p.pid,
+        name: p.name,
+        windowTitle: p.windowTitle,
+        isMinecraft: p.isMinecraft,
+      }));
+    }
     return await client.listProcessesRemote();
   }
 
@@ -26,6 +77,34 @@ export class ExoprocService {
     message?: string;
     error?: string;
   }> {
+    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+      const endpoint = client.getDaemonEndpoint();
+      if (endpoint.port) {
+        const alive = await client.checkDaemonAlive(
+          endpoint.host,
+          endpoint.port,
+        );
+        if (alive) return await client.attachRemote({ pid });
+      }
+      try {
+        const direct = await getDirectClient();
+        const procs = await direct.listProcesses();
+        const target = pid
+          ? procs.find((p: any) => p.pid === pid)
+          : procs.find((p: any) => p.isMinecraft || p.isJava);
+        if (!target) {
+          return { success: false, error: 'Target process not found' };
+        }
+        await direct.connect(target.pid);
+        return {
+          success: true,
+          pid: target.pid,
+          message: `Attached directly to ${target.name} (PID: ${target.pid})`,
+        };
+      } catch (err: any) {
+        return { success: false, error: err?.message || String(err) };
+      }
+    }
     return await client.attachRemote({ pid });
   }
 
@@ -34,10 +113,39 @@ export class ExoprocService {
     message?: string;
     error?: string;
   }> {
+    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+      const endpoint = client.getDaemonEndpoint();
+      if (endpoint.port) {
+        const alive = await client.checkDaemonAlive(
+          endpoint.host,
+          endpoint.port,
+        );
+        if (alive) return await client.detachRemote();
+      }
+      const direct = await getDirectClient();
+      await direct.disconnect();
+      return {
+        success: true,
+        message: 'Detached directly from target process',
+      };
+    }
     return await client.detachRemote();
   }
 
   async shutdown(): Promise<{ success: boolean; message?: string }> {
+    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+      const endpoint = client.getDaemonEndpoint();
+      if (endpoint.port) {
+        const alive = await client.checkDaemonAlive(
+          endpoint.host,
+          endpoint.port,
+        );
+        if (alive) return await client.shutdownRemote();
+      }
+      const direct = await getDirectClient();
+      await direct.disconnect();
+      return { success: true, message: 'Direct session reset' };
+    }
     return await client.shutdownRemote();
   }
 
@@ -127,6 +235,26 @@ export class ExoprocService {
   async screenshot(
     outputPath?: string,
   ): Promise<client.ScreenshotRemoteResult> {
+    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+      const endpoint = client.getDaemonEndpoint();
+      if (endpoint.port) {
+        const alive = await client.checkDaemonAlive(
+          endpoint.host,
+          endpoint.port,
+        );
+        if (alive) return await client.screenshotRemote(outputPath);
+      }
+      const { captureScreenshot } = await import('../screenshot/index.js');
+      const res = await captureScreenshot({ outputPath });
+      return {
+        success: res.success,
+        path: res.filePath,
+        filePath: res.filePath,
+        width: res.width,
+        height: res.height,
+        windowTitle: res.windowTitle,
+      };
+    }
     return await client.screenshotRemote(outputPath);
   }
 

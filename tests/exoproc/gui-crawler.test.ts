@@ -3,9 +3,9 @@ import {
   loadNavigationDatabase,
   guiNavigator,
   detectScreenByButtons,
-} from '../../packages/exoproc-tool/src/gui-navigator.js';
-import { GuiCrawler } from '../../packages/exoproc-tool/src/gui-crawler.js';
-import { exportMappings } from '../../packages/exoproc-tool/src/api.js';
+} from '../../packages/exoproc/src/remote/gui-navigator.js';
+import { GuiCrawler } from '../../packages/exoproc/src/remote/gui-crawler.js';
+import { exportMappings } from '../../packages/exoproc/src/remote/api.js';
 
 describe('GuiCrawler & Navigation Graph', () => {
   it('should load gui-navigation.json and have all menus', () => {

@@ -210,7 +210,7 @@ registerTool(
       .optional()
       .describe('Whether to obfuscate agent bytecode with TinyRemapper.'),
   },
-  async ({ classPath, port, obfuscate }) => {
+  async ({ classPath, port, obfuscate }: any) => {
     try {
       const res = await service.upgrade({ classPath, port, obfuscate });
       return textResponse(res);
@@ -232,7 +232,7 @@ registerTool(
         'Target screen to navigate to (e.g. "InGame", "GuiScreenOptionsSounds", "GuiOptions", "GuiVideoSettings"). Default is "InGame".',
       ),
   },
-  async ({ target }) => {
+  async ({ target }: any) => {
     try {
       const steps: string[] = [];
       const res = await service.navigate(target || 'InGame', (step) =>
@@ -300,7 +300,7 @@ registerTool(
       .optional()
       .describe('Maximum reach distance in blocks (default: 30)'),
   },
-  async ({ reach }) => {
+  async ({ reach }: any) => {
     try {
       const res = await service.getTarget(reach || 30);
       return textResponse(res);
@@ -320,7 +320,7 @@ registerTool(
       .optional()
       .describe('Search radius in blocks (default: 64)'),
   },
-  async ({ radius }) => {
+  async ({ radius }: any) => {
     try {
       const res = await service.getEntities(radius || 64);
       return textResponse(res);
@@ -357,7 +357,7 @@ registerTool(
         'Optional local file path to save screenshot on disk. Leave empty for in-memory visual inspection only.',
       ),
   },
-  async ({ outputPath }) => {
+  async ({ outputPath }: any) => {
     try {
       const shot = await service.fetchScreenshot();
       let savedPath: string | undefined;
@@ -412,7 +412,7 @@ registerTool(
   {
     message: z.string().describe('Message or slash command to send'),
   },
-  async ({ message }) => {
+  async ({ message }: any) => {
     try {
       const res = await service.chat(message);
       return textResponse(res);
@@ -430,7 +430,7 @@ registerTool(
     yaw: z.number().describe('Horizontal angle (-180 to 180 degrees)'),
     pitch: z.number().describe('Vertical angle (-90 up to 90 down degrees)'),
   },
-  async ({ yaw, pitch }) => {
+  async ({ yaw, pitch }: any) => {
     try {
       const res = await service.look(yaw, pitch);
       return textResponse(res);
@@ -453,7 +453,7 @@ registerTool(
       .optional()
       .describe('Hotbar slot index (0-8) required if action is "slot"'),
   },
-  async ({ action, slot }) => {
+  async ({ action, slot }: any) => {
     try {
       if (action === 'jump') return textResponse(await service.jump());
       if (action === 'attack' || action === 'swing')
@@ -480,7 +480,7 @@ registerTool(
       .union([z.number(), z.string()])
       .describe('Button ID number or text label (e.g. 1 or "Singleplayer")'),
   },
-  async ({ selector }) => {
+  async ({ selector }: any) => {
     try {
       const res = await service.click(selector);
       return textResponse(res);
@@ -497,7 +497,7 @@ registerTool(
   {
     code: z.string().describe('JavaScript code to evaluate in JVM'),
   },
-  async ({ code }) => {
+  async ({ code }: any) => {
     try {
       const res = await service.evalCode(code);
       return textResponse(res);
@@ -519,7 +519,7 @@ registerTool(
         'Optional list of specific GUI screens to crawl. Defaults to all reachable menus from current screen.',
       ),
   },
-  async ({ targets }) => {
+  async ({ targets }: any) => {
     try {
       const progress: string[] = [];
       const res = await service.crawl({
@@ -549,7 +549,7 @@ registerTool(
         'Whether to crawl all GUI screens to ensure all menu classes are discovered (default: true)',
       ),
   },
-  async ({ profile, crawl }) => {
+  async ({ profile, crawl }: any) => {
     try {
       const progress: string[] = [];
       const res = await service.exportMappings(profile, {

@@ -7,6 +7,8 @@ export * from './webview/index.js';
 export * from './bridge/index.js';
 export * from './screenshot/index.js';
 export * from './remote/index.js';
+export * from './service.js';
+export { startApiServer } from './server.js';
 
 export {
   AgentClient,

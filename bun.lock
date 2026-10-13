@@ -20,14 +20,12 @@
         "exoproc": "workspace:*",
         "exoproc-accessors": "workspace:*",
         "exoproc-asm": "workspace:*",
-        "exoproc-daemon": "workspace:*",
         "exoproc-dummy": "workspace:*",
         "exoproc-jjit": "workspace:*",
         "exoproc-mappings": "workspace:*",
         "exoproc-minecraft": "workspace:*",
         "exoproc-nashorn": "workspace:*",
         "exoproc-runtime": "workspace:*",
-        "exoproc-tool": "workspace:*",
         "exoproc-utils": "workspace:*",
         "njava-agent": "workspace:*",
       },
@@ -172,6 +170,7 @@
         "exoproc-daemon": "./dist/daemon/cli.js",
       },
       "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.32.1",
         "bun-capstone": "workspace:*",
         "bun-minhook": "workspace:*",
         "bun-nhook": "workspace:*",
@@ -181,39 +180,13 @@
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
         "chalk": "^5.3.0",
+        "commander": "^12.1.0",
         "exoproc-accessors": "workspace:*",
         "exoproc-asm": "workspace:*",
         "exoproc-jjit": "workspace:*",
         "exoproc-mappings": "workspace:*",
         "exoproc-minecraft": "workspace:*",
         "exoproc-utils": "workspace:*",
-        "njava-agent": "workspace:*",
-      },
-    },
-    "packages/exoproc-daemon": {
-      "name": "exoproc-daemon",
-      "version": "0.1.0",
-      "bin": {
-        "exoproc-daemon": "./src/cli.ts",
-      },
-      "dependencies": {
-        "bun-njava": "workspace:*",
-        "bun-nthread": "workspace:*",
-        "bun-winapi": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "chalk": "^5.3.0",
-        "exoproc": "workspace:*",
-        "exoproc-accessors": "workspace:*",
-        "exoproc-minecraft": "workspace:*",
-      },
-    },
-    "packages/exoproc-tool": {
-      "name": "exoproc-tool",
-      "version": "0.1.0",
-      "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.32.1",
-        "exoproc": "workspace:*",
-        "exoproc-jjit": "workspace:*",
         "ink": "^7.1.1",
         "njava-agent": "workspace:*",
         "react": "^19.2.8",
@@ -1933,8 +1906,6 @@
 
     "exoproc-asm": ["exoproc-asm@workspace:packages/asm"],
 
-    "exoproc-daemon": ["exoproc-daemon@workspace:packages/exoproc-daemon"],
-
     "exoproc-dummy": ["exoproc-dummy@workspace:packages/dummy"],
 
     "exoproc-examples": ["exoproc-examples@workspace:examples"],
@@ -1948,8 +1919,6 @@
     "exoproc-nashorn": ["exoproc-nashorn@workspace:packages/njava-nashorn"],
 
     "exoproc-runtime": ["exoproc-runtime@workspace:packages/njava-runtime"],
-
-    "exoproc-tool": ["exoproc-tool@workspace:packages/exoproc-tool"],
 
     "exoproc-utils": ["exoproc-utils@workspace:packages/utils"],
 
@@ -3453,6 +3422,8 @@
 
     "execa/signal-exit": ["signal-exit@4.1.0", "", {}, "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="],
 
+    "exoproc/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
     "exoproc-accessors/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
 
     "exoproc-examples/@types/react": ["@types/react@18.3.31", "", { "dependencies": { "@types/prop-types": "*", "csstype": "^3.2.2" } }, "sha512-vfEqpXTvwT91yhmwdfouStN2hSKwTvyRs8qpLfADyrq/kxDw0hZM7Wk9Ug1FELj8hIby+S/+kQCSRFF32nv2Qw=="],
@@ -3470,8 +3441,6 @@
     "exoproc-nashorn/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "exoproc-runtime/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "exoproc-tool/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "exoproc-utils/dotenv": ["dotenv@16.6.1", "", {}, "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow=="],
 

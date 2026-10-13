@@ -194,25 +194,70 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
     );
   }
 
+  // On Windows, Exoproc acts directly as the tool without requiring a background daemon
+  if (process.platform === 'win32' && !process.env.EXOPROC_FORCE_DAEMON) {
+    return { host: '127.0.0.1', port: port || 0 };
+  }
+
   // Not running, launch local daemon in background (standby mode)
   console.log(
     '⚡ Exoproc daemon not active. Launching daemon in background...',
   );
   const root = findRepoRoot();
-  const daemonExe = join(
-    root,
-    'packages',
-    'exoproc-daemon',
-    'standalone',
-    'exoproc-daemon.exe',
-  );
-  const daemonJs = join(
-    root,
-    'packages',
-    'exoproc-daemon',
-    'standalone',
-    'exoproc-daemon.js',
-  );
+  const daemonExe = existsSync(
+    join(
+      root,
+      'packages',
+      'exoproc',
+      'dist',
+      'daemon',
+      'standalone',
+      'exoproc-daemon.exe',
+    ),
+  )
+    ? join(
+        root,
+        'packages',
+        'exoproc',
+        'dist',
+        'daemon',
+        'standalone',
+        'exoproc-daemon.exe',
+      )
+    : join(
+        root,
+        'packages',
+        'exoproc-daemon',
+        'standalone',
+        'exoproc-daemon.exe',
+      );
+  const daemonJs = existsSync(
+    join(
+      root,
+      'packages',
+      'exoproc',
+      'dist',
+      'daemon',
+      'standalone',
+      'exoproc-daemon.js',
+    ),
+  )
+    ? join(
+        root,
+        'packages',
+        'exoproc',
+        'dist',
+        'daemon',
+        'standalone',
+        'exoproc-daemon.js',
+      )
+    : join(
+        root,
+        'packages',
+        'exoproc-daemon',
+        'standalone',
+        'exoproc-daemon.js',
+      );
   const exoprocDaemonDist = join(
     root,
     'packages',
@@ -433,9 +478,11 @@ export async function runRemote(
 export interface ScreenshotRemoteResult {
   success: boolean;
   filePath?: string;
+  path?: string;
   width?: number;
   height?: number;
   windowTitle?: string;
+  base64?: string;
   error?: string;
 }
 
@@ -620,13 +667,9 @@ export function getAgentMappingPool(): any {
           resolve(process.cwd(), 'mappings.json'),
           resolve(process.cwd(), 'live-crawled-mappings.json'),
           resolve(dirname(process.cwd()), 'mappings.json'),
+          resolve(root, 'packages/exoproc/live-crawled-mappings.json'),
           resolve(root, 'packages/exoproc/mappings.json'),
-          resolve(root, 'packages/exoproc-tool/live-crawled-mappings.json'),
-          resolve(root, 'packages/exoproc-tool/mappings.json'),
-          resolve(root, 'packages/neptune/mappings.json'),
           resolve(root, 'packages/minecraft/src/mappings/mappings-1.8.9.json'),
-          resolve(root, 'packages/neptune-tool/live-crawled-mappings.json'),
-          resolve(root, 'packages/neptune-tool/mappings.json'),
         ];
         for (const p of candidates) {
           if (existsSync(p)) {

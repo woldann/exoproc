@@ -1060,3 +1060,5 @@ export class NeptuneClient {
     this.activeProfile = undefined;
   }
 }
+
+export * from './remote/client.js';
