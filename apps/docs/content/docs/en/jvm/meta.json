@@ -1,0 +1,11 @@
+{
+  "title": "JVM & Reflection",
+  "pages": [
+    "overview",
+    "java-type",
+    "collections-and-arrays",
+    "class-extension",
+    "exception-handling",
+    "deobfuscation-mappings"
+  ]
+}

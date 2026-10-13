@@ -6,6 +6,7 @@
     "architecture",
     "nthread",
     "hooking",
+    "jvm",
     "---Bileşenler---",
     "packages",
     "playground",
