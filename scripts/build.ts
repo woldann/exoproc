@@ -264,9 +264,19 @@ async function buildAll() {
     // Keep dependencies external
     buildArgs.push('--packages', 'external');
 
-    // Mark all other workspace packages as external
-    for (const ext of externals) {
-      buildArgs.push('--external', ext);
+    // Mark all other workspace packages as external, except for exoproc which
+    // inlines its workspace packages for standalone zero-dependency distribution
+    if (pkg === 'exoproc') {
+      const optionals = Object.keys(
+        (pkgJson.optionalDependencies as Record<string, string>) ?? {},
+      );
+      for (const ext of optionals) {
+        buildArgs.push('--external', ext);
+      }
+    } else {
+      for (const ext of externals) {
+        buildArgs.push('--external', ext);
+      }
     }
 
     const result = spawnSync('bun', buildArgs, { stdio: 'inherit' });
