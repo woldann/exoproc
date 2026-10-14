@@ -4,7 +4,7 @@
     "access": "public",
     "registry": "https://npm.pkg.github.com"
   },
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Modular external Minecraft automation client, CLI runner, MCP server, and runtime instrumentation framework for Bun using exoproc.",
   "main": "./dist/index.js",
   "bin": {
