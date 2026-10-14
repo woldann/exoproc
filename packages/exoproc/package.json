@@ -79,14 +79,14 @@
     "zod": "^3.24.1"
   },
   "optionalDependencies": {
-    "bun-capstone": "workspace:*",
-    "bun-minhook": "workspace:*",
-    "bun-nhook": "workspace:*",
-    "bun-njava": "workspace:*",
-    "bun-nshm": "workspace:*",
-    "bun-nthread": "workspace:*",
-    "bun-winapi": "workspace:*",
-    "bun-xffi": "workspace:*",
-    "exoproc-accessors": "workspace:*"
+    "bun-capstone": "^0.2.0",
+    "bun-minhook": "^0.2.0",
+    "bun-nhook": "^0.2.0",
+    "bun-njava": "^0.2.0",
+    "bun-nshm": "^0.2.0",
+    "bun-nthread": "^0.2.0",
+    "bun-winapi": "^0.2.0",
+    "bun-xffi": "^0.2.0",
+    "exoproc-accessors": "^0.2.0"
   }
 }

@@ -250,6 +250,7 @@ async function buildAll() {
       f.endsWith('-worker.ts'),
     );
 
+    const isExoproc = pkg === 'exoproc';
     const buildArgs = [
       'build',
       entryPath,
@@ -258,22 +259,22 @@ async function buildAll() {
       '--outdir',
       join(pkgPath, 'dist'),
       '--target',
-      'bun',
+      isExoproc ? 'node' : 'bun',
     ];
 
-    // Keep dependencies external
-    buildArgs.push('--packages', 'external');
-
-    // Mark all other workspace packages as external, except for exoproc which
-    // inlines its workspace packages for standalone zero-dependency distribution
-    if (pkg === 'exoproc') {
+    if (isExoproc) {
+      buildArgs.push('--root', srcDir);
+      const npmDeps = Object.keys(
+        (pkgJson.dependencies as Record<string, string>) ?? {},
+      );
       const optionals = Object.keys(
         (pkgJson.optionalDependencies as Record<string, string>) ?? {},
       );
-      for (const ext of optionals) {
+      for (const ext of [...npmDeps, ...optionals]) {
         buildArgs.push('--external', ext);
       }
     } else {
+      buildArgs.push('--packages', 'external');
       for (const ext of externals) {
         buildArgs.push('--external', ext);
       }

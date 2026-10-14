@@ -24,6 +24,8 @@ export interface GuiNavigationDatabase {
   screens: Record<string, GuiScreenDef>;
 }
 
+import defaultNavigationDatabase from '../../../minecraft/src/mappings/gui-navigation.json';
+
 /**
  * Load the clean, declarative GUI navigation database.
  */
@@ -53,7 +55,7 @@ export function loadNavigationDatabase(): GuiNavigationDatabase {
     }
   }
 
-  throw new Error('Could not find gui-navigation.json in any search path');
+  return defaultNavigationDatabase as unknown as GuiNavigationDatabase;
 }
 
 /**
