@@ -167,7 +167,8 @@ export async function runScriptInWorker(
       }, options.timeoutMs);
     }
 
-    worker.on('message', (msg) => {
+    const anyWorker = worker as any;
+    anyWorker.on('message', (msg: any) => {
       if (!msg) return;
       if (msg.type === 'ready') {
         options.onReady?.();
@@ -182,12 +183,12 @@ export async function runScriptInWorker(
       }
     });
 
-    worker.on('error', (err) => {
+    anyWorker.on('error', (err: any) => {
       if (timeoutTimer) clearTimeout(timeoutTimer);
       reject(err);
     });
 
-    worker.on('exit', (code) => {
+    anyWorker.on('exit', (code: any) => {
       if (timeoutTimer) clearTimeout(timeoutTimer);
       if (code !== 0) {
         reject(new Error(`Worker stopped with exit code ${code}`));

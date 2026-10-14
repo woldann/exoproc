@@ -141,7 +141,7 @@ function ensureStarted(): Promise<WaiterRuntime> {
   // extension this module was loaded with.
   const ext = import.meta.url.endsWith('.ts') ? '.ts' : '.js';
   const w = new Worker(new URL(`./waiter-worker${ext}`, import.meta.url).href);
-  w.unref?.();
+  (w as any).unref?.();
 
   const runtime: WaiterRuntime = { table, wakeHandle, pending };
 

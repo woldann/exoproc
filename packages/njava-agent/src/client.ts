@@ -50,6 +50,15 @@ export interface AgentClientOptions {
   timeoutMs?: number;
 }
 
+function timeoutSignal(ms: number): any {
+  if (typeof (AbortSignal as any)?.timeout === 'function') {
+    return (AbortSignal as any).timeout(ms);
+  }
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
 /**
  * Universal HTTP Client for communicating with the NJava Agent (Exoproc.java).
  * Runs completely cross-platform on any OS without requiring Windows or native bindings.
@@ -73,7 +82,7 @@ export class AgentClient {
   public async isAlive(timeoutMs = 1500): Promise<boolean> {
     try {
       const res = await fetch(`${this.baseUrl}/status`, {
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: timeoutSignal(timeoutMs),
       });
       if (res.ok) {
         const json = (await res.json()) as any;
@@ -88,7 +97,7 @@ export class AgentClient {
    */
   public async getStatus(): Promise<AgentStatus> {
     const res = await fetch(`${this.baseUrl}/status`, {
-      signal: AbortSignal.timeout(this.timeoutMs),
+      signal: timeoutSignal(this.timeoutMs),
     });
     if (!res.ok) {
       throw new Error(`Agent status failed: HTTP ${res.status}`);
@@ -109,7 +118,7 @@ export class AgentClient {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, globals }),
-        signal: AbortSignal.timeout(timeoutMs ?? this.timeoutMs),
+        signal: timeoutSignal(timeoutMs ?? this.timeoutMs),
       });
       if (!res.ok) {
         return {
@@ -133,7 +142,7 @@ export class AgentClient {
    */
   public async getClasses(): Promise<string[]> {
     const res = await fetch(`${this.baseUrl}/classes`, {
-      signal: AbortSignal.timeout(this.timeoutMs),
+      signal: timeoutSignal(this.timeoutMs),
     });
     if (!res.ok) {
       throw new Error(`Agent classes failed: HTTP ${res.status}`);
@@ -148,7 +157,7 @@ export class AgentClient {
   public async shutdown(): Promise<boolean> {
     try {
       const res = await fetch(`${this.baseUrl}/shutdown`, {
-        signal: AbortSignal.timeout(5000),
+        signal: timeoutSignal(5000),
       });
       return res.ok;
     } catch {

@@ -184,9 +184,11 @@ export async function isAgentRunning(
   timeoutMs = 1000,
 ): Promise<boolean> {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/status`, {
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    const signal =
+      typeof (AbortSignal as any)?.timeout === 'function'
+        ? (AbortSignal as any).timeout(timeoutMs)
+        : undefined;
+    const res = await fetch(`http://127.0.0.1:${port}/status`, { signal });
     if (res.ok) {
       const json = (await res.json()) as any;
       return Boolean(json.alive !== false);
