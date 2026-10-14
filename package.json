@@ -51,7 +51,7 @@
     "bun-thunks": "workspace:*",
     "bun-winapi": "workspace:*",
     "bun-xffi": "workspace:*",
-    "exoproc": "workspace:*",
+    "@woldann/exoproc": "workspace:*",
     "exoproc-accessors": "workspace:*",
     "exoproc-asm": "workspace:*",
     "exoproc-dummy": "workspace:*",

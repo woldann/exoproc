@@ -1,7 +1,8 @@
 {
-  "name": "exoproc",
+  "name": "@woldann/exoproc",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.2.0",
   "description": "Modular external Minecraft automation client, CLI runner, MCP server, and runtime instrumentation framework for Bun using exoproc.",
@@ -68,6 +69,10 @@
     "cli"
   ],
   "author": "Serkan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/woldann/exoproc.git"
+  },
   "homepage": "https://github.com/woldann/exoproc#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",

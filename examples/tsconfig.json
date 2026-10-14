@@ -18,6 +18,7 @@
       "bun-minhook": ["packages/minhook/src/index.ts"],
       "exoproc-dummy": ["packages/dummy/src/index.ts"],
       "exoproc": ["packages/exoproc/src/index.ts"],
+      "@woldann/exoproc": ["packages/exoproc/src/index.ts"],
       "@/*": ["examples/*"]
     }
   },

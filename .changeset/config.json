@@ -7,5 +7,29 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["docs"]
+  "ignore": [
+    "docs",
+    "bun-capstone",
+    "bun-capstone-abi",
+    "bun-minhook",
+    "bun-nhook",
+    "bun-njava",
+    "bun-nshm",
+    "bun-nthread",
+    "bun-thunks",
+    "bun-winapi",
+    "bun-xffi",
+    "exoproc-accessors",
+    "exoproc-asm",
+    "exoproc-dummy",
+    "exoproc-jjit",
+    "exoproc-mappings",
+    "exoproc-minecraft",
+    "exoproc-nashorn",
+    "exoproc-runtime",
+    "exoproc-utils",
+    "njava-agent",
+    "@exoproc/simulate",
+    "@exoproc/win32-abi"
+  ]
 }

@@ -1,6 +1,8 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -14,15 +16,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      packages: write
     env:
-      # changesets/action pushes commits/tags directly via git after a
-      # successful `changeset publish`. Without this, that push runs
-      # `.husky/pre-push` (typecheck + full Wine test suite), which this
-      # bare Linux job never sets up Wine for -- it fails every Wine-
-      # dependent test and aborts the push *after* npm publish already
-      # succeeded, making a genuinely successful release look like a
-      # failed run. CI (ci.yml) already covers testing before merge to
-      # main; this job must not repeat it.
       HUSKY: '0'
     steps:
       - uses: actions/checkout@v4
@@ -37,26 +32,32 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Configure npm registry auth
-        run: echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
+      - name: Configure npm registry auth for GitHub Packages
+        run: |
+          echo "@woldann:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> ~/.npmrc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # changesets/action does one of two things on every push to main:
-      # - if any `.changeset/*.md` files are present, it opens/updates a
-      #   "Version Packages" PR that runs the `version` script (bumps
-      #   versions + changelogs + deletes the changesets).
-      # - otherwise (i.e. that PR was just merged), it runs the `publish`
-      #   script, which builds and runs `changeset publish`. That command
-      #   publishes every package whose version isn't on npm yet, rewriting
-      #   `workspace:*` ranges to real versions and publishing in dependency
-      #   order automatically. The action then pushes a git tag per
-      #   published package (`<name>@<version>`) and creates a matching
-      #   GitHub Release from that package's changelog entry -- no manual
-      #   tagging step needed.
       - name: Create Release Pull Request or Publish
+        id: changesets
         uses: changesets/action@v1
         with:
           version: bun run version
           publish: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attach tarball to GitHub Release
+        run: |
+          npm pack --workspace=packages/exoproc
+          TARBALL=$(ls woldann-exoproc-*.tgz exoproc-*.tgz 2>/dev/null | head -n 1)
+          if [ -n "$TARBALL" ]; then
+            TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [ -n "$TAG" ]; then
+              gh release upload "$TAG" "$TARBALL" --clobber || true
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
