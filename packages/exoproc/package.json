@@ -66,8 +66,8 @@
     "minecraft",
     "automation",
     "mcp",
-    "dashboard",
-    "web-ui"
+    "daemon",
+    "cli"
   ],
   "author": "Serkan",
   "homepage": "https://github.com/woldann/exoproc#readme",

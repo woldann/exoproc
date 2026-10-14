@@ -7,7 +7,7 @@
     "rootDir": "./src"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/tui", "src/scripts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/scripts"],
   "references": [
     { "path": "../asm" },
     { "path": "../capstone" },

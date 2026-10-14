@@ -3,8 +3,6 @@ export * from './config/profiles.js';
 export * from './accessors/accessor-registry.js';
 export * from './tools/tool-manager.js';
 export * from './constants.js';
-export * from './webview/index.js';
-export * from './bridge/index.js';
 export * from './screenshot/index.js';
 export * from './remote/index.js';
 export * from './service.js';
