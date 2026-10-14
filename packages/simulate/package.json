@@ -1,6 +1,6 @@
 {
   "name": "@exoproc/simulate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Virtual Windows OS simulation engine and browser mock FFI layer for Exoproc.",
   "type": "module",
   "packageManager": "npm@12.0.1",

@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pure TypeScript mapping database, matchmaking pool, and mappings.json I/O engine for the Exoproc / NJava ecosystem.",
   "main": "./dist/index.js",
   "exports": {

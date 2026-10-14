@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Modular external Minecraft automation client, CLI runner, MCP server, and runtime instrumentation framework for Bun using exoproc.",
   "main": "./dist/index.js",
   "bin": {

@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Advanced host and middleware accessors for bun-xffi — orchestrating HostAccessor family (redirector/bootstrap) plus concrete indirect-call, memset/memcmp, file-transfer, process-cache, machineCode-pool, and scanner middleware.",
   "main": "./dist/index.js",
   "exports": {
