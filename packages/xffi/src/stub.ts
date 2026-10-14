@@ -73,8 +73,12 @@ export interface Stub extends DynamicCFunction {
 // ---------------------------------------------------------------------------
 // Internal factory
 // ---------------------------------------------------------------------------
-function makeStub(address: number, bytes: number[]): Stub {
-  const wrapper = createMachineCode(address, ['ptr', []], bytes) as any;
+export function makeStub(
+  address: number | bigint,
+  bytes: number[] = [0xc3],
+): Stub {
+  const addr = Number(address);
+  const wrapper = createMachineCode(addr, ['ptr', []], bytes) as any;
 
   Object.defineProperty(wrapper, 'isStub', {
     value: true,
@@ -83,9 +87,9 @@ function makeStub(address: number, bytes: number[]): Stub {
     writable: false,
   });
 
-  wrapper.cloneForAddress = (addr: number): Stub => {
-    if (addr === address) return wrapper;
-    return makeStub(addr, bytes);
+  wrapper.cloneForAddress = (targetAddr: number): Stub => {
+    if (targetAddr === addr) return wrapper;
+    return makeStub(targetAddr, bytes);
   };
 
   return wrapper as Stub;

@@ -1,8 +1,12 @@
 import { expect, test, describe, afterAll } from 'bun:test';
-import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, unlinkSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { HostAccessor, type HostAccessorSession } from 'bun-xffi';
+import {
+  HostAccessor,
+  AccessorSealedError,
+  type HostAccessorSession,
+} from 'bun-xffi';
 import {
   createAccessorWithoutInit,
   createAccessor,
@@ -11,7 +15,7 @@ import {
 } from 'exoproc-accessors';
 import { getGlobalDummyProcess } from 'exoproc-dummy';
 
-describe('HostAccessor Session Persistence', () => {
+describe('HostAccessor Pipeline Blueprint and Hibernation', () => {
   const tempFiles: string[] = [];
 
   const getTempPath = (name: string) => {
@@ -31,7 +35,7 @@ describe('HostAccessor Session Persistence', () => {
     }
   });
 
-  test('HostAccessor toJSON and metadata serialization', () => {
+  test('HostAccessor toJSON builds pipeline blueprint and metadata', () => {
     const proc = getGlobalDummyProcess();
     const accessor = createAccessorWithoutInit(proc.pid, {
       idType: 'processAllThreadIds',
@@ -46,18 +50,52 @@ describe('HostAccessor Session Persistence', () => {
     expect(meta.profileId).toBe('lunar-client');
 
     const json = accessor.toJSON();
-    expect(json.version).toBe(1);
+    expect(json.version).toBe(2);
     expect(json.processId).toBe(proc.pid);
     expect(json.accessorType).toBe('IndirectNThreadHostAccessor');
     expect(json.metadata?.gameName).toBe('Minecraft 1.8.9');
     expect(json.metadata?.profileId).toBe('lunar-client');
     expect(json.options?.idType).toBe('processAllThreadIds');
+    expect(json.pipeline).toBeDefined();
+    expect(Array.isArray(json.pipeline)).toBe(true);
+    expect(json.pipeline!.length).toBeGreaterThan(0);
     expect(json.savedAt).toBeDefined();
 
     accessor.close();
   });
 
-  test('saveToFileSync and HostAccessor.loadSession', () => {
+  test('save() hibernates stack, seals instance and throws on subsequent memory calls', async () => {
+    const proc = getGlobalDummyProcess();
+    const filePath = getTempPath('sealed-test');
+
+    const accessor = await createAccessor(proc.pid);
+    expect(accessor.isSealed).toBe(false);
+
+    // Save & hibernate
+    await accessor.save(filePath);
+    expect(accessor.isSealed).toBe(true);
+
+    // Verify subsequent ops throw AccessorSealedError
+    expect(accessor.alloc(64)).rejects.toThrow(/sealed\/hibernated/);
+    expect(() => accessor.allocSync(64)).toThrow(/sealed\/hibernated/);
+
+    // Load from file via createAccessor(filePath)
+    const restored = await createAccessor(filePath);
+    expect(restored).toBeInstanceOf(IndirectNThreadHostAccessor);
+    expect(restored.processId).toBe(proc.pid);
+
+    // Verify restored accessor is functional
+    const buf = Buffer.from('hibernated resume works!');
+    const addr = await restored.alloc(64);
+    await restored.write(addr, buf);
+    const back = await restored.read(addr, buf.length);
+    expect(back.toString()).toBe(buf.toString());
+    await restored.free(addr);
+
+    await restored.deinit();
+  }, 40000);
+
+  test('HostAccessor.loadSession reads session file accurately', () => {
     const proc = getGlobalDummyProcess();
     const filePath = getTempPath('sync');
 
@@ -71,25 +109,11 @@ describe('HostAccessor Session Persistence', () => {
     expect(existsSync(filePath)).toBe(true);
 
     const loaded = HostAccessor.loadSession(filePath);
-    expect(loaded.version).toBe(1);
+    expect(loaded.version).toBe(2);
     expect(loaded.processId).toBe(proc.pid);
     expect(loaded.metadata?.customKey).toBe(42);
     expect(loaded.accessorType).toBe('IndirectNThreadHostAccessor');
-
-    accessor.close();
-  });
-
-  test('saveToFile (async)', async () => {
-    const proc = getGlobalDummyProcess();
-    const filePath = getTempPath('async');
-
-    const accessor = createAccessorWithoutInit(proc.pid);
-    const writtenPath = await accessor.saveToFile(filePath);
-    expect(writtenPath).toBe(filePath);
-    expect(existsSync(filePath)).toBe(true);
-
-    const loaded = HostAccessor.loadSession(filePath);
-    expect(loaded.processId).toBe(proc.pid);
+    expect(loaded.pipeline).toBeDefined();
 
     accessor.close();
   });
@@ -106,7 +130,7 @@ describe('HostAccessor Session Persistence', () => {
 
     const filePath = getTempPath('custom-mock');
     const mockSession: HostAccessorSession = {
-      version: 1,
+      version: 2,
       savedAt: new Date().toISOString(),
       processId: 12345,
       accessorType: 'CustomMockAccessor',
@@ -119,42 +143,4 @@ describe('HostAccessor Session Persistence', () => {
     expect(called).toBe(true);
     expect(restored.processId).toBe(12345);
   });
-
-  test('save and restore full accessor session from live process', async () => {
-    const proc = getGlobalDummyProcess();
-    const filePath = getTempPath('live-session');
-
-    // 1. Create and initialize accessor
-    const accessor = await createAccessor(proc.pid);
-    accessor.setSessionMetadata('attachedBy', 'test-suite');
-
-    // 2. Save session
-    await accessor.saveToFile(filePath);
-
-    // 3. Verify session file contents
-    const session = HostAccessor.loadSession(filePath);
-    expect(session.processId).toBe(proc.pid);
-    expect(session.threadId).toBeDefined();
-    expect(typeof session.threadId).toBe('number');
-    expect(session.metadata?.attachedBy).toBe('test-suite');
-
-    // Release the thread before restoring so it can be re-hijacked cleanly
-    await accessor.deinit();
-
-    // 4. Restore using createAccessorFromFile
-    const restored = await createAccessorFromFile(filePath);
-    expect(restored).toBeInstanceOf(IndirectNThreadHostAccessor);
-    expect(restored.processId).toBe(proc.pid);
-    expect(restored.getSessionMetadata().attachedBy).toBe('test-suite');
-
-    // 5. Verify restored accessor is functional
-    const buf = Buffer.from('hello restored accessor');
-    const addr = await restored.alloc(64);
-    await restored.write(addr, buf);
-    const back = await restored.read(addr, buf.length);
-    expect(back.toString()).toBe(buf.toString());
-    await restored.free(addr);
-
-    await restored.deinit();
-  }, 40000);
 });

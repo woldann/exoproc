@@ -1,6 +1,6 @@
 import { Thread, Module } from 'bun-winapi';
 import { Kernel32Impl, type ISyncCallableMemoryAccessor } from 'bun-xffi';
-import { CallThreadDiedError, type NThreadOptions } from 'bun-nthread';
+import { CallThreadDiedError, NThread, type NThreadOptions } from 'bun-nthread';
 import { NShm } from 'bun-nshm';
 import {
   attachNJava,
@@ -16,6 +16,7 @@ import {
 import {
   HostAccessor,
   type HostAccessorSession,
+  RedirectorHostAccessor,
 } from './middleware-accessor.js';
 import {
   IndirectNThreadHostAccessor,
@@ -317,9 +318,14 @@ function isThreadDiedError(err: unknown): boolean {
 }
 
 export async function createAccessor(
-  id: number,
+  idOrPath: number | string,
   options: AccessorOptions = {},
 ): Promise<HostAccessor> {
+  if (typeof idOrPath === 'string') {
+    return await HostAccessor.load(idOrPath, options);
+  }
+  const id = idOrPath;
+
   const initOne = async (
     targetId: number,
     opt: AccessorOptions,
@@ -486,6 +492,50 @@ export async function restoreAccessorFromSession(
     ...(session.options as AccessorOptions | undefined),
     ...overrideOptions,
   };
+
+  const nthreadLayer = session.pipeline?.find((p) => p.type === 'NThread');
+  if (nthreadLayer?.state && nthreadLayer.state.threadId) {
+    try {
+      const testThread = Thread.open(nthreadLayer.state.threadId);
+      const isAlive = testThread.isValid() && testThread.getExitCode() === 259;
+      testThread.close();
+
+      if (isAlive) {
+        const redirector = new RedirectorHostAccessor(session.processId);
+        const nthread = new NThread(
+          session.processId,
+          nthreadLayer.state.threadId,
+          (baseOptions.hostOptions as NThreadOptions) ?? {},
+          redirector,
+        );
+        nthread.resumeFromHibernation(nthreadLayer.state as any);
+
+        const accessor = new IndirectNThreadHostAccessor(nthread);
+        redirector.target = accessor;
+
+        const hasNShm =
+          session.pipeline?.some((p) => p.type === 'NShm') ||
+          baseOptions.sharedMemory;
+        if (hasNShm) {
+          accessor.backend = new (baseOptions.sharedMemoryMiddleware ?? NShm)(
+            accessor.backend,
+            accessor,
+            baseOptions.sharedMemoryOptions,
+          );
+        }
+
+        (accessor as any)._options = baseOptions;
+        if (session.metadata) {
+          for (const [key, value] of Object.entries(session.metadata)) {
+            accessor.setSessionMetadata(key, value);
+          }
+        }
+        return accessor;
+      }
+    } catch {
+      // Hibernated resume failed; fall through to normal reconnection
+    }
+  }
 
   let targetId = session.processId;
   let useThread = false;

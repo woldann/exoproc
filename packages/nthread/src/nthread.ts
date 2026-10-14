@@ -13,6 +13,7 @@ import {
   resolveAddress,
   stackAlign16,
   type IHostAccessor,
+  makeStub,
 } from 'bun-xffi';
 import {
   getRandomSpinStub,
@@ -37,6 +38,21 @@ import {
 import { log } from './logger.js';
 
 const nthreadLog = log.add('NThread');
+
+export interface NThreadState {
+  threadId: number;
+  callRsp: string;
+  savedContext: string;
+  stubs: {
+    spinStub: string;
+    pushRetStub: string;
+    pushRetRegKey: string;
+    jumpStub: string;
+    jumpRegKey: string;
+    retStub: string;
+    addRsp28RetStub: string;
+  };
+}
 
 /**
  * Stack slack below the captured RSP reserved for the call-dispatch return chain.
@@ -620,6 +636,90 @@ export class NThread extends InittableMiddlewareAccessor {
       this.closeThread();
       this.nativeThread = undefined;
     }
+  }
+
+  /**
+   * Puts this NThread into hibernation:
+   * - Captures full state (registers, callRsp, stubs).
+   * - Closes the local thread handle without releasing the thread back to user mode.
+   * - Leaves the remote thread parked at spinStub (EB FE / jmp $).
+   * - Marks this instance as uninitialized/closed.
+   */
+  public hibernate(): NThreadState {
+    if (!this.nativeThread) {
+      throw new Error('NThread is not initialized or already closed');
+    }
+
+    const state: NThreadState = {
+      threadId: this.threadId,
+      callRsp: `0x${this.callRsp.toString(16)}`,
+      savedContext: this.savedContext.toBase64(),
+      stubs: {
+        spinStub: `0x${this.stubs.spinStub!.address.toString(16)}`,
+        pushRetStub: `0x${this.stubs.pushRetStub!.address.toString(16)}`,
+        pushRetRegKey: this.stubs.pushRetRegKey as string,
+        jumpStub: `0x${this.stubs.jumpStub!.address.toString(16)}`,
+        jumpRegKey: this.stubs.jumpRegKey as string,
+        retStub: `0x${this.stubs.retStub!.address.toString(16)}`,
+        addRsp28RetStub: `0x${this.stubs.addRsp28RetStub!.address.toString(16)}`,
+      },
+    };
+
+    // Close host handle without releasing thread back to user code
+    this.nativeThread.close();
+    this.nativeThread = undefined;
+    this.markUninitialized();
+
+    return state;
+  }
+
+  /**
+   * Resumes this NThread from a hibernated state descriptor without re-hijacking.
+   * The remote thread is already waiting at spinStub.
+   */
+  public resumeFromHibernation(state: NThreadState): void {
+    this.nativeThread = Native.Thread.open(state.threadId);
+    if (!this.nativeThread.isValid()) {
+      throw new Error(`Failed to open hibernated thread ${state.threadId}`);
+    }
+
+    this.suspendCount = 1;
+
+    this.stubs = {
+      spinStub: makeStub(BigInt(state.stubs.spinStub), [0xeb, 0xfe]),
+      pushRetStub: makeStub(BigInt(state.stubs.pushRetStub)),
+      pushRetRegKey: state.stubs.pushRetRegKey as any,
+      jumpStub: makeStub(BigInt(state.stubs.jumpStub)),
+      jumpRegKey: state.stubs.jumpRegKey as any,
+      retStub: makeStub(BigInt(state.stubs.retStub), [0xc3]),
+      addRsp28RetStub: makeStub(
+        BigInt(state.stubs.addRsp28RetStub),
+        [0x48, 0x83, 0xc4, 0x28, 0xc3],
+      ),
+    };
+
+    this.savedContext = new Native.ThreadContext(this.nativeThread);
+    this.savedContext.fromBase64(state.savedContext);
+    this.callRsp = BigInt(state.callRsp);
+    this.expectedRsp = 0n;
+    this._ctxFetched = false;
+
+    // Mark as initialized so init() doesn't re-run the hijack handshake
+    this.markInitialized();
+  }
+
+  /**
+   * Factory function that constructs an NThread directly from a hibernated state.
+   */
+  static restoreFromState(
+    backendOrPid: ISyncCallableMemoryAccessor | number,
+    state: NThreadState,
+    options: NThreadOptions = {},
+    root?: IHostAccessor,
+  ): NThread {
+    const nt = new NThread(backendOrPid, state.threadId, options, root!);
+    nt.resumeFromHibernation(state);
+    return nt;
   }
 
   protected override onDeinitSync(): void {

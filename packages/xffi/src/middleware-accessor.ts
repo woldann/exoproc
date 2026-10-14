@@ -291,6 +291,16 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
     return this.initState.kind === 'done';
   }
 
+  /** Marks this instance as already initialized (e.g. when resuming from hibernation). */
+  public markInitialized(): void {
+    this.initState = INIT_STATE_DONE;
+  }
+
+  /** Marks this instance as uninitialized / idle (e.g. after hibernation). */
+  public markUninitialized(): void {
+    this.initState = INIT_STATE_IDLE;
+  }
+
   protected get isInitializing(): boolean {
     return this.initState.kind === 'async';
   }
@@ -707,8 +717,25 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
   }
 }
 
+export class AccessorSealedError extends Error {
+  constructor(
+    message: string = 'HostAccessor is sealed/hibernated after save(). Restore from file to resume operations.',
+  ) {
+    super(message);
+    this.name = 'AccessorSealedError';
+  }
+}
+
 /**
- * Serializable snapshot of a HostAccessor session configuration and state.
+ * Descriptor for a layer in the accessor decorator chain.
+ */
+export interface LayerDescriptor {
+  type: string;
+  state?: Record<string, any>;
+}
+
+/**
+ * Serializable snapshot of a HostAccessor session configuration, pipeline, and state.
  */
 export interface HostAccessorSession {
   version: number;
@@ -716,6 +743,7 @@ export interface HostAccessorSession {
   processId: number;
   threadId?: number;
   accessorType: string;
+  pipeline?: LayerDescriptor[];
   metadata?: Record<string, any>;
   options?: Record<string, any>;
   stubs?: Record<string, string>;
@@ -732,6 +760,21 @@ export class HostAccessor extends InittableMiddlewareAccessor {
 
   protected _sessionMetadata: Record<string, any> = {};
   public _options?: Record<string, any>;
+  protected _isSealed: boolean = false;
+
+  get isSealed(): boolean {
+    return this._isSealed;
+  }
+
+  seal(): void {
+    this._isSealed = true;
+  }
+
+  protected checkSealed(): void {
+    if (this._isSealed) {
+      throw new AccessorSealedError();
+    }
+  }
 
   constructor(backend: ISyncCallableMemoryAccessor, root?: IHostAccessor) {
     super(backend, root ?? (null as any));
@@ -745,6 +788,138 @@ export class HostAccessor extends InittableMiddlewareAccessor {
     if (b) {
       this._processId = b.processId;
     }
+  }
+
+  protected override async readAfterInit(
+    address: AddressLike,
+    size: number,
+    offset = 0,
+  ): Promise<Buffer> {
+    this.checkSealed();
+    return super.readAfterInit(address, size, offset);
+  }
+
+  protected override readAfterInitSync(
+    address: AddressLike,
+    size: number,
+    offset = 0,
+  ): Buffer {
+    this.checkSealed();
+    return super.readAfterInitSync(address, size, offset);
+  }
+
+  protected override async writeAfterInit(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): Promise<number> {
+    this.checkSealed();
+    return super.writeAfterInit(address, data, offset);
+  }
+
+  protected override writeAfterInitSync(
+    address: AddressLike,
+    data: Buffer | Uint8Array,
+    offset = 0,
+  ): number {
+    this.checkSealed();
+    return super.writeAfterInitSync(address, data, offset);
+  }
+
+  protected override async allocAfterInit(
+    size: number | any,
+    address: AddressLike | null = null,
+    protection?: any,
+    allocationType?: any,
+  ): Promise<AddressLike> {
+    this.checkSealed();
+    return super.allocAfterInit(size, address, protection, allocationType);
+  }
+
+  protected override allocAfterInitSync(
+    size: number | any,
+    address: AddressLike | null = null,
+    protection?: any,
+    allocationType?: any,
+  ): AddressLike {
+    this.checkSealed();
+    return super.allocAfterInitSync(size, address, protection, allocationType);
+  }
+
+  protected override async freeAfterInit(
+    address: AddressLike,
+    size = 0,
+    freeType?: any,
+  ): Promise<boolean> {
+    this.checkSealed();
+    return super.freeAfterInit(address, size, freeType);
+  }
+
+  protected override freeAfterInitSync(
+    address: AddressLike,
+    size = 0,
+    freeType?: any,
+  ): boolean {
+    this.checkSealed();
+    return super.freeAfterInitSync(address, size, freeType);
+  }
+
+  protected override async protectAfterInit(
+    address: AddressLike,
+    size: number,
+    newProtect: any,
+  ): Promise<number> {
+    this.checkSealed();
+    return super.protectAfterInit(address, size, newProtect);
+  }
+
+  protected override protectAfterInitSync(
+    address: AddressLike,
+    size: number,
+    newProtect: any,
+  ): number {
+    this.checkSealed();
+    return super.protectAfterInitSync(address, size, newProtect);
+  }
+
+  protected override async queryAfterInit(address: AddressLike): Promise<any> {
+    this.checkSealed();
+    return super.queryAfterInit(address);
+  }
+
+  protected override queryAfterInitSync(address: AddressLike): any {
+    this.checkSealed();
+    return super.queryAfterInitSync(address);
+  }
+
+  protected override async callAfterInit(
+    func: CFunction,
+    args: any[],
+  ): Promise<CCallResult> {
+    this.checkSealed();
+    return super.callAfterInit(func, args);
+  }
+
+  protected override callAfterInitSync(
+    func: CFunction,
+    args: any[],
+  ): CCallResult {
+    this.checkSealed();
+    return super.callAfterInitSync(func, args);
+  }
+
+  protected override async machineCodeAfterInit(
+    machineCode: CMachineCode,
+  ): Promise<number> {
+    this.checkSealed();
+    return super.machineCodeAfterInit(machineCode);
+  }
+
+  protected override machineCodeAfterInitSync(
+    machineCode: CMachineCode,
+  ): number {
+    this.checkSealed();
+    return super.machineCodeAfterInitSync(machineCode);
   }
 
   /**
@@ -763,32 +938,92 @@ export class HostAccessor extends InittableMiddlewareAccessor {
   }
 
   /**
-   * Serializes the accessor state and configuration into a JSON session object.
+   * Serializes the accessor state, hibernates stateful layers (e.g. NThread),
+   * and builds a declarative pipeline blueprint.
    */
   toJSON(): HostAccessorSession {
+    const chainLayers: any[] = [];
+    const visited = new Set<any>();
+
+    const traverse = (start: any) => {
+      let curr = start;
+      while (curr && !visited.has(curr)) {
+        visited.add(curr);
+        chainLayers.push(curr);
+
+        if (typeof curr.getTarget === 'function') {
+          const t = curr.getTarget();
+          if (
+            t &&
+            t !== curr &&
+            t !== curr.root &&
+            t !== this &&
+            !visited.has(t)
+          ) {
+            traverse(t);
+          }
+        } else if (
+          curr.target &&
+          curr.target !== curr &&
+          curr.target !== curr.root &&
+          curr.target !== this &&
+          !visited.has(curr.target)
+        ) {
+          traverse(curr.target);
+        }
+
+        curr = curr.backend;
+      }
+    };
+
+    traverse(this.backend);
+
+    const directNt = (this as any).nthread;
+    if (directNt && !visited.has(directNt)) {
+      traverse(directNt);
+    }
+
+    const pipeline: LayerDescriptor[] = [];
+    // Walk from base (innermost backend) to top (outermost middleware)
+    for (let i = chainLayers.length - 1; i >= 0; i--) {
+      const layer = chainLayers[i];
+      const type = layer.constructor?.name || 'MiddlewareAccessor';
+      let state: any = undefined;
+      if (typeof layer.hibernate === 'function') {
+        state = layer.hibernate();
+      } else if (typeof layer.saveState === 'function') {
+        state = layer.saveState();
+      }
+      pipeline.push({ type, ...(state !== undefined ? { state } : {}) });
+    }
+
     const threadId =
       (this as any).nthread?.threadId ??
       (this as any).threadId ??
       (this as any)._threadId;
 
     return {
-      version: 1,
+      version: 2,
       savedAt: new Date().toISOString(),
       processId: this.processId,
       ...(threadId !== undefined ? { threadId } : {}),
       accessorType: this.constructor.name || 'HostAccessor',
+      pipeline,
       metadata: { ...this._sessionMetadata },
       options: this._options ? { ...this._options } : undefined,
     };
   }
 
   /**
-   * Saves the accessor session configuration to a file synchronously.
+   * Hibernates the accessor stack, seals this instance so it cannot be further operated on,
+   * and saves the session to a JSON file synchronously.
    *
    * @param filePath Target JSON file path.
    * @returns Absolute path of the written session file.
    */
   saveToFileSync(filePath: string): string {
+    this.checkSealed();
+
     const absPath = resolve(filePath);
     const dir = dirname(absPath);
     if (!existsSync(dir)) {
@@ -796,6 +1031,10 @@ export class HostAccessor extends InittableMiddlewareAccessor {
     }
     const session = this.toJSON();
     writeFileSync(absPath, JSON.stringify(session, null, 2), 'utf8');
+
+    // Seal this instance after saving
+    this.seal();
+
     return absPath;
   }
 
@@ -806,6 +1045,16 @@ export class HostAccessor extends InittableMiddlewareAccessor {
    * @returns Absolute path of the written session file.
    */
   async saveToFile(filePath: string): Promise<string> {
+    return this.saveToFileSync(filePath);
+  }
+
+  /** Alias for saveToFile */
+  async save(filePath: string): Promise<string> {
+    return this.saveToFile(filePath);
+  }
+
+  /** Alias for saveToFileSync */
+  saveSync(filePath: string): string {
     return this.saveToFileSync(filePath);
   }
 
@@ -869,6 +1118,16 @@ export class HostAccessor extends InittableMiddlewareAccessor {
     }
 
     return await restorer(session, overrideOptions);
+  }
+
+  /**
+   * Convenience alias: loads and rehydrates an accessor from a saved session file.
+   */
+  static async load(
+    filePath: string,
+    overrideOptions?: any,
+  ): Promise<HostAccessor> {
+    return await HostAccessor.restoreFromFile(filePath, overrideOptions);
   }
 
   protected override async onInit(): Promise<void> {

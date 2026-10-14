@@ -94,6 +94,15 @@ export class ThreadContext {
     return clone;
   }
 
+  toBase64(): string {
+    return Buffer.from(this.buffer).toString('base64');
+  }
+
+  fromBase64(base64: string): void {
+    const bytes = Buffer.from(base64, 'base64');
+    new Uint8Array(this.buffer).set(bytes);
+  }
+
   // ── Register Accessors ──────────────────────────────────────────────────
 
   get ContextFlags(): number {
