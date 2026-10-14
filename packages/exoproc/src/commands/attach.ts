@@ -25,7 +25,7 @@ async function main() {
   }
 
   console.log('┌─────────────────────────────────────────────────────────┐');
-  console.log('│ 🎯 Neptune Daemon Attached Successfully                 │');
+  console.log('│ 🎯 Exoproc Daemon Attached Successfully                 │');
   console.log('├─────────────────────────────────────────────────────────┤');
   console.log(`│ Target:        ${resp.targetName} (PID: ${resp.pid})`);
   console.log(`│ Window:        ${resp.windowTitle || 'N/A'}`);

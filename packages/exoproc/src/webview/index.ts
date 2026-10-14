@@ -1,4 +1,4 @@
-import type { NeptuneClient } from '../client.js';
+import type { ExoprocClient } from '../client.js';
 import { ReactiveWebviewBridge } from '../bridge/reactive-bridge.js';
 import { CdpWebviewDriver } from './cdp-driver.js';
 import { NativeWebviewDriver } from './native-driver.js';
@@ -10,7 +10,7 @@ export interface WebviewWindowOptions {
   width?: number;
   height?: number;
   apiKey?: string;
-  client?: NeptuneClient;
+  client?: ExoprocClient;
   engineUrl?: string;
   borderless?: boolean;
   debug?: boolean;
@@ -24,7 +24,7 @@ export interface WebviewWindowOptions {
 export class WebviewWindow {
   public bridge?: ReactiveWebviewBridge;
   public driver: WebviewDriver;
-  private client?: NeptuneClient;
+  private client?: ExoprocClient;
 
   constructor(private options: WebviewWindowOptions) {
     this.client = options.client;

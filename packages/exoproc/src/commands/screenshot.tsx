@@ -11,7 +11,7 @@ interface Props {
 const ScreenshotView: React.FC<Props> = ({ customPath, onDone }) => {
   const [loading, setLoading] = useState(true);
   const [statusText, setStatusText] = useState(
-    'Requesting screenshot from Neptune Daemon...',
+    'Requesting screenshot from Exoproc Daemon...',
   );
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<{
@@ -61,7 +61,7 @@ const ScreenshotView: React.FC<Props> = ({ customPath, onDone }) => {
   if (loading) {
     return (
       <Box flexDirection="column" padding={1}>
-        <Text color="cyan">📸 Neptune Screenshot</Text>
+        <Text color="cyan">📸 Exoproc Screenshot</Text>
         <Text color="yellow">⏳ {statusText}</Text>
       </Box>
     );

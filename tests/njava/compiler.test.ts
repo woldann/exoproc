@@ -22,7 +22,7 @@ describe('njava compiler', () => {
 
   it('extracts class and package info from source code', () => {
     const code = `
-      package net.neptune.injected;
+      package org.exoproc.injected;
       import java.util.List;
 
       public class JumpHook implements Runnable {
@@ -32,9 +32,9 @@ describe('njava compiler', () => {
       }
     `;
     const info = extractClassInfo(code);
-    expect(info.packageName).toBe('net.neptune.injected');
+    expect(info.packageName).toBe('org.exoproc.injected');
     expect(info.className).toBe('JumpHook');
-    expect(info.fqcn).toBe('net.neptune.injected.JumpHook');
+    expect(info.fqcn).toBe('org.exoproc.injected.JumpHook');
   });
 
   it('resolves correct ecj jar paths', () => {
@@ -58,7 +58,7 @@ describe('njava compiler', () => {
     const javaPath = getTestJavaPath(8);
 
     const source = `
-      package net.neptune.test;
+      package org.exoproc.test;
 
       public class SimpleTask implements Runnable {
           private final int count;
@@ -83,10 +83,10 @@ describe('njava compiler', () => {
 
     expect(result.success).toBe(true);
     expect(result.errors).toHaveLength(0);
-    expect(result.mainClass).toBe('net.neptune.test.SimpleTask');
-    expect(result.classes.has('net.neptune.test.SimpleTask')).toBe(true);
+    expect(result.mainClass).toBe('org.exoproc.test.SimpleTask');
+    expect(result.classes.has('org.exoproc.test.SimpleTask')).toBe(true);
 
-    const bytecode = result.classes.get('net.neptune.test.SimpleTask')!;
+    const bytecode = result.classes.get('org.exoproc.test.SimpleTask')!;
     expect(bytecode.length).toBeGreaterThan(100);
 
     // Verify Java bytecode magic number: 0xCAFEBABE
@@ -104,7 +104,7 @@ describe('njava compiler', () => {
     const javaPath = getTestJavaPath(8);
 
     const source = `
-      package net.neptune.test;
+      package org.exoproc.test;
 
       public class OuterClass {
           public static class InnerStatic {
@@ -128,18 +128,18 @@ describe('njava compiler', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.classes.has('net.neptune.test.OuterClass')).toBe(true);
-    expect(result.classes.has('net.neptune.test.OuterClass$InnerStatic')).toBe(
+    expect(result.classes.has('org.exoproc.test.OuterClass')).toBe(true);
+    expect(result.classes.has('org.exoproc.test.OuterClass$InnerStatic')).toBe(
       true,
     );
-    expect(result.classes.has('net.neptune.test.OuterClass$1')).toBe(true);
+    expect(result.classes.has('org.exoproc.test.OuterClass$1')).toBe(true);
   });
 
   it('handles compilation errors gracefully', async () => {
     const javaPath = getTestJavaPath(8);
 
     const brokenSource = `
-      package net.neptune.test;
+      package org.exoproc.test;
 
       public class BrokenClass {
           this is totally invalid java code!
@@ -164,7 +164,7 @@ describe('njava compiler', () => {
     }
 
     const source = `
-      package net.neptune.test;
+      package org.exoproc.test;
 
       public class ModernClass {
           public static String format(Object obj) {
@@ -181,9 +181,9 @@ describe('njava compiler', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.classes.has('net.neptune.test.ModernClass')).toBe(true);
+    expect(result.classes.has('org.exoproc.test.ModernClass')).toBe(true);
 
-    const bytecode = result.classes.get('net.neptune.test.ModernClass')!;
+    const bytecode = result.classes.get('org.exoproc.test.ModernClass')!;
     // Verify Java 17 major version: 61 (0x003D)
     const majorVersion = (bytecode[6] << 8) | bytecode[7];
     expect(majorVersion).toBe(61);

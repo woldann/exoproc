@@ -1,11 +1,11 @@
 /**
- * Neptune Tools System
+ * Exoproc Tools System
  *
  * Provides interactive reverse-engineering and instrumentation utilities
  * that can be triggered from the Web UI or API.
  */
 
-export interface NeptuneToolParameter {
+export interface ExoprocToolParameter {
   name: string;
   type: 'string' | 'number' | 'boolean';
   description: string;
@@ -13,20 +13,20 @@ export interface NeptuneToolParameter {
   required?: boolean;
 }
 
-export interface NeptuneTool {
+export interface ExoprocTool {
   id: string;
   name: string;
   description: string;
   category: 'Memory' | 'Network' | 'World' | 'Diagnostics';
   icon: string;
-  parameters: NeptuneToolParameter[];
+  parameters: ExoprocToolParameter[];
   execute: (
     args: Record<string, any>,
   ) => Promise<{ success: boolean; message: string; data?: any }>;
 }
 
 export class ToolManager {
-  private tools: Map<string, NeptuneTool> = new Map();
+  private tools: Map<string, ExoprocTool> = new Map();
 
   constructor() {
     this.registerDefaultTools();
@@ -140,7 +140,7 @@ export class ToolManager {
     });
   }
 
-  public registerTool(tool: NeptuneTool) {
+  public registerTool(tool: ExoprocTool) {
     this.tools.set(tool.id, tool);
   }
 
@@ -150,7 +150,7 @@ export class ToolManager {
     description: string;
     category: string;
     icon: string;
-    parameters: NeptuneToolParameter[];
+    parameters: ExoprocToolParameter[];
   }[] {
     return Array.from(this.tools.values()).map((t) => ({
       id: t.id,

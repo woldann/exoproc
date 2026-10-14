@@ -46,7 +46,7 @@ export class CdpWebviewDriver implements WebviewDriver {
     this.bindings.set(name, fn);
     // Expose on currently running document if already connected
     this.eval(
-      `if (typeof window.__neptune_bind_fn === 'function') { window.__neptune_bind_fn(${JSON.stringify(name)}); }`,
+      `if (typeof window.__exoproc_bind_fn === 'function') { window.__exoproc_bind_fn(${JSON.stringify(name)}); }`,
     );
   }
 
@@ -65,33 +65,33 @@ export class CdpWebviewDriver implements WebviewDriver {
   private injectRpcBridge() {
     const boundNames = Array.from(this.bindings.keys());
     const initScript = `
-      window.__neptune_rpc_resolvers = window.__neptune_rpc_resolvers || {};
-      window.__neptune_rpc_rejecters = window.__neptune_rpc_rejecters || {};
+      window.__exoproc_rpc_resolvers = window.__exoproc_rpc_resolvers || {};
+      window.__exoproc_rpc_rejecters = window.__exoproc_rpc_rejecters || {};
 
-      window.__neptune_rpc_resolve = function(callId, result) {
-        if (window.__neptune_rpc_resolvers && window.__neptune_rpc_resolvers[callId]) {
-          window.__neptune_rpc_resolvers[callId](result);
-          delete window.__neptune_rpc_resolvers[callId];
-          delete window.__neptune_rpc_rejecters[callId];
+      window.__exoproc_rpc_resolve = function(callId, result) {
+        if (window.__exoproc_rpc_resolvers && window.__exoproc_rpc_resolvers[callId]) {
+          window.__exoproc_rpc_resolvers[callId](result);
+          delete window.__exoproc_rpc_resolvers[callId];
+          delete window.__exoproc_rpc_rejecters[callId];
         }
       };
 
-      window.__neptune_rpc_reject = function(callId, error) {
-        if (window.__neptune_rpc_rejecters && window.__neptune_rpc_rejecters[callId]) {
-          window.__neptune_rpc_rejecters[callId](new Error(error));
-          delete window.__neptune_rpc_resolvers[callId];
-          delete window.__neptune_rpc_rejecters[callId];
+      window.__exoproc_rpc_reject = function(callId, error) {
+        if (window.__exoproc_rpc_rejecters && window.__exoproc_rpc_rejecters[callId]) {
+          window.__exoproc_rpc_rejecters[callId](new Error(error));
+          delete window.__exoproc_rpc_resolvers[callId];
+          delete window.__exoproc_rpc_rejecters[callId];
         }
       };
 
-      window.__neptune_bind_fn = function(name) {
+      window.__exoproc_bind_fn = function(name) {
         window[name] = function(...args) {
           return new Promise(function(resolve, reject) {
             var callId = Math.random().toString(36).substring(2) + Date.now().toString(36);
-            window.__neptune_rpc_resolvers[callId] = resolve;
-            window.__neptune_rpc_rejecters[callId] = reject;
-            if (typeof window.__NEPTUNE_RPC_DISPATCH__ === 'function') {
-              window.__NEPTUNE_RPC_DISPATCH__(JSON.stringify({ callId: callId, fnName: name, args: args }));
+            window.__exoproc_rpc_resolvers[callId] = resolve;
+            window.__exoproc_rpc_rejecters[callId] = reject;
+            if (typeof window.__EXOPROC_RPC_DISPATCH__ === 'function') {
+              window.__EXOPROC_RPC_DISPATCH__(JSON.stringify({ callId: callId, fnName: name, args: args }));
             } else {
               resolve(null);
             }
@@ -101,7 +101,7 @@ export class CdpWebviewDriver implements WebviewDriver {
 
       // Register all bound function names on window
       ${JSON.stringify(boundNames)}.forEach(function(fn) {
-        window.__neptune_bind_fn(fn);
+        window.__exoproc_bind_fn(fn);
       });
     `;
 
@@ -111,13 +111,13 @@ export class CdpWebviewDriver implements WebviewDriver {
   private resolveRpc(callId: string, result: any) {
     const serialized = JSON.stringify(result === undefined ? null : result);
     this.eval(
-      `if (typeof window.__neptune_rpc_resolve === 'function') { window.__neptune_rpc_resolve(${JSON.stringify(callId)}, ${serialized}); }`,
+      `if (typeof window.__exoproc_rpc_resolve === 'function') { window.__exoproc_rpc_resolve(${JSON.stringify(callId)}, ${serialized}); }`,
     );
   }
 
   private rejectRpc(callId: string, error: string) {
     this.eval(
-      `if (typeof window.__neptune_rpc_reject === 'function') { window.__neptune_rpc_reject(${JSON.stringify(callId)}, ${JSON.stringify(error)}); }`,
+      `if (typeof window.__exoproc_rpc_reject === 'function') { window.__exoproc_rpc_reject(${JSON.stringify(callId)}, ${JSON.stringify(error)}); }`,
     );
   }
 }

@@ -27,7 +27,7 @@ export class NativeWebviewDriver implements WebviewDriver {
       const { Webview } = await import('bun-webview').catch(() => ({}) as any);
       if (Webview) {
         this.webviewInstance = new Webview();
-        this.webviewInstance.title = this.options.title || 'Neptune Cockpit';
+        this.webviewInstance.title = this.options.title || 'Exoproc Cockpit';
         this.webviewInstance.size = {
           width: this.options.width || 1280,
           height: this.options.height || 820,

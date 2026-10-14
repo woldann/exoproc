@@ -27,24 +27,6 @@ export function loadScript(scriptName: string): string {
       'scripts',
       `${scriptName}.ts`,
     ),
-    join(root, 'packages', 'neptune', 'dist', 'scripts', `${scriptName}.js`),
-    join(root, 'packages', 'neptune', 'src', 'scripts', `${scriptName}.ts`),
-    join(
-      root,
-      'packages',
-      'neptune-tool',
-      'dist',
-      'scripts',
-      `${scriptName}.js`,
-    ),
-    join(
-      root,
-      'packages',
-      'neptune-tool',
-      'src',
-      'scripts',
-      `${scriptName}.ts`,
-    ),
     join(import.meta.dirname, '..', 'scripts', `${scriptName}.js`),
     join(import.meta.dirname, '..', 'scripts', `${scriptName}.ts`),
     join(import.meta.dirname, 'scripts', `${scriptName}.js`),
@@ -106,7 +88,6 @@ export function findRepoRoot(): string {
         existsSync(join(curr, 'bunfig.toml')) &&
         (existsSync(join(curr, 'bun-wine')) ||
           existsSync(join(curr, 'exoproc-tool')) ||
-          existsSync(join(curr, 'neptune-tool')) ||
           existsSync(join(curr, 'package.json')))
       ) {
         return curr;
@@ -124,8 +105,6 @@ export function getDaemonState(): DaemonState | null {
   const paths = [
     join(root, 'tmp', '.exoproc-daemon.json'),
     join(root, 'tmp', '.exoproc-tool-daemon.json'),
-    join(root, 'tmp', '.neptune-daemon.json'),
-    join(root, 'tmp', '.neptune-tool-daemon.json'),
   ];
   for (const p of paths) {
     if (existsSync(p)) {
@@ -142,10 +121,8 @@ export function getDaemonEndpoint(): {
   port: number;
   isRemote: boolean;
 } {
-  const envHost =
-    process.env.HOST || process.env.EXOPROC_HOST || process.env.NEPTUNE_HOST;
-  const envPortStr =
-    process.env.PORT || process.env.EXOPROC_PORT || process.env.NEPTUNE_PORT;
+  const envHost = process.env.HOST || process.env.EXOPROC_HOST;
+  const envPortStr = process.env.PORT || process.env.EXOPROC_PORT;
   const envPort = envPortStr ? parseInt(envPortStr, 10) : undefined;
 
   if (envHost && envPort) {
@@ -274,33 +251,13 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
     'daemon',
     'cli.ts',
   );
-  const neptuneDaemonDist = join(
-    root,
-    'packages',
-    'neptune',
-    'dist',
-    'daemon',
-    'cli.js',
-  );
-  const neptuneDaemonSrc = join(
-    root,
-    'packages',
-    'neptune',
-    'src',
-    'daemon',
-    'cli.ts',
-  );
   const targetScript = existsSync(daemonJs)
     ? daemonJs
     : existsSync(exoprocDaemonDist)
       ? exoprocDaemonDist
       : existsSync(exoprocDaemonSrc)
         ? exoprocDaemonSrc
-        : existsSync(neptuneDaemonDist)
-          ? neptuneDaemonDist
-          : existsSync(neptuneDaemonSrc)
-            ? neptuneDaemonSrc
-            : null;
+        : null;
 
   const winBunDir =
     process.env.BUN_WIN_DIR ||
@@ -323,7 +280,7 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
       child.unref();
     } else {
       throw new Error(
-        'Neptune daemon binary or script not found. Please build with `bun run daemon:build`.',
+        'Exoproc daemon binary or script not found. Please build with `bun run daemon:build`.',
       );
     }
   } else {
@@ -351,7 +308,7 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
       child.unref();
     } else {
       throw new Error(
-        'Neptune daemon binary or bundle not found. Please build with `bun run daemon:build`.',
+        'Exoproc daemon binary or bundle not found. Please build with `bun run daemon:build`.',
       );
     }
   }
@@ -368,7 +325,7 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
   }
 
   throw new Error(
-    'Neptune daemon started in background but failed liveness check.',
+    'Exoproc daemon started in background but failed liveness check.',
   );
 }
 
@@ -585,7 +542,6 @@ let cachedTargetMode: any = null;
 
 export const DEFAULT_AGENT_PORT = 43378;
 export const DEFAULT_EXOPROC_PORT = 43377;
-export const DEFAULT_NEPTUNE_PORT = 43377;
 
 export async function probeEndpoint(
   host: string,
@@ -730,8 +686,8 @@ export async function isMinecraftTarget(
 ): Promise<boolean> {
   if (activeMinecraftClient) return true;
   if (
-    process.env.NEPTUNE_MINECRAFT === '1' ||
-    process.env.NEPTUNE_MINECRAFT === 'true'
+    process.env.EXOPROC_MINECRAFT === '1' ||
+    process.env.EXOPROC_MINECRAFT === 'true'
   )
     return true;
   const status = (await checkDaemonAlive(host, port)) as any;
@@ -793,7 +749,7 @@ export async function ensureMinecraft(
       activeMinecraftMappings = activeMinecraftClient?.mappings ?? null;
       return activeMinecraftClient;
     } catch (err) {
-      if (process.env.DEBUG || process.env.NEPTUNE_DEBUG || options?.force) {
+      if (process.env.DEBUG || process.env.EXOPROC_DEBUG || options?.force) {
         console.error('[ensureMinecraft Error]', err);
       }
       return null;

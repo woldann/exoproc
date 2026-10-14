@@ -1,5 +1,5 @@
 /**
- * Engine-side AES-GCM-256 Authenticated Encryption for Neptune Bridge.
+ * Engine-side AES-GCM-256 Authenticated Encryption for Exoproc Bridge.
  * Protects all MDX layouts, configuration values, and telemetry.
  */
 

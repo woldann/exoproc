@@ -3,7 +3,7 @@ import {
   extractClassNameFromClassBytes,
   getAgentBytecodeSync,
 } from 'njava-agent';
-import { NeptuneClient } from 'exoproc';
+import { ExoprocClient } from 'exoproc';
 import { runDaemon, clearDaemonState } from 'exoproc/daemon';
 import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -51,8 +51,8 @@ describe('Exoproc Agent Upgrade System (.class loading & elevation)', () => {
     expect(extracted).toBe('org.exoproc.njava.agent.utils.Exoproc');
   });
 
-  it('NeptuneClient exposes upgradeToAgent and upgrade methods', () => {
-    const client = new NeptuneClient();
+  it('ExoprocClient exposes upgradeToAgent and upgrade methods', () => {
+    const client = new ExoprocClient();
     expect(client.isUpgraded).toBe(false);
     expect(client.agentPort).toBeUndefined();
     expect(typeof client.upgradeToAgent).toBe('function');
@@ -79,8 +79,8 @@ describe('Exoproc Agent Upgrade System (.class loading & elevation)', () => {
     expect(failJson.error).toContain('Daemon is not attached');
   });
 
-  it('NeptuneClient connects to daemon and verifies upgrade interface', async () => {
-    const client = new NeptuneClient();
+  it('ExoprocClient connects to daemon and verifies upgrade interface', async () => {
+    const client = new ExoprocClient();
     const st = await client.connectDaemon({
       host: '127.0.0.1',
       port: TEST_PORT,

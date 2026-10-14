@@ -104,33 +104,33 @@ export class CdpClient {
                 this.hasConnectedOnce = true;
                 this.isDisconnected = false;
                 console.log(
-                  `[Neptune Engine] ✓ DevTools CDP connected to Deno Cockpit: ${pageTarget.url}`,
+                  `[Exoproc Engine] ✓ DevTools CDP connected to Deno Cockpit: ${pageTarget.url}`,
                 );
 
                 this.send('Runtime.enable');
                 this.send('Page.enable');
                 this.send('Runtime.addBinding', {
-                  name: '__NEPTUNE_RPC_DISPATCH__',
+                  name: '__EXOPROC_RPC_DISPATCH__',
                 });
-                this.send('Runtime.addBinding', { name: '__NEPTUNE_IPC__' });
+                this.send('Runtime.addBinding', { name: '__EXOPROC_IPC__' });
                 this.send('Runtime.addBinding', { name: '__WEBVIEW_IPC__' });
                 this.send('Runtime.addBinding', {
-                  name: '__neptune_native_ping',
+                  name: '__exoproc_native_ping',
                 });
 
                 const nativeEarlyScript = `
-                  window.__NEPTUNE_NATIVE__ = true;
-                  window.__NEPTUNE_LAUNCHED__ = true;
-                  window.__NEPTUNE_ENGINE_ATTACHED__ = true;
-                  window.__NEPTUNE_VERSION__ = "1.0.0";
-                  window.__NEPTUNE_CDP_READY__ = true;
+                  window.__EXOPROC_NATIVE__ = true;
+                  window.__EXOPROC_LAUNCHED__ = true;
+                  window.__EXOPROC_ENGINE_ATTACHED__ = true;
+                  window.__EXOPROC_VERSION__ = "1.0.0";
+                  window.__EXOPROC_CDP_READY__ = true;
                   try {
                     if (typeof window.sessionStorage !== 'undefined') {
-                      window.sessionStorage.setItem("neptune_is_native", "1");
+                      window.sessionStorage.setItem("exoproc_is_native", "1");
                     }
                   } catch {}
                   if (typeof window.dispatchEvent === 'function') {
-                    window.dispatchEvent(new CustomEvent('neptune:native-ready', { detail: { native: true } }));
+                    window.dispatchEvent(new CustomEvent('exoproc:native-ready', { detail: { native: true } }));
                   }
                 `;
                 this.send('Page.addScriptToEvaluateOnNewDocument', {
@@ -237,7 +237,7 @@ export class CdpClient {
   private handleDisconnect(reason: string = 'Connection closed') {
     if (this.isDisconnected) return;
     this.isDisconnected = true;
-    console.log(`[Neptune Engine] ℹ DevTools CDP connection closed: ${reason}`);
+    console.log(`[Exoproc Engine] ℹ DevTools CDP connection closed: ${reason}`);
 
     if (this.healthTimer) {
       clearInterval(this.healthTimer);
@@ -309,8 +309,8 @@ export class CdpClient {
         msg.method === 'Page.frameNavigated' ||
         msg.method === 'Runtime.executionContextCreated'
       ) {
-        this.send('Runtime.addBinding', { name: '__NEPTUNE_RPC_DISPATCH__' });
-        this.send('Runtime.addBinding', { name: '__NEPTUNE_IPC__' });
+        this.send('Runtime.addBinding', { name: '__EXOPROC_RPC_DISPATCH__' });
+        this.send('Runtime.addBinding', { name: '__EXOPROC_IPC__' });
         this.send('Runtime.addBinding', { name: '__WEBVIEW_IPC__' });
         if (this.options.injectedScript) {
           this.send('Runtime.evaluate', {
@@ -325,7 +325,7 @@ export class CdpClient {
 
       if (
         msg.method === 'Runtime.bindingCalled' &&
-        msg.params?.name === '__NEPTUNE_RPC_DISPATCH__'
+        msg.params?.name === '__EXOPROC_RPC_DISPATCH__'
       ) {
         try {
           const payload =
@@ -345,7 +345,7 @@ export class CdpClient {
 
       if (
         msg.method === 'Runtime.bindingCalled' &&
-        (msg.params?.name === '__NEPTUNE_IPC__' ||
+        (msg.params?.name === '__EXOPROC_IPC__' ||
           msg.params?.name === '__WEBVIEW_IPC__')
       ) {
         const payload = JSON.parse(msg.params.payload);
@@ -353,7 +353,7 @@ export class CdpClient {
       } else if (msg.method === 'Runtime.consoleAPICalled') {
         const firstArg = msg.params?.args?.[0]?.value;
         if (typeof firstArg === 'string') {
-          if (firstArg.startsWith('__NEPTUNE_IPC__:')) {
+          if (firstArg.startsWith('__EXOPROC_IPC__:')) {
             const payload = JSON.parse(firstArg.slice(16));
             if (this.options.onMessage) this.options.onMessage(payload);
           } else if (firstArg.startsWith('__WEBVIEW_IPC__:')) {

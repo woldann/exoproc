@@ -1,5 +1,5 @@
 /**
- * Core Struct Definitions for Neptune Reactive Webview Bridge
+ * Core Struct Definitions for Exoproc Reactive Webview Bridge
  *
  * Struct 1: ConfigState (Web UI -> Engine)
  * Struct 2: TelemetryState (Engine -> Web UI)

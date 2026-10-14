@@ -1,11 +1,16 @@
 {
-  "title": "JVM ve Reflection",
+  "title": "JVM & Yansıma (Reflection)",
   "pages": [
     "overview",
     "java-type",
     "collections-and-arrays",
     "class-extension",
     "exception-handling",
-    "deobfuscation-mappings"
+    "deobfuscation-mappings",
+    "dynamic-compilation",
+    "bytecode-injection",
+    "agent-bridge",
+    "stub-generation",
+    "script-runner"
   ]
 }

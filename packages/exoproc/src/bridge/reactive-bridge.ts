@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import type { NeptuneClient } from '../client.js';
+import type { ExoprocClient } from '../client.js';
 import { GAME_PROFILES } from '../config/profiles.js';
 import type { WebviewDriver } from '../webview/driver.js';
 import { CdpWebviewDriver } from '../webview/cdp-driver.js';
@@ -18,7 +18,7 @@ export type ConfigChangeCallback = (
 ) => void;
 export type ActionCallback = (action: string, payload: any) => void;
 
-import { DEFAULT_NEPTUNE_LAYOUT_MDX } from '../layout/default-layout.js';
+import { DEFAULT_EXOPROC_LAYOUT_MDX } from '../layout/default-layout.js';
 import {
   importBridgeCryptoKey,
   encryptBridgePacket,
@@ -40,7 +40,7 @@ export const DEFAULT_PRESETS: ConfigPreset[] = [
   },
 ];
 
-export interface NeptuneUIConfig {
+export interface ExoprocUIConfig {
   statusTitle: string;
   statusSubtitle: string;
   showSearchBar: boolean;
@@ -54,7 +54,7 @@ export interface NeptuneUIConfig {
   emptyStateSubtitle: string;
 }
 
-export const DEFAULT_UI_CONFIG: NeptuneUIConfig = {
+export const DEFAULT_UI_CONFIG: ExoprocUIConfig = {
   statusTitle: '0ms',
   statusSubtitle: 'Local Engine Bridge Active',
   showSearchBar: true,
@@ -66,11 +66,11 @@ export const DEFAULT_UI_CONFIG: NeptuneUIConfig = {
   showProcessPicker: true,
   emptyStateTitle: 'No instrumentation active',
   emptyStateSubtitle:
-    'All diagnostics are dynamically provided by the Neptune Engine.',
+    'All diagnostics are dynamically provided by the Exoproc Engine.',
 };
 
 /**
- * Dedicated Deno Fresh Cockpit Bridge & RPC Binding for Neptune.
+ * Dedicated Deno Fresh Cockpit Bridge & RPC Binding for Exoproc.
  * Connects the Deno Web Cockpit directly via WebviewDriver (CDP or Native Webview).
  */
 export class ReactiveWebviewBridge {
@@ -85,7 +85,7 @@ export class ReactiveWebviewBridge {
     targetPid: null,
   };
 
-  public layoutMdx: string = DEFAULT_NEPTUNE_LAYOUT_MDX;
+  public layoutMdx: string = DEFAULT_EXOPROC_LAYOUT_MDX;
   public cryptoKey: CryptoKey | null = null;
   public isEncrypted: boolean = false;
   public activeAccount: { id: string; name: string; username?: string } | null =
@@ -127,7 +127,7 @@ export class ReactiveWebviewBridge {
   public expectedSessionNonce?: string;
 
   constructor(
-    public client?: NeptuneClient,
+    public client?: ExoprocClient,
     targetUrl?: string,
     driver?: WebviewDriver,
     sessionNonce?: string,
@@ -141,7 +141,7 @@ export class ReactiveWebviewBridge {
         onConnect: () => {
           this.driver.eval(`
             if (typeof window.dispatchEvent === 'function') {
-              window.dispatchEvent(new CustomEvent('neptune:engine-ready', { detail: { ready: true } }));
+              window.dispatchEvent(new CustomEvent('exoproc:engine-ready', { detail: { ready: true } }));
             }
           `);
           this.syncFullState();
@@ -169,7 +169,7 @@ export class ReactiveWebviewBridge {
           sessionNonce !== this.expectedSessionNonce
         ) {
           console.warn(
-            '[Neptune Bridge] ⚠️ Session nonce mismatch in canSwitchToEncrypted!',
+            '[Exoproc Bridge] ⚠️ Session nonce mismatch in canSwitchToEncrypted!',
           );
           return false;
         }
@@ -199,7 +199,7 @@ export class ReactiveWebviewBridge {
               this.cryptoKey = await importBridgeCryptoKey(data.key);
               this.isEncrypted = true;
               console.log(
-                `[Neptune Bridge] ✓ E2EE Key loaded for [${targetUserId}]! canSwitchToEncrypted: TRUE`,
+                `[Exoproc Bridge] ✓ E2EE Key loaded for [${targetUserId}]! canSwitchToEncrypted: TRUE`,
               );
               // Immediately sync full state and start telemetry loop
               this.syncFullState();
@@ -233,7 +233,7 @@ export class ReactiveWebviewBridge {
       this.isEncrypted = false;
       resetBridgeCryptoSeq();
       console.log(
-        `[Neptune Bridge] 🔄 Switched engine account to [${user?.name || 'Guest'}]. Awaiting new key.`,
+        `[Exoproc Bridge] 🔄 Switched engine account to [${user?.name || 'Guest'}]. Awaiting new key.`,
       );
       return { success: true };
     });
@@ -255,7 +255,7 @@ export class ReactiveWebviewBridge {
   public startScreenshotLoop(intervalMs: number = 2000) {
     if (this.screenshotTimer) return;
     const outputPath =
-      process.env.NEPTUNE_SCREENSHOT_PATH || 'neptune-cockpit.png';
+      process.env.EXOPROC_SCREENSHOT_PATH || 'exoproc-cockpit.png';
 
     this.screenshotTimer = setInterval(async () => {
       try {
@@ -313,7 +313,7 @@ export class ReactiveWebviewBridge {
     }
   }
 
-  private uiConfig: NeptuneUIConfig = DEFAULT_UI_CONFIG;
+  private uiConfig: ExoprocUIConfig = DEFAULT_UI_CONFIG;
 
   public async getSerializedState() {
     if (this.client) {
@@ -390,14 +390,14 @@ export class ReactiveWebviewBridge {
         .then((encryptedPacket) => {
           const payload = JSON.stringify(encryptedPacket);
           this.driver.eval(`
-            if (window.__NEPTUNE_SDK__) {
-              window.__NEPTUNE_SDK__.receiveEngineState(${payload});
+            if (window.__EXOPROC_SDK__) {
+              window.__EXOPROC_SDK__.receiveEngineState(${payload});
             }
             window.dispatchEvent(new CustomEvent('engine:state', { detail: ${payload} }));
           `);
         })
         .catch((e) =>
-          console.error('[Neptune Encrypted Bridge] Encryption error:', e),
+          console.error('[Exoproc Encrypted Bridge] Encryption error:', e),
         );
       return;
     }
@@ -461,7 +461,7 @@ export class ReactiveWebviewBridge {
         const decrypted = await decryptBridgePacket(packet, this.cryptoKey);
         await this.handleAction(decrypted.action, decrypted);
       } catch (err) {
-        console.error('[Neptune Bridge] Error decrypting inbound packet:', err);
+        console.error('[Exoproc Bridge] Error decrypting inbound packet:', err);
       }
       return;
     }
@@ -473,7 +473,7 @@ export class ReactiveWebviewBridge {
         try {
           cb(msg as ConfigDiffEvent, this.config);
         } catch (e) {
-          console.error('[Neptune] Error in config callback:', e);
+          console.error('[Exoproc] Error in config callback:', e);
         }
       }
       return;
@@ -487,7 +487,7 @@ export class ReactiveWebviewBridge {
       try {
         cb(action, payload);
       } catch (e) {
-        console.error('[Neptune] Error in action callback:', e);
+        console.error('[Exoproc] Error in action callback:', e);
       }
     }
 
@@ -531,16 +531,16 @@ export class ReactiveWebviewBridge {
         const profileId = payload.profileId;
         if (pid && this.client) {
           console.log(
-            `[Neptune Engine] Attaching to game process PID ${pid}...`,
+            `[Exoproc Engine] Attaching to game process PID ${pid}...`,
           );
           try {
             await this.client.connect(pid, profileId);
             console.log(
-              `[Neptune Engine] ✓ Successfully attached to process PID ${pid}`,
+              `[Exoproc Engine] ✓ Successfully attached to process PID ${pid}`,
             );
           } catch (err: any) {
             console.error(
-              `[Neptune Engine] ✗ Attachment failed for PID ${pid}:`,
+              `[Exoproc Engine] ✗ Attachment failed for PID ${pid}:`,
               err?.message ?? err,
             );
           }

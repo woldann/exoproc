@@ -32,7 +32,7 @@ server.registerResource(
   'minecraft://status',
   {
     description:
-      'Neptune connection, Minecraft PID, active GUI screen class, and player presence.',
+      'Exoproc connection, Minecraft PID, active GUI screen class, and player presence.',
     mimeType: 'application/json',
   },
   async (uri) => {
@@ -165,7 +165,7 @@ server.registerResource(
 );
 
 // ==========================================
-// MCP Tools (exoproc_* and neptune_* aliases)
+// MCP Tools (exoproc_* tools)
 // ==========================================
 
 function registerTool(
@@ -175,13 +175,12 @@ function registerTool(
   handler: any,
 ) {
   (server as any).tool(`exoproc_${toolName}`, description, schema, handler);
-  (server as any).tool(`neptune_${toolName}`, description, schema, handler);
 }
 
 // 1. Connection & Status
 registerTool(
   'status',
-  'Get Neptune daemon/agent connection status, target Minecraft PID, screen, and player state.',
+  'Get Exoproc daemon/agent connection status, target Minecraft PID, screen, and player state.',
   {},
   async () => {
     try {

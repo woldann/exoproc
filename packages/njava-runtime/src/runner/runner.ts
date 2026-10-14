@@ -88,11 +88,11 @@ export function resolveWorkerPath(): URL | string {
       'worker.ts',
     ),
     join(process.cwd(), 'packages', 'njava-runtime', 'src', 'script-worker.ts'),
-    join(process.cwd(), 'dist-tests', 'neptune', 'worker.js'),
+    join(process.cwd(), 'dist-tests', 'exoproc', 'worker.js'),
     join(
       process.cwd(),
       'packages',
-      'neptune',
+      'exoproc',
       'dist',
       'script-runner',
       'worker.bundle.js',
@@ -100,7 +100,7 @@ export function resolveWorkerPath(): URL | string {
     join(
       process.cwd(),
       'packages',
-      'neptune',
+      'exoproc',
       'dist',
       'script-runner',
       'worker.js',
@@ -108,7 +108,7 @@ export function resolveWorkerPath(): URL | string {
     join(
       process.cwd(),
       'packages',
-      'neptune',
+      'exoproc',
       'src',
       'script-runner',
       'worker.ts',

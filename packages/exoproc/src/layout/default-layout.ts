@@ -1,9 +1,9 @@
 /**
- * Default MDX Layout shipped with Neptune Engine.
+ * Default MDX Layout shipped with Exoproc Engine.
  * Provides a clean, modern tabbed interface for instrumentation and telemetry.
  * Custom frontends can replace this string with their own custom MDX layout.
  */
-export const DEFAULT_NEPTUNE_LAYOUT_MDX = `
+export const DEFAULT_EXOPROC_LAYOUT_MDX = `
 <Tabs>
   <Tab label="Telemetry">
     <Grid cols={2} gap={4}>

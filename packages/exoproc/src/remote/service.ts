@@ -7,8 +7,8 @@ import { guiNavigator } from './gui-navigator.js';
 let _directClient: any = null;
 async function getDirectClient() {
   if (!_directClient) {
-    const { NeptuneClient } = await import('../client.js');
-    _directClient = new NeptuneClient();
+    const { ExoprocClient } = await import('../client.js');
+    _directClient = new ExoprocClient();
   }
   return _directClient;
 }
@@ -625,9 +625,6 @@ export class ExoprocService {
   }
 }
 
-export const NeptuneService = ExoprocService;
-export type NeptuneService = ExoprocService;
 export const ExoprocRemoteService = ExoprocService;
-export const NeptuneRemoteService = ExoprocService;
 export const service = new ExoprocService();
 export default service;

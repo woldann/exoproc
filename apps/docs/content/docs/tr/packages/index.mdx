@@ -1,17 +1,38 @@
 ---
-title: "Paket haritası"
-description: "| Paket               | Sorumluluk                                                                                |"
+title: "Paket Haritası"
+description: "Exoproc monoreposundaki tüm paketlerin mimari sorumlulukları ve genel bakışı."
 ---
 
-| Paket               | Sorumluluk                                                                                |
-| ------------------- | ----------------------------------------------------------------------------------------- |
-| `bun-xffi`          | Cross-process FFI tabanı: C ABI türleri, struct/union yerleşimi, accessor'lar, TinyCC JIT |
-| `bun-winapi`        | Process, thread, module, memory ve context için Win32 sarmalayıcıları                     |
-| `bun-nthread`       | Mevcut hedef thread'ini yönlendirerek çağrı yürütme                                       |
-| `exoproc-accessors` | NThread'i dolaylı bellek/çağrı zincirine bağlayan middleware'ler                          |
-| `bun-nhook`         | 2 byte `EB FE` park-and-simulate inline hook                                              |
-| `bun-minhook`       | 5 byte detour ve taşınmış trampoline hook                                                 |
-| `bun-capstone`      | Talimat çözümleme için Capstone bağları                                                   |
-| `bun-nshm`          | Paylaşılan bellek yardımcıları                                                            |
+Exoproc deposu, Windows x64 platformunu hedefleyen modüler paketlerden oluşan bir Bun çalışma alanı (workspace) monoreposudur:
 
-Uygulama yazarken en basit giriş noktası, `exoproc` paketinden gelen `createAccessor()` işleviyle tam accessor zincirini kurmaktır. `exoproc-utils` ortak yardımcı katmandır; onun dışında `bun-xffi` tüm işlevsel katmanların tabanıdır. `bun-winapi` Windows nesnelerini bu zeminde sarmalar, `bun-nthread` ise thread ve root accessor yaşam döngüsünü sizin kurduğunuz ileri seviye yoldur.
+| Paket | Sorumluluk |
+| --- | --- |
+| **`exoproc`** | **Birleşik üst düzey paket:** CLI çalıştırıcı (`exoproc run`), MCP sunucusu, otomasyon servisi ve doğal Windows süreç içi çalıştırıcı. |
+| **`bun-njava`** | JVM tersine mühendislik, saf JNI vtable yansıması, dinamik sınıf vekilleme ve iş parçacığı bağlama. |
+| **`njava-agent`** | Gerçek zamanlı oyun otomasyonu için gömülü HTTP/RPC sunuculu bellek içi yüksek hızlı Java ajanı. |
+| **`njava-runtime`** | Çalışma zamanı betik yürütme, Nashorn uyumluluk katmanı (`Java.type`, `Java.from`, `Java.extend`) ve sınıf tanımlama stratejileri. |
+| **`exoproc-mappings`**| Çoklu sürüm harita havuzu ve veritabanı dizinleyicisi (Mojang, Fabric Intermediary, Yarn, Forge MCP). |
+| **`exoproc-jjit`** | Sıfır bağımlılıklı bellek içi Java derleyicisi (Java 8 için ECJ 3.26, Java 17+ için ECJ 3.46) ve Tiny-Remapper. |
+| **`bun-xffi`** | Temel süreçler arası FFI: C ABI tipleri, struct/union yerleşimi, bellek erişimcileri ve TinyCC JIT. |
+| **`bun-winapi`** | Win32 süreç, iş parçacığı, modül, bellek ve iş parçacığı bağlam sarmalayıcıları. |
+| **`bun-nthread`** | `CreateRemoteThread` kullanmadan mevcut bir hedef iş parçacığını yönlendirerek gizli süreçler arası kod çalıştırma. |
+| **`bun-nhook`** | Bellek tahsisi gerektirmeyen 2 baytlık satır içi `EB FE` beklet-ve-simüle-et fonksiyon yönlendirmesi. |
+| **`bun-minhook`** | Standart 5 baytlık rel32 JMP sapma ve taşınmış trambolin kancalama mimarisi (uzak geçit/relay desteğiyle). |
+| **`bun-capstone`** | Komut kod çözme ve göreceli adres yeniden konumlandırma için Capstone tersine derleme bağlayıcıları. |
+| **`bun-nshm`** | Süreçler arası paylaşımlı bellek yardımcıları ve eşitleme ilkelleri. |
+| **`exoproc-utils`** | Ortak günlükleme, hata yönetimi ve performans tanı araçları. |
+
+## Mimari Akış
+
+```text
+exoproc (Birleşik CLI, MCP & Otomasyon)
+  │
+  ├─► njava ailesi (bun-njava, njava-agent, njava-runtime, exoproc-mappings, exoproc-jjit)
+  │     └─► JVM Yansıması, Dinamik Bayt Kodu, Nashorn API & Süreç İçi Ajan
+  │
+  ├─► Kancalama ailesi (bun-nhook, bun-minhook, bun-capstone)
+  │     └─► Fonksiyon Yönlendirme (2 baytlık park & 5 baytlık JMP sapmaları)
+  │
+  └─► Çalıştırma & Bellek temeli (bun-nthread, bun-winapi, bun-xffi)
+        └─► İş Parçacığı Yönlendirme, Win32 API, Bellek Erişimcileri & C-ABI
+```

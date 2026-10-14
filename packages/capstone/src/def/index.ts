@@ -20,7 +20,7 @@ function findCapstoneDll(): string {
     join(__dirname, '../../../packages/capstone/deps/capstone.dll'),
     join(__dirname, '../../../../packages/capstone/deps/capstone.dll'),
     join(process.cwd(), 'packages/capstone/deps/capstone.dll'),
-    join(tmpdir(), 'neptune_capstone.dll'),
+    join(tmpdir(), 'exoproc_capstone.dll'),
   ];
 
   for (const candidate of candidates) {
@@ -34,7 +34,7 @@ function findCapstoneDll(): string {
     typeof EMBEDDED_CAPSTONE_DLL_BASE64 === 'string' &&
     EMBEDDED_CAPSTONE_DLL_BASE64.length > 0
   ) {
-    const tempDllPath = join(tmpdir(), 'neptune_capstone.dll');
+    const tempDllPath = join(tmpdir(), 'exoproc_capstone.dll');
     try {
       if (!existsSync(tempDllPath)) {
         writeFileSync(

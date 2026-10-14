@@ -333,7 +333,7 @@ async function main() {
     }
 
     if (!ready) {
-      console.error('❌ Timeout waiting for Neptune Agent Inspector to start.');
+      console.error('❌ Timeout waiting for Exoproc Agent Inspector to start.');
       if (spawnedProcess) spawnedProcess.kill();
       process.exit(1);
     }

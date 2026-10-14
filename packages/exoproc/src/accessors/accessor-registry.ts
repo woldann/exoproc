@@ -1,8 +1,8 @@
 /**
- * Neptune Accessor Registry
+ * Exoproc Accessor Registry
  *
  * Manages active typed memory accessors mapped from target JVM game processes.
- * When attached to a process, Neptune initializes these accessors to provide
+ * When attached to a process, Exoproc initializes these accessors to provide
  * direct AST/JNI memory pointer reads, field offsets, and live telemetry to the Web UI.
  */
 
@@ -250,7 +250,7 @@ export class AccessorRegistry {
   }
 
   /**
-   * Called when Neptune attaches to a target process (PID).
+   * Called when Exoproc attaches to a target process (PID).
    * Resolves base memory pointers for all accessors.
    */
   public attach(pid: number, _profileId = 'vanilla_1_8_9') {

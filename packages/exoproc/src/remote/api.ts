@@ -775,18 +775,12 @@ export interface ExportMappingsResult {
 function findDatabaseTemplate(): string | null {
   const possiblePaths = [
     resolve(process.cwd(), 'packages/njava-agent/resources/database.json'),
-    resolve(process.cwd(), 'packages/neptune-agent/resources/database.json'),
     resolve(process.cwd(), 'packages/minecraft/src/mappings/database.json'),
     resolve(import.meta.dirname, '../../njava-agent/resources/database.json'),
-    resolve(import.meta.dirname, '../../neptune-agent/resources/database.json'),
     resolve(import.meta.dirname, '../../minecraft/src/mappings/database.json'),
     resolve(
       import.meta.dirname,
       '../../../packages/njava-agent/resources/database.json',
-    ),
-    resolve(
-      import.meta.dirname,
-      '../../../packages/neptune-agent/resources/database.json',
     ),
     resolve(
       import.meta.dirname,
@@ -797,9 +791,6 @@ function findDatabaseTemplate(): string | null {
     process.env.EXOPROC_DATABASE_FILE ||
     process.env.EXOPROC_DATABASE_PATH ||
     process.env.EXOPROC_DATABASE ||
-    process.env.NEPTUNE_DATABASE_FILE ||
-    process.env.NEPTUNE_DATABASE_PATH ||
-    process.env.NEPTUNE_DATABASE ||
     process.env.DATABASE_FILE;
   if (envDb && existsSync(envDb)) {
     try {
@@ -821,9 +812,6 @@ function findExistingMappings(profile: string): any {
     process.env.EXOPROC_MAPPINGS_FILE ||
     process.env.EXOPROC_MAPPINGS_PATH ||
     process.env.EXOPROC_MAPPINGS ||
-    process.env.NEPTUNE_MAPPINGS_FILE ||
-    process.env.NEPTUNE_MAPPINGS_PATH ||
-    process.env.NEPTUNE_MAPPINGS ||
     process.env.MAPPINGS_FILE;
   if (envMap && existsSync(envMap)) {
     try {
@@ -837,10 +825,6 @@ function findExistingMappings(profile: string): any {
     ),
     resolve(
       process.cwd(),
-      `packages/neptune-agent/resources/mappings-${profile}.json`,
-    ),
-    resolve(
-      process.cwd(),
       `packages/minecraft/src/mappings/mappings-${profile}.json`,
     ),
     resolve(
@@ -849,19 +833,11 @@ function findExistingMappings(profile: string): any {
     ),
     resolve(
       import.meta.dirname,
-      `../../neptune-agent/resources/mappings-${profile}.json`,
-    ),
-    resolve(
-      import.meta.dirname,
       `../../minecraft/src/mappings/mappings-${profile}.json`,
     ),
     resolve(
       import.meta.dirname,
       `../../../packages/njava-agent/resources/mappings-${profile}.json`,
-    ),
-    resolve(
-      import.meta.dirname,
-      `../../../packages/neptune-agent/resources/mappings-${profile}.json`,
     ),
     resolve(
       import.meta.dirname,
@@ -884,9 +860,6 @@ function findOutputTargetPaths(profile: string): string[] {
     process.env.EXOPROC_MAPPINGS_FILE ||
     process.env.EXOPROC_MAPPINGS_PATH ||
     process.env.EXOPROC_MAPPINGS ||
-    process.env.NEPTUNE_MAPPINGS_FILE ||
-    process.env.NEPTUNE_MAPPINGS_PATH ||
-    process.env.NEPTUNE_MAPPINGS ||
     process.env.MAPPINGS_FILE;
   if (envMap) {
     const absEnvMap = resolve(process.cwd(), envMap);
@@ -899,10 +872,6 @@ function findOutputTargetPaths(profile: string): string[] {
     ),
     resolve(
       process.cwd(),
-      `packages/neptune-agent/resources/mappings-${profile}.json`,
-    ),
-    resolve(
-      process.cwd(),
       `packages/minecraft/src/mappings/mappings-${profile}.json`,
     ),
     resolve(
@@ -911,19 +880,11 @@ function findOutputTargetPaths(profile: string): string[] {
     ),
     resolve(
       import.meta.dirname,
-      `../../neptune-agent/resources/mappings-${profile}.json`,
-    ),
-    resolve(
-      import.meta.dirname,
       `../../minecraft/src/mappings/mappings-${profile}.json`,
     ),
     resolve(
       import.meta.dirname,
       `../../../packages/njava-agent/resources/mappings-${profile}.json`,
-    ),
-    resolve(
-      import.meta.dirname,
-      `../../../packages/neptune-agent/resources/mappings-${profile}.json`,
     ),
     resolve(
       import.meta.dirname,
@@ -1468,7 +1429,7 @@ export async function exportMappings(
     }
 
     exportData = {
-      $schema: 'neptune-mappings-v1',
+      $schema: 'exoproc-mappings-v1',
       version: profile,
       profile,
       generatedAt: new Date().toISOString(),

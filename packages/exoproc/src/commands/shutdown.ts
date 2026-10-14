@@ -1,12 +1,12 @@
 import { shutdownRemote } from '../client.js';
 
 async function main() {
-  console.log('Shutting down Neptune daemon process...');
+  console.log('Shutting down Exoproc daemon process...');
   const res = await shutdownRemote();
   if (res.success) {
-    console.log('✓ Neptune daemon stopped successfully.');
+    console.log('✓ Exoproc daemon stopped successfully.');
   } else {
-    console.log('Neptune daemon was not running or failed to stop.');
+    console.log('Exoproc daemon was not running or failed to stop.');
   }
 }
 

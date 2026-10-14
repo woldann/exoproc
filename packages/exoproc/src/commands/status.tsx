@@ -26,7 +26,7 @@ const StatusCard: React.FC<StatusProps> = ({
       >
         <Box marginBottom={1}>
           <Text bold color="red">
-            🔴 Neptune Daemon: Inactive / Unreachable
+            🔴 Exoproc Daemon: Inactive / Unreachable
           </Text>
         </Box>
         {port ? (
@@ -76,8 +76,8 @@ const StatusCard: React.FC<StatusProps> = ({
       <Box justifyContent="space-between" marginBottom={1}>
         <Text bold color={isAttached ? 'green' : 'yellow'}>
           {isAttached
-            ? '🟢 Neptune Daemon: Active & Attached'
-            : '🟡 Neptune Daemon: Standby Mode'}
+            ? '🟢 Exoproc Daemon: Active & Attached'
+            : '🟡 Exoproc Daemon: Standby Mode'}
         </Text>
         <Text color="black" backgroundColor={isAttached ? 'green' : 'yellow'}>
           {' '}

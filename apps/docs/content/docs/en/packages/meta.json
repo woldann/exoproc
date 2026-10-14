@@ -1,4 +1,4 @@
 {
   "title": "Packages",
-  "pages": ["index", "nthread", "xffi"]
+  "pages": ["index", "exoproc", "njava", "nthread", "xffi"]
 }

@@ -27,7 +27,7 @@ export interface CockpitProps {
   onRescan: () => Promise<void>;
 }
 
-export const NeptuneCockpit: React.FC<CockpitProps> = ({
+export const ExoprocCockpit: React.FC<CockpitProps> = ({
   initialTarget,
   ipcInfo,
   logs,
@@ -97,7 +97,7 @@ export const NeptuneCockpit: React.FC<CockpitProps> = ({
     <box flexDirection="column" style={{ padding: 1, flexGrow: 1 }}>
       {/* Header Banner */}
       <box
-        title=" 🔱 NEPTUNE AUTONOMOUS GAME COCKPIT "
+        title=" 🔱 EXOPROC AUTONOMOUS GAME COCKPIT "
         titleColor="cyan"
         border
         borderStyle="rounded"
@@ -109,7 +109,7 @@ export const NeptuneCockpit: React.FC<CockpitProps> = ({
           <box flexDirection="column">
             <text fg="cyan">
               <strong fg="cyan">
-                Neptune External Instrumentation & Reactive Bridge
+                Exoproc External Instrumentation & Reactive Bridge
               </strong>
             </text>
             <text fg="gray">

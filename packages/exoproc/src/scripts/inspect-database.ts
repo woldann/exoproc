@@ -1,5 +1,5 @@
 /**
- * Inspects canonical schema database in Neptune
+ * Inspects canonical schema database in Exoproc
  * Reads TARGET_CLASS from global scope if provided
  * Outputs:
  * RESULT:DB_MATCH|<json>

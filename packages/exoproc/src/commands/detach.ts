@@ -1,11 +1,11 @@
 import { detachRemote } from '../client.js';
 
 async function main() {
-  console.log('Detaching Neptune Daemon from target process...');
+  console.log('Detaching Exoproc Daemon from target process...');
   const res = await detachRemote();
   if (res.success) {
     console.log('✓ Target process detached successfully.');
-    console.log('🟡 Neptune Daemon remains running in Standby mode.');
+    console.log('🟡 Exoproc Daemon remains running in Standby mode.');
     console.log('   Use `bun run attach [PID]` to attach to another process,');
     console.log('   or `bun run shutdown` to stop the daemon completely.');
   } else {

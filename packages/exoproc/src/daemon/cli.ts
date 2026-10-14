@@ -10,13 +10,13 @@ async function main() {
   if (command === 'status') {
     const state = readDaemonState();
     if (!state) {
-      console.log(chalk.yellow('Neptune Daemon is not running.'));
+      console.log(chalk.yellow('Exoproc Daemon is not running.'));
       process.exit(0);
     }
     const alive = await isDaemonAlive(state);
     if (!alive) {
       console.log(
-        chalk.red('Neptune Daemon state exists but daemon is not responding.'),
+        chalk.red('Exoproc Daemon state exists but daemon is not responding.'),
       );
       clearDaemonState();
       process.exit(1);
@@ -26,7 +26,7 @@ async function main() {
       : chalk.yellow('🟡 Standby (No process attached)');
 
     console.log('┌─────────────────────────────────────────────────────────┐');
-    console.log('│ 📊 Neptune Daemon Status                                │');
+    console.log('│ 📊 Exoproc Daemon Status                                │');
     console.log('├─────────────────────────────────────────────────────────┤');
     console.log(`│ Status:        ${statusStr}`);
     if (state.upgraded) {
@@ -87,7 +87,7 @@ async function main() {
         method: 'POST',
         signal: AbortSignal.timeout(3000),
       });
-      console.log(chalk.green('✓ Neptune daemon process stopped.'));
+      console.log(chalk.green('✓ Exoproc daemon process stopped.'));
     } catch {}
     clearDaemonState();
     process.exit(0);
@@ -97,7 +97,7 @@ async function main() {
     const state = readDaemonState();
     if (!state) {
       console.log(
-        chalk.red('Neptune Daemon is not running. Launch daemon first.'),
+        chalk.red('Exoproc Daemon is not running. Launch daemon first.'),
       );
       process.exit(1);
     }
@@ -117,7 +117,7 @@ async function main() {
     const state = readDaemonState();
     if (!state) {
       console.log(
-        chalk.red('Neptune Daemon is not running. Start daemon first.'),
+        chalk.red('Exoproc Daemon is not running. Start daemon first.'),
       );
       process.exit(1);
     }
@@ -145,7 +145,7 @@ async function main() {
     const state = readDaemonState();
     if (!state) {
       console.log(
-        chalk.red('Neptune Daemon is not running. Start daemon first.'),
+        chalk.red('Exoproc Daemon is not running. Start daemon first.'),
       );
       process.exit(1);
     }
@@ -213,7 +213,7 @@ async function main() {
   }
 
   console.log(
-    `Usage: neptune-daemon [daemon|status|attach|detach|procs|shutdown] [--port <n>] [--host <ip>] [--auto-attach]`,
+    `Usage: exoproc daemon [daemon|status|attach|detach|procs|shutdown] [--port <n>] [--host <ip>] [--auto-attach]`,
   );
 }
 

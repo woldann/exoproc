@@ -98,7 +98,7 @@ export interface RunningProcessInfo {
   suggestedProfile: GameProfile;
 }
 
-export interface NeptuneTelemetry {
+export interface ExoprocTelemetry {
   connected: boolean;
   pid?: number;
   processName?: string;
@@ -122,7 +122,7 @@ export interface NeptuneTelemetry {
   tickCount: number;
 }
 
-export class NeptuneClient {
+export class ExoprocClient {
   public pid?: number;
   public processName?: string;
   public windowTitle?: string;
@@ -141,12 +141,12 @@ export class NeptuneClient {
   private tickInterval?: any;
   private tickCount = 0;
   private lastTickTime = Date.now();
-  private telemetryListeners: Array<(telemetry: NeptuneTelemetry) => void> = [];
+  private telemetryListeners: Array<(telemetry: ExoprocTelemetry) => void> = [];
 
   constructor() {}
 
   public onTelemetry(
-    listener: (telemetry: NeptuneTelemetry) => void,
+    listener: (telemetry: ExoprocTelemetry) => void,
   ): () => void {
     this.telemetryListeners.push(listener);
     return () => {
@@ -357,11 +357,11 @@ export class NeptuneClient {
         this.rawMc = Minecraft.theMinecraft;
       }
       console.log(
-        '[Neptune] ✓ Initialized fast Java reflection proxy for live Minecraft synchronization',
+        '[Exoproc] ✓ Initialized fast Java reflection proxy for live Minecraft synchronization',
       );
     } catch (proxyErr: any) {
       console.warn(
-        '[Neptune] Standby for Java reflection proxy:',
+        '[Exoproc] Standby for Java reflection proxy:',
         proxyErr?.message ?? proxyErr,
       );
     }
@@ -420,7 +420,7 @@ export class NeptuneClient {
   }
 
   /**
-   * Connects to a running Neptune daemon HTTP server.
+   * Connects to a running Exoproc daemon HTTP server.
    */
   public async connectDaemon(
     options: {
@@ -440,7 +440,7 @@ export class NeptuneClient {
 
     const status = await checkDaemonAlive(host, port);
     if (!status || !status.alive) {
-      throw new Error(`Neptune daemon at ${host}:${port} is not reachable`);
+      throw new Error(`Exoproc daemon at ${host}:${port} is not reachable`);
     }
 
     this.pid = status.pid ?? undefined;
@@ -478,7 +478,7 @@ export class NeptuneClient {
   /**
    * Upgrades the active external memory or daemon connection to an in-process Java Agent.
    * Loads the agent .class bytecode and dynamically defines it into JVM memory (ClassLoader.defineClass).
-   * Elevates Neptune's Java reflection and Minecraft client to communicate directly with the in-process agent.
+   * Elevates Exoproc's Java reflection and Minecraft client to communicate directly with the in-process agent.
    */
   public async upgradeToAgent(
     options: {
@@ -553,7 +553,7 @@ export class NeptuneClient {
     // 2. Direct / in-process / external memory connection upgrade
     if (!this.java && !this.host) {
       throw new Error(
-        'Neptune is not attached to any process. Call connect(pid) or connectDaemon() before upgrading.',
+        'Exoproc is not attached to any process. Call connect(pid) or connectDaemon() before upgrading.',
       );
     }
 
@@ -606,7 +606,7 @@ export class NeptuneClient {
       },
     });
 
-    // Elevate Neptune to in-process agent
+    // Elevate Exoproc to in-process agent
     this.java = getAgentJavaContext('127.0.0.1', targetPort);
     this.isUpgraded = true;
     this.agentPort = targetPort;
@@ -637,7 +637,7 @@ export class NeptuneClient {
    * Alias for upgradeToAgent.
    */
   public async upgrade(
-    options?: Parameters<NeptuneClient['upgradeToAgent']>[0],
+    options?: Parameters<ExoprocClient['upgradeToAgent']>[0],
   ) {
     return this.upgradeToAgent(options);
   }
@@ -657,7 +657,7 @@ export class NeptuneClient {
     const targetPid = options.pid ?? this.pid;
     if (!targetPid && !this.java) {
       throw new Error(
-        'NeptuneClient.executeScript: not connected to any process or agent. Call connect or connectAgent first.',
+        'ExoprocClient.executeScript: not connected to any process or agent. Call connect or connectAgent first.',
       );
     }
     if (!this.java && targetPid) {
@@ -678,7 +678,7 @@ export class NeptuneClient {
       options.onLog?.(line);
     };
 
-    const paramNames = ['Java', 'print', 'neptune', 'client', 'mc'];
+    const paramNames = ['Java', 'print', 'exoproc', 'client', 'mc'];
     const paramValues = [this.java, printFn, this, this, this.rawMc];
 
     if (options.globals && typeof options.globals === 'object') {
@@ -699,7 +699,7 @@ export class NeptuneClient {
 
   /**
    * Captures a screenshot of the attached (or auto-detected) target game window via NThread.
-   * Can be called directly on an actively injected/connected NeptuneClient instance.
+   * Can be called directly on an actively injected/connected ExoprocClient instance.
    */
   public async captureScreenshot(
     options: ScreenshotOptions = {},
@@ -759,7 +759,7 @@ export class NeptuneClient {
         const matcher = new MinecraftMatcher(this.mcClient.bridge);
         matcher.registerTo(this.java, this.mcClient.mappings);
         console.log(
-          '[Neptune] ✓ Lazily initialized fast Java reflection proxy',
+          '[Exoproc] ✓ Lazily initialized fast Java reflection proxy',
         );
       } catch {}
     }
@@ -788,7 +788,7 @@ export class NeptuneClient {
           if (!this.phase2Completed && this.mcClient && this.java) {
             this.phase2Completed = true;
             console.log(
-              '[Neptune] 🌍 In-world player detected! Automatically running Phase 2 matching (matchWorld)...',
+              '[Exoproc] 🌍 In-world player detected! Automatically running Phase 2 matching (matchWorld)...',
             );
             const matcher = new MinecraftMatcher(this.mcClient.bridge);
             matcher
@@ -798,14 +798,14 @@ export class NeptuneClient {
                   matcher.registerTo(this.java, worldMappings);
                   (this.mcClient as any).mappings = worldMappings;
                   console.log(
-                    '[Neptune] ✓ Phase 2 auto-resolution completed & registered',
+                    '[Exoproc] ✓ Phase 2 auto-resolution completed & registered',
                   );
                 }
               })
               .catch((err) => {
                 this.phase2Completed = false;
                 console.warn(
-                  '[Neptune] Phase 2 auto-resolution failed:',
+                  '[Exoproc] Phase 2 auto-resolution failed:',
                   err?.message || err,
                 );
               });
@@ -910,7 +910,7 @@ export class NeptuneClient {
     } catch {}
   }
 
-  public async getTelemetry(): Promise<NeptuneTelemetry> {
+  public async getTelemetry(): Promise<ExoprocTelemetry> {
     if (!this.mcClient) {
       return {
         connected: false,

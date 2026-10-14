@@ -1,5 +1,5 @@
 /**
- * Inspects detected classes in Neptune's dynamic Class Pool
+ * Inspects detected classes in Exoproc's dynamic Class Pool
  * Reads TARGET_CLASS from global scope if provided
  * Outputs:
  * RESULT:POOL_MATCH|<json>

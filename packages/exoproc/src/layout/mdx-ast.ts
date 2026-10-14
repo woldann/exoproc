@@ -1,7 +1,7 @@
 /**
- * Two-way MDX Abstract Syntax Tree (AST) Parser & Serializer for Neptune Cockpit.
+ * Two-way MDX Abstract Syntax Tree (AST) Parser & Serializer for Exoproc Cockpit.
  * Allows visual manipulation (drag-and-drop, reordering, adding, removing) and
- * serializes clean, indented .mdx layouts to sync back to the Neptune Engine.
+ * serializes clean, indented .mdx layouts to sync back to the Exoproc Engine.
  */
 
 export interface MdxNode {

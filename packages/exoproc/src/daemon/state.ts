@@ -35,7 +35,6 @@ export function findRepoRoot(): string {
       if (
         existsSync(join(curr, 'bunfig.toml')) &&
         (existsSync(join(curr, 'bun-wine')) ||
-          existsSync(join(curr, 'neptune-tool')) ||
           existsSync(join(curr, 'package.json')))
       ) {
         return curr;
@@ -52,13 +51,13 @@ export function getDaemonStatePath(): string {
   const root = findRepoRoot();
   const tmpDir = join(root, 'tmp');
   if (existsSync(tmpDir)) {
-    return join(tmpDir, '.neptune-daemon.json');
+    return join(tmpDir, '.exoproc-daemon.json');
   }
   try {
     mkdirSync(tmpDir, { recursive: true });
-    return join(tmpDir, '.neptune-daemon.json');
+    return join(tmpDir, '.exoproc-daemon.json');
   } catch {
-    return join(root, '.neptune-daemon.json');
+    return join(root, '.exoproc-daemon.json');
   }
 }
 

@@ -213,7 +213,7 @@ export async function runDaemon(
     if (!isAttached) return;
     console.log(
       chalk.yellow(
-        `\n[Neptune Daemon] Detaching from ${currentTargetName} (PID: ${currentTargetPid})...`,
+        `\n[Exoproc Daemon] Detaching from ${currentTargetName} (PID: ${currentTargetPid})...`,
       ),
     );
     try {
@@ -234,7 +234,7 @@ export async function runDaemon(
     updateState();
     console.log(
       chalk.cyan(
-        `[Neptune Daemon] Transitioned to Standby mode (port ${server.port}). Ready for new attach.`,
+        `[Exoproc Daemon] Transitioned to Standby mode (port ${server.port}). Ready for new attach.`,
       ),
     );
   };
@@ -283,7 +283,7 @@ export async function runDaemon(
 
     console.log(
       chalk.cyan(
-        `\n[Neptune Daemon] Attaching to target PID ${pid} (${name})...`,
+        `\n[Exoproc Daemon] Attaching to target PID ${pid} (${name})...`,
       ),
     );
 
@@ -404,7 +404,7 @@ export async function runDaemon(
 
     Java.detect = detectFn;
     Java.detectSync = detectSyncFn;
-    Java.neptune = {
+    Java.exoproc = {
       matcher,
       detect: detectFn,
       detectSync: detectSyncFn,
@@ -487,16 +487,16 @@ export async function runDaemon(
     };
 
     try {
-      if (currentJava?.neptune?.ensurePhase2) {
-        await currentJava.neptune.ensurePhase2();
+      if (currentJava?.exoproc?.ensurePhase2) {
+        await currentJava.exoproc.ensurePhase2();
       }
 
       // Build parameter list: base params + global variable names
-      const paramNames = ['Java', 'print', 'neptune'];
+      const paramNames = ['Java', 'print', 'exoproc'];
       const paramValues = [
         currentJava ?? null,
         printFn,
-        currentJava?.neptune ?? null,
+        currentJava?.exoproc ?? null,
       ];
 
       // Add Minecraft-specific globals if not already provided
@@ -557,7 +557,7 @@ export async function runDaemon(
     if (isShuttingDown) return;
     isShuttingDown = true;
     console.log(
-      `\n[Neptune Daemon] ${reason} - Shutting down daemon process...`,
+      `\n[Exoproc Daemon] ${reason} - Shutting down daemon process...`,
     );
     clearInterval(livenessTimer);
     try {
@@ -681,7 +681,7 @@ export async function runDaemon(
           } = await import('njava-agent');
           console.log(
             chalk.cyan(
-              `\n[Neptune Daemon] Upgrading target JVM to in-process Java Agent...`,
+              `\n[Exoproc Daemon] Upgrading target JVM to in-process Java Agent...`,
             ),
           );
 
@@ -746,9 +746,9 @@ export async function runDaemon(
                 currentMatcher.mappings as any,
               );
             }
-            (agentRes.agentContext as any).neptune = (
+            (agentRes.agentContext as any).exoproc = (
               currentJava as any
-            ).neptune;
+            ).exoproc;
             (agentRes.agentContext as any).detect = (currentJava as any).detect;
             (agentRes.agentContext as any).detectSync = (
               currentJava as any
@@ -772,7 +772,7 @@ export async function runDaemon(
           });
         } catch (err: any) {
           console.error(
-            chalk.red(`[Neptune Daemon] Failed to upgrade to agent:`),
+            chalk.red(`[Exoproc Daemon] Failed to upgrade to agent:`),
             err,
           );
           return Response.json(
@@ -1068,19 +1068,19 @@ export async function runDaemon(
     } catch (err: any) {
       console.warn(
         chalk.yellow(
-          `[Neptune Daemon] Initial attach deferred: ${err?.message || err}`,
+          `[Exoproc Daemon] Initial attach deferred: ${err?.message || err}`,
         ),
       );
       console.log(
         chalk.cyan(
-          `[Neptune Daemon] Running in Standby mode on port ${server.port}. Waiting for attach command from client.`,
+          `[Exoproc Daemon] Running in Standby mode on port ${server.port}. Waiting for attach command from client.`,
         ),
       );
     }
   } else {
     console.log(
       chalk.cyan(
-        `[Neptune Daemon] Standby server active on port ${server.port}. Waiting for attach command from client.`,
+        `[Exoproc Daemon] Standby server active on port ${server.port}. Waiting for attach command from client.`,
       ),
     );
   }
@@ -1095,7 +1095,7 @@ export async function runDaemon(
           if (consecutiveFails >= 5) {
             console.log(
               chalk.yellow(
-                `\n[Neptune Daemon] Target process PID ${currentTargetPid} terminated.`,
+                `\n[Exoproc Daemon] Target process PID ${currentTargetPid} terminated.`,
               ),
             );
             detachFromProcess();

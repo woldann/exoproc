@@ -268,7 +268,7 @@ declare var TARGET_PROFILE: string | undefined;
   }
 
   const result = {
-    $schema: 'neptune-mappings-v1',
+    $schema: 'exoproc-mappings-v1',
     version: profile,
     profile,
     generatedAt: new Date().toISOString(),

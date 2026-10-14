@@ -1,5 +1,5 @@
 /**
- * Global type definitions for Neptune Daemon evaluation context
+ * Global type definitions for Exoproc Daemon evaluation context
  * These are available in daemon eval() execution
  */
 
@@ -29,5 +29,5 @@ declare var minecraftClass: any;
 /** Button list from current screen (if available) */
 declare var buttonList: any[];
 
-/** Field name mappings from Neptune's obfuscation mapping */
+/** Field name mappings from Exoproc's obfuscation mapping */
 declare var mappings: Record<string, string>;

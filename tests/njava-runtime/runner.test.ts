@@ -124,7 +124,7 @@ describe('njava-runtime > Script Runner & Worker', () => {
 
       const stats: Stats = {
         fps: 60,
-        title: 'Neptune TS Worker',
+        title: 'Exoproc TS Worker',
       };
 
       print('TS Worker: ' + (stats.title as string) + ' @ ' + stats.fps + ' fps');
@@ -139,9 +139,9 @@ describe('njava-runtime > Script Runner & Worker', () => {
 
     expect(result.success).toBe(true);
     expect(result.stats.fps).toBe(60);
-    expect(result.stats.title).toBe('Neptune TS Worker');
+    expect(result.stats.title).toBe('Exoproc TS Worker');
     expect(logs.length).toBeGreaterThan(0);
-    expect(logs[0]).toContain('TS Worker: Neptune TS Worker @ 60 fps');
+    expect(logs[0]).toContain('TS Worker: Exoproc TS Worker @ 60 fps');
   });
 
   it('executes functional TypeScript tasks directly on runtime.runSync with Java and print', async () => {

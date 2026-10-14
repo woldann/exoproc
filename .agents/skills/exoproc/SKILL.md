@@ -8,7 +8,7 @@ description: >-
 
 This skill guides AI agents on interacting with, monitoring, and controlling live Minecraft (1.8.9) instances via the Exoproc instrumentation engine.
 
-Exoproc operates as a high-performance **HTTP & Server-Sent Events (SSE) API server** (running on `http://127.0.0.1:43370`) and an **MCP Server** (`exoproc_*` / `neptune_*` tools and `minecraft://*` resources).
+Exoproc operates as a high-performance **HTTP & Server-Sent Events (SSE) API server** (running on `http://127.0.0.1:43370`) and an **MCP Server** (`exoproc_*` tools and `minecraft://*` resources).
 
 ---
 
@@ -187,7 +187,7 @@ http POST http://127.0.0.1:43370/look yaw:=-90 pitch:=0
 
 When using Antigravity or MCP clients, invoke these tools and resources:
 
-### Native MCP Tools (Both `exoproc_*` and `neptune_*` supported)
+### Native MCP Tools (`exoproc_*`)
 
 | Tool Name               | Purpose                                                                                                                                                                                                |
 | :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
