@@ -171,8 +171,12 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
     );
   }
 
-  // On Windows, Exoproc acts directly as the tool without requiring a background daemon
-  if (process.platform === 'win32' && !process.env.EXOPROC_FORCE_DAEMON) {
+  // On Windows with Bun runtime, Exoproc can act directly without requiring a background daemon
+  if (
+    process.platform === 'win32' &&
+    typeof (globalThis as any).Bun !== 'undefined' &&
+    !process.env.EXOPROC_FORCE_DAEMON
+  ) {
     return { host: '127.0.0.1', port: port || 0 };
   }
 

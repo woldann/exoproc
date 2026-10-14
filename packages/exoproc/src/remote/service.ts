@@ -13,10 +13,18 @@ async function getDirectClient() {
   return _directClient;
 }
 
+function isDirectSupported(): boolean {
+  return (
+    process.platform === 'win32' &&
+    typeof (globalThis as any).Bun !== 'undefined' &&
+    !process.env.EXOPROC_REMOTE
+  );
+}
+
 export class ExoprocService {
   // Status and Process Management
   async getStatus(): Promise<client.StatusResponse | null> {
-    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+    if (isDirectSupported()) {
       const endpoint = client.getDaemonEndpoint();
       if (endpoint.port) {
         const alive = await client.checkDaemonAlive(
@@ -50,7 +58,7 @@ export class ExoprocService {
   }
 
   async listProcesses(): Promise<client.CandidateProcess[]> {
-    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+    if (isDirectSupported()) {
       const endpoint = client.getDaemonEndpoint();
       if (endpoint.port) {
         const alive = await client.checkDaemonAlive(
@@ -77,7 +85,7 @@ export class ExoprocService {
     message?: string;
     error?: string;
   }> {
-    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+    if (isDirectSupported()) {
       const endpoint = client.getDaemonEndpoint();
       if (endpoint.port) {
         const alive = await client.checkDaemonAlive(
@@ -113,7 +121,7 @@ export class ExoprocService {
     message?: string;
     error?: string;
   }> {
-    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+    if (isDirectSupported()) {
       const endpoint = client.getDaemonEndpoint();
       if (endpoint.port) {
         const alive = await client.checkDaemonAlive(
@@ -133,7 +141,7 @@ export class ExoprocService {
   }
 
   async shutdown(): Promise<{ success: boolean; message?: string }> {
-    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+    if (isDirectSupported()) {
       const endpoint = client.getDaemonEndpoint();
       if (endpoint.port) {
         const alive = await client.checkDaemonAlive(
@@ -235,7 +243,7 @@ export class ExoprocService {
   async screenshot(
     outputPath?: string,
   ): Promise<client.ScreenshotRemoteResult> {
-    if (process.platform === 'win32' && !process.env.EXOPROC_REMOTE) {
+    if (isDirectSupported()) {
       const endpoint = client.getDaemonEndpoint();
       if (endpoint.port) {
         const alive = await client.checkDaemonAlive(
