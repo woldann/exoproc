@@ -5,11 +5,12 @@ import { z } from 'zod';
 import { service } from './service.js';
 import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
+import { VERSION } from './version.js';
 
 // Create Model Context Protocol (MCP) Server
 const server = new McpServer({
   name: 'exoproc',
-  version: '0.1.0',
+  version: VERSION,
 });
 
 // Helper to format text response

@@ -157,14 +157,16 @@ export function resolveDefaultJavaPath(): string {
  */
 export function resolveEcjJarPath(javaMajorVersion: number): string {
   const jarName = javaMajorVersion < 17 ? 'ecj-3.26.0.jar' : 'ecj-3.46.100.jar';
+  const baseDir =
+    import.meta.dirname || (import.meta as any).dir || process.cwd();
 
   const candidateDirs = [
-    // 1. Relative to import.meta.dir (packages/jjit/src or packages/jjit/dist)
-    join(import.meta.dir, '..', 'deps'),
-    join(import.meta.dir, '..', 'dist'),
-    join(import.meta.dir, 'deps'),
-    join(import.meta.dir, 'dist'),
-    import.meta.dir,
+    // 1. Relative to baseDir (packages/jjit/src or packages/jjit/dist)
+    join(baseDir, '..', 'deps'),
+    join(baseDir, '..', 'dist'),
+    join(baseDir, 'deps'),
+    join(baseDir, 'dist'),
+    baseDir,
     // 2. Relative to monorepo root / packages / cwd
     join(process.cwd(), 'packages', 'jjit', 'deps'),
     join(process.cwd(), 'packages', 'njava', 'deps'),

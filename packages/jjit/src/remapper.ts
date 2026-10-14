@@ -246,12 +246,14 @@ export const STANDARD_CANONICAL_CLASSES: Record<string, string> = {
  */
 export function resolveTinyRemapperJarPath(): string {
   const jarName = 'tiny-remapper-0.14.1-fat.jar';
+  const baseDir =
+    import.meta.dirname || (import.meta as any).dir || process.cwd();
   const candidateDirs = [
-    join(import.meta.dir, '..', 'deps'),
-    join(import.meta.dir, '..', 'dist'),
-    join(import.meta.dir, 'deps'),
-    join(import.meta.dir, 'dist'),
-    import.meta.dir,
+    join(baseDir, '..', 'deps'),
+    join(baseDir, '..', 'dist'),
+    join(baseDir, 'deps'),
+    join(baseDir, 'dist'),
+    baseDir,
     join(process.cwd(), 'packages', 'jjit', 'deps'),
     join(process.cwd(), 'packages', 'njava', 'deps'),
     join(process.cwd(), 'deps'),

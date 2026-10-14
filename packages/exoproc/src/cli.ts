@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { service } from './service.js';
 import { isToolMode, getRuntimeMode } from './capabilities.js';
 import { renderCliResult } from './ui/index.js';
+import { VERSION } from './version.js';
 
 const program = new Command();
 
@@ -13,7 +14,7 @@ program
   .description(
     'Unified external Minecraft automation client, CLI runner, MCP server, and runtime instrumentation framework',
   )
-  .version('0.2.0')
+  .version(VERSION)
   .option('--json', 'Output pure JSON instead of human-friendly terminal UI');
 
 function readStdin(): Promise<string> {
@@ -461,6 +462,38 @@ program
         }),
       opts,
     );
+  });
+
+program
+  .command('inspect-jar <jarPath>')
+  .alias('inspect')
+  .description('Inspect classes, methods, and structure of a target .jar file')
+  .option('-p, --port <port>', 'Agent HTTP port (default: 43378)', '43378')
+  .option('-f, --filter <regex>', 'Filter class names matching pattern')
+  .option('-e, --eval <code>', 'Execute JavaScript snippet inside agent')
+  .option('-m, --mappings <file>', 'External mappings JSON file')
+  .option('-s, --schema <file>', 'External schema / database JSON file')
+  .option('-d, --detect', 'Run class signature match & detection')
+  .option('-k, --keep-alive', 'Leave agent running in background')
+  .option('--libs <dir|classpath>', 'Libraries directory or classpath')
+  .option('--version-json <file>', 'Version JSON metadata file')
+  .option('--json', 'Output pure JSON')
+  .action(async (jarPath, opts) => {
+    const isJson = Boolean(opts?.json ?? program.opts().json);
+    const { runInspectJar } = await import('./remote/inspect-jar.js');
+    await runInspectJar({
+      jarPath,
+      port: opts.port ? parseInt(opts.port, 10) : 43378,
+      filter: opts.filter,
+      evalCode: opts.eval,
+      mappings: opts.mappings,
+      schema: opts.schema,
+      detect: Boolean(opts.detect),
+      keepAlive: Boolean(opts.keepAlive),
+      libs: opts.libs,
+      versionJson: opts.versionJson,
+      jsonOutput: isJson,
+    });
   });
 
 // 8. Standalone HTTP API Server Mode

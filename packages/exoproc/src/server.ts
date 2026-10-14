@@ -1,5 +1,6 @@
 import { service } from './service.js';
 import * as client from './client.js';
+import { VERSION } from './version.js';
 
 export interface ServerOptions {
   port?: number;
@@ -298,7 +299,7 @@ export async function handleApiRequest(req: Request): Promise<Response> {
         case '/': {
           return jsonResponse({
             name: 'exoproc-api',
-            version: '0.1.0',
+            version: VERSION,
             status: 'online',
             engine: 'Bun.serve',
             streaming: 'Server-Sent Events (text/event-stream)',

@@ -202,8 +202,11 @@ interface Options {
   jsonOutput?: boolean;
 }
 
-function parseArgs(): Options {
-  const args = process.argv.slice(2);
+function parseArgs(rawArgs?: string[]): Options {
+  let args = rawArgs ?? process.argv.slice(2);
+  if (args[0] === 'inspect-jar' || args[0] === 'inspect') {
+    args = args.slice(1);
+  }
   const opts: Options = {
     port: 43378,
   };
@@ -258,15 +261,12 @@ async function checkStatus(port: number): Promise<any | null> {
   return null;
 }
 
-async function main() {
-  const opts = parseArgs();
+export async function runInspectJar(customOpts?: Partial<Options>) {
+  const opts = { ...parseArgs(), ...(customOpts || {}) };
   const repoRoot = findRepoRoot();
-  const agentJar = getAgentJarSync().jarPath;
 
   if (!opts.jarPath) {
-    console.error(
-      'Usage: bun run tool:inspect-jar <path-to-target.jar> [options]',
-    );
+    console.error('Usage: exoproc inspect-jar <path-to-target.jar> [options]');
     console.error('\nOptions:');
     console.error(
       '  -p, --port <port>          Agent HTTP port (default: 43378)',
@@ -307,6 +307,7 @@ async function main() {
 
   // If agent is not running on this port, spawn it
   if (!status || !status.alive) {
+    const agentJar = getAgentJarSync().jarPath;
     const cpList = resolveFullClasspath(
       resolvedJar,
       agentJar,
@@ -512,8 +513,14 @@ async function main() {
   }
 }
 
-if (import.meta.main) {
-  main().catch((err) => {
+const isDirectExecution =
+  Boolean(import.meta.main) &&
+  typeof process !== 'undefined' &&
+  !process.argv?.[1]?.endsWith('cli.js') &&
+  !process.argv?.[1]?.endsWith('cli.ts');
+
+if (isDirectExecution) {
+  runInspectJar().catch((err) => {
     console.error('Fatal error:', err);
     process.exit(1);
   });
