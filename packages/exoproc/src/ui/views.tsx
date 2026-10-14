@@ -735,10 +735,9 @@ export const EvalCard: React.FC<{ result: any }> = ({ result }) => {
             Output Logs:
           </Text>
           {result.logs.slice(0, 10).map((l: string, i: number) => (
-            <Text key={i} color="gray">
-              {' '}
-              › {l}
-            </Text>
+            <Box key={i}>
+              <Text color="gray"> › {l}</Text>
+            </Box>
           ))}
           {result.logs.length > 10 ? (
             <Text dimColor>... and {result.logs.length - 10} more lines</Text>
@@ -943,11 +942,10 @@ export const FilterClassesCard: React.FC<{
         paddingX={1}
         marginBottom={1}
       >
-        {matched.slice(0, 30).map((c) => (
-          <Text key={c} color="white">
-            {' '}
-            • {c}
-          </Text>
+        {matched.slice(0, 30).map((c: string, idx: number) => (
+          <Box key={`${c}-${idx}`}>
+            <Text color="white"> • {c}</Text>
+          </Box>
         ))}
         {matched.length > 30 ? (
           <Text dimColor>... and {matched.length - 30} more classes</Text>
