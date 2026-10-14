@@ -6,6 +6,7 @@ export * from './constants.js';
 export * from './screenshot/index.js';
 export * from './remote/index.js';
 export * from './service.js';
+export * from './capabilities.js';
 export { startApiServer } from './server.js';
 
 import {

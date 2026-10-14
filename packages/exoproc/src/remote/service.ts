@@ -3,6 +3,7 @@ import { resolve, join, dirname } from 'node:path';
 import * as client from './client.js';
 import * as api from './api.js';
 import { guiNavigator } from './gui-navigator.js';
+import { hasNativeXffi } from '../capabilities.js';
 
 let _directClient: any = null;
 async function getDirectClient() {
@@ -14,11 +15,7 @@ async function getDirectClient() {
 }
 
 function isDirectSupported(): boolean {
-  return (
-    process.platform === 'win32' &&
-    typeof (globalThis as any).Bun !== 'undefined' &&
-    !process.env.EXOPROC_REMOTE
-  );
+  return hasNativeXffi() && !process.env.EXOPROC_REMOTE;
 }
 
 export class ExoprocService {
@@ -46,6 +43,7 @@ export class ExoprocService {
         uptime: 0,
         upgraded: direct.isUpgraded ?? false,
         agentPort: direct.agentPort ?? null,
+        nativeSupported: true,
       };
     }
     try {

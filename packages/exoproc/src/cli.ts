@@ -641,6 +641,21 @@ program
   .option('-p, --port <port>', 'Daemon port to listen on', '43370')
   .option('-h, --host <host>', 'Daemon host to bind to', '127.0.0.1')
   .action(async (opts) => {
+    const { hasNativeXffi } = await import('./capabilities.js');
+    if (!hasNativeXffi()) {
+      console.error(
+        JSON.stringify(
+          {
+            success: false,
+            error:
+              'Exoproc daemon requires native Windows x64 instrumentation with Bun (bun-xffi). On Node.js or non-Windows, run Exoproc in client/tool mode connected to an existing daemon or agent.',
+          },
+          null,
+          2,
+        ),
+      );
+      process.exit(1);
+    }
     const { runDaemon } = await import('./daemon/index.js');
     const port = parseInt(opts.port, 10) || 43370;
     const host = opts.host || '127.0.0.1';

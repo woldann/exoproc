@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { assertNativeCapability } from './capabilities.js';
 let _winapi: any = null;
 let _xffi: any = null;
 let _accessors: any = null;
@@ -6,11 +7,7 @@ let _njava: any = null;
 
 function getWinApi() {
   if (!_winapi) {
-    if (process.platform !== 'win32') {
-      throw new Error(
-        'Native Windows API requires Windows or Wine environment',
-      );
-    }
+    assertNativeCapability('Windows API');
     _winapi = require('bun-winapi');
   }
   return _winapi;
@@ -18,9 +15,7 @@ function getWinApi() {
 
 function getXffi() {
   if (!_xffi) {
-    if (process.platform !== 'win32') {
-      throw new Error('Native XFFI requires Windows or Wine environment');
-    }
+    assertNativeCapability('Native XFFI');
     _xffi = require('bun-xffi');
   }
   return _xffi;
@@ -28,9 +23,7 @@ function getXffi() {
 
 function getAccessors() {
   if (!_accessors) {
-    if (process.platform !== 'win32') {
-      throw new Error('Native accessors require Windows or Wine environment');
-    }
+    assertNativeCapability('Process memory accessors');
     _accessors = require('exoproc-accessors');
   }
   return _accessors;
@@ -38,6 +31,7 @@ function getAccessors() {
 
 function getNJava() {
   if (!_njava) {
+    assertNativeCapability('Native JNI reflection (NJava)');
     _njava = require('bun-njava');
   }
   return _njava;

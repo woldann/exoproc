@@ -202,6 +202,15 @@ async function main() {
     }
 
     try {
+      const { hasNativeXffi } = await import('../capabilities.js');
+      if (!hasNativeXffi()) {
+        console.error(
+          chalk.red(
+            '❌ Native FFI (bun-xffi) is not available. Exoproc daemon requires Windows x64 with Bun.',
+          ),
+        );
+        process.exit(1);
+      }
       await runDaemon({ port, host, autoAttach, pid });
     } catch (err: any) {
       console.error(
