@@ -11,6 +11,7 @@ import { Thread } from 'bun-winapi';
 import { NThread, type NThreadOptions } from 'bun-nthread';
 import {
   HostAccessor,
+  type HostAccessorSession,
   ThrowingMemoryAccessor,
   RedirectorHostAccessor,
   BootstrapHostAccessor,
@@ -161,6 +162,31 @@ export class IndirectNThreadHostAccessor extends HostAccessor {
 
   protected override onInitSync(): void {
     this.bootstrapRoot.initSync();
+  }
+
+  override toJSON(): HostAccessorSession {
+    const session = super.toJSON();
+    session.accessorType = 'IndirectNThreadHostAccessor';
+    try {
+      const nt = this.nthread;
+      if (nt && typeof nt.threadId === 'number') {
+        session.threadId = nt.threadId;
+      }
+      if (nt && nt.stubs) {
+        const stubs: Record<string, string> = {};
+        for (const [k, v] of Object.entries(nt.stubs)) {
+          if (v && typeof (v as any).address === 'bigint') {
+            stubs[k] = `0x${(v as any).address.toString(16)}`;
+          }
+        }
+        if (Object.keys(stubs).length > 0) {
+          session.stubs = stubs;
+        }
+      }
+    } catch {
+      // In case nthreadRef is not yet resolved or stubs are not populated
+    }
+    return session;
   }
 }
 

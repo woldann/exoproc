@@ -1,3 +1,5 @@
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import { type AddressLike, NativeMemory } from './pointer.js';
 import { AbstractSyncMemoryAccessor } from './accessor.js';
 import * as debug from './debug-helper.js';
@@ -706,6 +708,20 @@ export abstract class InittableMiddlewareAccessor extends MiddlewareAccessor {
 }
 
 /**
+ * Serializable snapshot of a HostAccessor session configuration and state.
+ */
+export interface HostAccessorSession {
+  version: number;
+  savedAt: string;
+  processId: number;
+  threadId?: number;
+  accessorType: string;
+  metadata?: Record<string, any>;
+  options?: Record<string, any>;
+  stubs?: Record<string, string>;
+}
+
+/**
  * HostAccessor is a base class that automatically initializes all nested InittableMiddlewareAccessors
  * in the backend decorator chain.
  */
@@ -713,6 +729,9 @@ export class HostAccessor extends InittableMiddlewareAccessor {
   override get processId(): number {
     return this._processId;
   }
+
+  protected _sessionMetadata: Record<string, any> = {};
+  public _options?: Record<string, any>;
 
   constructor(backend: ISyncCallableMemoryAccessor, root?: IHostAccessor) {
     super(backend, root ?? (null as any));
@@ -726,6 +745,130 @@ export class HostAccessor extends InittableMiddlewareAccessor {
     if (b) {
       this._processId = b.processId;
     }
+  }
+
+  /**
+   * Sets custom session metadata (e.g. process name, window title, attached JVM info).
+   */
+  setSessionMetadata(key: string, value: any): this {
+    this._sessionMetadata[key] = value;
+    return this;
+  }
+
+  /**
+   * Gets a copy of the attached session metadata.
+   */
+  getSessionMetadata(): Record<string, any> {
+    return { ...this._sessionMetadata };
+  }
+
+  /**
+   * Serializes the accessor state and configuration into a JSON session object.
+   */
+  toJSON(): HostAccessorSession {
+    const threadId =
+      (this as any).nthread?.threadId ??
+      (this as any).threadId ??
+      (this as any)._threadId;
+
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      processId: this.processId,
+      ...(threadId !== undefined ? { threadId } : {}),
+      accessorType: this.constructor.name || 'HostAccessor',
+      metadata: { ...this._sessionMetadata },
+      options: this._options ? { ...this._options } : undefined,
+    };
+  }
+
+  /**
+   * Saves the accessor session configuration to a file synchronously.
+   *
+   * @param filePath Target JSON file path.
+   * @returns Absolute path of the written session file.
+   */
+  saveToFileSync(filePath: string): string {
+    const absPath = resolve(filePath);
+    const dir = dirname(absPath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    const session = this.toJSON();
+    writeFileSync(absPath, JSON.stringify(session, null, 2), 'utf8');
+    return absPath;
+  }
+
+  /**
+   * Saves the accessor session configuration to a file asynchronously.
+   *
+   * @param filePath Target JSON file path.
+   * @returns Absolute path of the written session file.
+   */
+  async saveToFile(filePath: string): Promise<string> {
+    return this.saveToFileSync(filePath);
+  }
+
+  /**
+   * Reads and parses a HostAccessorSession from a JSON file.
+   *
+   * @param filePath Target JSON file path.
+   * @returns Parsed HostAccessorSession object.
+   */
+  static loadSession(filePath: string): HostAccessorSession {
+    const absPath = resolve(filePath);
+    if (!existsSync(absPath)) {
+      throw new Error(`HostAccessor session file not found: ${absPath}`);
+    }
+    const raw = readFileSync(absPath, 'utf8');
+    const session = JSON.parse(raw) as HostAccessorSession;
+    if (!session || typeof session.processId !== 'number') {
+      throw new Error(`Invalid HostAccessor session file: ${absPath}`);
+    }
+    return session;
+  }
+
+  private static restorers = new Map<
+    string,
+    (
+      session: HostAccessorSession,
+      overrideOptions?: any,
+    ) => Promise<HostAccessor>
+  >();
+
+  /**
+   * Registers a factory function to restore a specific accessorType from a saved session.
+   */
+  static registerRestorer(
+    accessorType: string,
+    restorer: (
+      session: HostAccessorSession,
+      overrideOptions?: any,
+    ) => Promise<HostAccessor>,
+  ): void {
+    HostAccessor.restorers.set(accessorType, restorer);
+  }
+
+  /**
+   * Restores an active HostAccessor from a previously saved session file.
+   */
+  static async restoreFromFile(
+    filePath: string,
+    overrideOptions?: any,
+  ): Promise<HostAccessor> {
+    const session = HostAccessor.loadSession(filePath);
+    const restorer =
+      HostAccessor.restorers.get(session.accessorType) ??
+      HostAccessor.restorers.get('default');
+
+    if (!restorer) {
+      throw new Error(
+        `No restorer registered for accessorType: "${session.accessorType}". ` +
+          `Ensure 'exoproc-accessors' is imported or register a custom restorer via HostAccessor.registerRestorer().`,
+      );
+    }
+
+    return await restorer(session, overrideOptions);
   }
 
   protected override async onInit(): Promise<void> {

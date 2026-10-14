@@ -45,12 +45,13 @@ import {
   InittableMiddlewareAccessor,
   isInittableAccessor,
   HostAccessor,
+  type HostAccessorSession,
   type IHostAccessor,
   type IInittableAccessor,
   type IMiddlewareAccessor,
 } from 'bun-xffi';
 
-export { HostAccessor };
+export { HostAccessor, type HostAccessorSession };
 
 export abstract class MsvcrtDependentMiddlewareAccessor extends InittableMiddlewareAccessor {
   protected async onInit(): Promise<void> {

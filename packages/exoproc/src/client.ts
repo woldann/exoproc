@@ -365,6 +365,102 @@ export class ExoprocClient {
   }
 
   /**
+   * Saves the active host accessor session configuration and state to a JSON file.
+   *
+   * @param filePath Destination JSON file path.
+   * @returns Absolute path of the written session file.
+   */
+  public async saveSession(filePath: string): Promise<string> {
+    if (!this.host) {
+      throw new Error(
+        'Cannot save session: client is not attached to any host process',
+      );
+    }
+    this.host.setSessionMetadata('processName', this.processName);
+    this.host.setSessionMetadata('windowTitle', this.windowTitle);
+    if (this.activeProfile?.id) {
+      this.host.setSessionMetadata('profileId', this.activeProfile.id);
+    }
+    return await this.host.saveToFile(filePath);
+  }
+
+  /**
+   * Re-attaches to a target process using a previously saved session file.
+   *
+   * Re-uses the saved thread ID directly if the thread is still alive, bypassing
+   * the thread candidate discovery race.
+   *
+   * @param sessionFilePath Path to saved session JSON file.
+   * @param profileId Optional profile override.
+   * @param customOptions Additional options.
+   */
+  public async attachFromFile(
+    sessionFilePath: string,
+    profileId?: string,
+    customOptions: MinecraftClientOptions = {},
+  ): Promise<MinecraftClient> {
+    const { createAccessorFromFile, HostAccessor } = getAccessors();
+    const { getJavaSync } = getNJava();
+
+    const session = HostAccessor.loadSession(sessionFilePath);
+    this.pid = session.processId;
+    this.isDaemonConnection = false;
+    this.isUpgraded = false;
+    this.agentPort = undefined;
+    this.processName = session.metadata?.processName ?? 'javaw.exe';
+    this.windowTitle = session.metadata?.windowTitle ?? '';
+
+    const resolvedProfileId = profileId ?? session.metadata?.profileId;
+
+    if (resolvedProfileId && GAME_PROFILES[resolvedProfileId]) {
+      this.activeProfile = GAME_PROFILES[resolvedProfileId];
+    } else {
+      this.activeProfile = detectProfileFromWindow(
+        this.windowTitle,
+        this.processName,
+      );
+    }
+
+    const mergedOptions: MinecraftClientOptions = {
+      ...this.activeProfile.matchOptions,
+      ...customOptions,
+    };
+
+    this.host = await createAccessorFromFile(sessionFilePath);
+    this.mcClient = await MinecraftClient.attach(this.host, mergedOptions);
+
+    // Initialize fast Java sync proxy
+    try {
+      this.java =
+        typeof (this.host as any).getJavaSync === 'function'
+          ? (this.host as any).getJavaSync()
+          : getJavaSync(this.host);
+      const matcher = new MinecraftMatcher(this.mcClient.bridge);
+      matcher.registerTo(this.java, this.mcClient.mappings);
+      const Minecraft = this.java.type('net.minecraft.client.Minecraft');
+      try {
+        this.rawMc =
+          typeof Minecraft.getMinecraft === 'function'
+            ? Minecraft.getMinecraft()
+            : Minecraft.theMinecraft;
+      } catch {
+        this.rawMc = Minecraft.theMinecraft;
+      }
+      console.log(
+        '[Exoproc] ✓ Initialized fast Java reflection proxy for live Minecraft synchronization',
+      );
+    } catch (proxyErr: any) {
+      console.warn(
+        '[Exoproc] Standby for Java reflection proxy:',
+        proxyErr?.message ?? proxyErr,
+      );
+    }
+
+    this.startTickLoop();
+    return this.mcClient;
+  }
+
+  /**
    * Connects to a running NJava Agent HTTP server.
    * Completely cross-platform, works directly on Linux/macOS/Windows without Windows accessors.
    */

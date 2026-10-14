@@ -13,7 +13,10 @@ import {
   type ReflectionBridge,
   type ReflectedClass,
 } from 'bun-njava';
-import { HostAccessor } from './middleware-accessor.js';
+import {
+  HostAccessor,
+  type HostAccessorSession,
+} from './middleware-accessor.js';
 import {
   IndirectNThreadHostAccessor,
   NThreadRaceAccessor,
@@ -22,6 +25,8 @@ import {
   createStealthJavaAccessor,
   spawnStealthWorkerThread,
 } from './stealth-java.js';
+
+export type { HostAccessorSession };
 
 export {
   createStealthJavaAccessor,
@@ -251,6 +256,7 @@ export function createAccessorWithoutInit(
   options: AccessorOptions = {},
 ): HostAccessor {
   const base = resolveBaseAccessor(id, options);
+  base._options = options;
   if (!options.sharedMemory) {
     return base;
   }
@@ -319,6 +325,7 @@ export async function createAccessor(
     opt: AccessorOptions,
   ): Promise<HostAccessor> => {
     const accessor = createAccessorWithoutInit(targetId, opt);
+    accessor._options = opt;
     try {
       await accessor.init();
 
@@ -458,3 +465,93 @@ export function createAccessorOptions(
     sharedMemory: preset.sharedMemory,
   };
 }
+
+/**
+ * Restores an active {@link HostAccessor} from a previously saved {@link HostAccessorSession}.
+ *
+ * If `session.threadId` is recorded and that thread is still alive in the target process,
+ * it attempts direct re-attachment (`idType: 'thread'`), resuming access in milliseconds
+ * without re-racing thread candidates. If the thread died or is unavailable, it falls back
+ * to process-wide attachment (`idType: 'processAllThreadIds'`).
+ *
+ * @param session Parsed session object.
+ * @param overrideOptions Optional options to merge with or override the saved options.
+ * @returns Initialized HostAccessor instance.
+ */
+export async function restoreAccessorFromSession(
+  session: HostAccessorSession,
+  overrideOptions: AccessorOptions = {},
+): Promise<HostAccessor> {
+  const baseOptions: AccessorOptions = {
+    ...(session.options as AccessorOptions | undefined),
+    ...overrideOptions,
+  };
+
+  let targetId = session.processId;
+  let useThread = false;
+
+  try {
+    const threads = Thread.getThreads(session.processId);
+    if (threads.length === 0) {
+      throw new Error(
+        `Cannot restore accessor: process ${session.processId} is not running (no threads found).`,
+      );
+    }
+    if (
+      session.threadId !== undefined &&
+      threads.some((t) => t.tid === session.threadId)
+    ) {
+      targetId = session.threadId;
+      useThread = true;
+    }
+  } catch (err: any) {
+    if (err.message?.includes('Cannot restore accessor:')) {
+      throw err;
+    }
+    // If thread snapshot query threw, fall back to process-level attach
+  }
+
+  const finalOptions: AccessorOptions = {
+    ...baseOptions,
+    idType: useThread
+      ? 'thread'
+      : (baseOptions.idType ?? 'processAllThreadIds'),
+  };
+
+  const accessor = await createAccessor(targetId, finalOptions);
+
+  // Restore saved session metadata
+  if (session.metadata) {
+    for (const [key, value] of Object.entries(session.metadata)) {
+      accessor.setSessionMetadata(key, value);
+    }
+  }
+
+  return accessor;
+}
+
+/**
+ * Convenience helper to restore an accessor directly from a saved JSON session file.
+ *
+ * @param filePath Path to the saved session JSON file.
+ * @param overrideOptions Optional options to merge with or override the saved options.
+ * @returns Initialized HostAccessor instance.
+ */
+export async function createAccessorFromFile(
+  filePath: string,
+  overrideOptions?: AccessorOptions,
+): Promise<HostAccessor> {
+  return await HostAccessor.restoreFromFile(filePath, overrideOptions);
+}
+
+// Register default restorers with HostAccessor
+HostAccessor.registerRestorer(
+  'IndirectNThreadHostAccessor',
+  async (session, overrideOptions) => {
+    return await restoreAccessorFromSession(session, overrideOptions);
+  },
+);
+
+HostAccessor.registerRestorer('default', async (session, overrideOptions) => {
+  return await restoreAccessorFromSession(session, overrideOptions);
+});
