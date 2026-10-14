@@ -48,10 +48,53 @@ export class ExoprocService {
     }
     try {
       const { host, port } = await client.ensureDaemon();
-      return await client.checkDaemonAlive(host, port);
+      const status = await client.checkDaemonAlive(host, port);
+      if (
+        status &&
+        ((status as any).buildId !== undefined ||
+          (status as any).version !== undefined ||
+          (status as any).isStandalone !== undefined)
+      ) {
+        return {
+          alive: true,
+          attached: true,
+          daemonPid: 0,
+          port,
+          agentPort: port,
+          buildId: (status as any).buildId,
+          version: (status as any).version,
+          uptime: status.uptime,
+          upgraded: true,
+          targetName: 'Minecraft (In-Process Java Agent)',
+        };
+      }
+      return status;
     } catch {
       const endpoint = client.getDaemonEndpoint();
-      return await client.checkDaemonAlive(endpoint.host, endpoint.port);
+      const status = await client.checkDaemonAlive(
+        endpoint.host,
+        endpoint.port,
+      );
+      if (status) return status;
+      const agentStatus = await client.checkDaemonAlive(
+        endpoint.host,
+        client.DEFAULT_AGENT_PORT,
+      );
+      if (agentStatus) {
+        return {
+          alive: true,
+          attached: true,
+          daemonPid: 0,
+          port: client.DEFAULT_AGENT_PORT,
+          agentPort: client.DEFAULT_AGENT_PORT,
+          buildId: (agentStatus as any).buildId,
+          version: (agentStatus as any).version,
+          uptime: agentStatus.uptime,
+          upgraded: true,
+          targetName: 'Minecraft (In-Process Java Agent)',
+        };
+      }
+      return null;
     }
   }
 
@@ -336,11 +379,14 @@ export class ExoprocService {
   }
 
   async getState(): Promise<{
+    status?: client.StatusResponse | null;
     gui: api.GuiInfo;
     player: api.PlayerInfo;
     world: api.WorldInfo;
   }> {
-    return await api.inspectState();
+    const status = await this.getStatus();
+    const data = await api.inspectState();
+    return { status, ...data };
   }
 
   async getTarget(reach: number = 30): Promise<api.TargetResult> {
@@ -444,6 +490,7 @@ export class ExoprocService {
     obfuscated: boolean;
     className?: string;
     classesCount?: number;
+    buildId?: string;
     mappingsPath?: string;
     error?: string;
   }> {
@@ -573,6 +620,7 @@ export class ExoprocService {
           javaVersion: res.javaVersion,
           obfuscated: obfuscate,
           className: res.className,
+          buildId: res.buildId,
           mappingsPath,
         };
       } else {
@@ -608,6 +656,7 @@ export class ExoprocService {
           javaVersion: res.javaVersion,
           classesCount: res.classesCount,
           obfuscated: obfuscate,
+          buildId: res.buildId,
           mappingsPath,
         };
       }

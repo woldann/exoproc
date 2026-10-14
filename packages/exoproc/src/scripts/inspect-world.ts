@@ -7,7 +7,7 @@
 
 import { getMinecraft } from './gui-utils';
 
-await (async () => {
+(() => {
   const mc = getMinecraft();
   const w = mc ? mc.theWorld : null;
   const scr = mc ? mc.currentScreen : null;
@@ -38,7 +38,7 @@ await (async () => {
       entities = list
         ? String(typeof list.size === 'function' ? list.size() : list.length)
         : '0';
-    } catch {}
+    } catch (e) {}
 
     let players = '0';
     try {
@@ -46,7 +46,7 @@ await (async () => {
       players = list
         ? String(typeof list.size === 'function' ? list.size() : list.length)
         : '0';
-    } catch {}
+    } catch (e) {}
 
     const isRemote = w.isRemote ? 'true' : 'false';
 
@@ -54,13 +54,13 @@ await (async () => {
     try {
       if (typeof w.getWorldTime === 'function') time = String(w.getWorldTime());
       else if (w.worldTime !== undefined) time = String(w.worldTime);
-    } catch {}
+    } catch (e) {}
 
     let raining = 'false';
     try {
       if (typeof w.isRaining === 'function') raining = String(w.isRaining());
       else if (w.raining !== undefined) raining = String(w.raining);
-    } catch {}
+    } catch (e) {}
 
     print(
       'WORLD|' +

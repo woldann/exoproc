@@ -300,7 +300,7 @@ export async function handleApiRequest(req: Request): Promise<Response> {
             name: 'exoproc-api',
             version: '0.1.0',
             status: 'online',
-            engine: typeof Bun !== 'undefined' ? 'Bun.serve' : 'node:http',
+            engine: 'Bun.serve',
             streaming: 'Server-Sent Events (text/event-stream)',
             endpoints: {
               telemetry: [
@@ -597,93 +597,16 @@ export async function startApiServer(
       : Number(process.env.API_PORT) || 43370;
   const hostname = options.host || '127.0.0.1';
 
-  if (typeof Bun !== 'undefined' && typeof Bun.serve === 'function') {
-    const server = Bun.serve({
-      port,
-      hostname,
-      idleTimeout: 120,
-      fetch: handleApiRequest,
-    });
-    return {
-      port: server.port ?? port,
-      hostname: server.hostname ?? hostname,
-      stop: () => server.stop(),
-    };
-  }
-
-  const http = await import('node:http');
-  const nodeServer = http.createServer(async (req, res) => {
-    try {
-      const protocol = req.headers['x-forwarded-proto'] || 'http';
-      const host = req.headers.host || `${hostname}:${port}`;
-      const url = new URL(req.url || '/', `${protocol}://${host}`);
-
-      const headers = new Headers();
-      for (const [key, val] of Object.entries(req.headers)) {
-        if (val !== undefined) {
-          if (Array.isArray(val)) {
-            for (const v of val) headers.append(key, v);
-          } else {
-            headers.set(key, val);
-          }
-        }
-      }
-
-      const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-      const body = hasBody
-        ? new ReadableStream({
-            start(controller) {
-              req.on('data', (chunk) => controller.enqueue(chunk));
-              req.on('end', () => controller.close());
-              req.on('error', (err) => controller.error(err));
-            },
-          })
-        : null;
-
-      const webReq = new Request(url.toString(), {
-        method: req.method,
-        headers,
-        body,
-        // @ts-ignore
-        duplex: hasBody ? 'half' : undefined,
-      });
-
-      const webRes = await handleApiRequest(webReq);
-
-      res.statusCode = webRes.status;
-      webRes.headers.forEach((v, k) => {
-        res.setHeader(k, v);
-      });
-
-      if (webRes.body) {
-        const reader = webRes.body.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
-        }
-      }
-      res.end();
-    } catch (err: any) {
-      if (!res.headersSent) {
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-      }
-      res.end(JSON.stringify({ success: false, error: String(err) }));
-    }
+  const server = Bun.serve({
+    port,
+    hostname,
+    idleTimeout: 120,
+    fetch: handleApiRequest,
   });
-
-  await new Promise<void>((resolve, reject) => {
-    nodeServer.listen(port, hostname, () => resolve());
-    nodeServer.once('error', reject);
-  });
-
-  const addr = nodeServer.address();
-  const actualPort = addr && typeof addr === 'object' ? addr.port : port;
 
   return {
-    port: actualPort,
-    hostname,
-    stop: () => nodeServer.close(),
+    port: server.port ?? port,
+    hostname: server.hostname ?? hostname,
+    stop: () => server.stop(),
   };
 }

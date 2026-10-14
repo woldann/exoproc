@@ -1,9 +1,47 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join, dirname, basename, delimiter } from 'node:path';
 import { spawn } from 'node:child_process';
-import { findRepoRoot } from './client.js';
+import { findRepoRoot, evalRemote } from './client.js';
 import { getAgentJarSync } from 'njava-agent';
+import { renderToString } from 'ink';
+import React from 'react';
+import { InspectorCard, FilterClassesCard, EvalCard } from '../ui/views.js';
+
+/**
+ * Fast in-memory ZIP central directory reader to enumerate classes inside any .jar
+ */
+function getJarClasses(jarPath: string): string[] {
+  try {
+    const buf = readFileSync(jarPath);
+    let eocdOffset = -1;
+    for (let i = buf.length - 22; i >= 0; i--) {
+      if (buf.readUInt32LE(i) === 0x06054b50) {
+        eocdOffset = i;
+        break;
+      }
+    }
+    if (eocdOffset === -1) return [];
+    const totalEntries = buf.readUInt16LE(eocdOffset + 10);
+    const cdOffset = buf.readUInt32LE(eocdOffset + 16);
+    const classes: string[] = [];
+    let pos = cdOffset;
+    for (let i = 0; i < totalEntries; i++) {
+      if (buf.readUInt32LE(pos) !== 0x02014b50) break;
+      const nameLen = buf.readUInt16LE(pos + 28);
+      const extraLen = buf.readUInt16LE(pos + 30);
+      const commentLen = buf.readUInt16LE(pos + 32);
+      const name = buf.toString('utf8', pos + 46, pos + 46 + nameLen);
+      if (name.endsWith('.class') && !name.startsWith('META-INF/')) {
+        classes.push(name.slice(0, -6).replace(/\//g, '.'));
+      }
+      pos += 46 + nameLen + extraLen + commentLen;
+    }
+    return classes;
+  } catch {
+    return [];
+  }
+}
 
 function loadLibrariesFromJson(
   jsonPath: string,
@@ -220,19 +258,10 @@ async function checkStatus(port: number): Promise<any | null> {
   return null;
 }
 
-async function shutdown(port: number): Promise<void> {
-  try {
-    await fetch(`http://127.0.0.1:${port}/shutdown`, {
-      method: 'POST',
-      signal: AbortSignal.timeout(1500),
-    });
-  } catch {}
-}
-
 async function main() {
   const opts = parseArgs();
   const repoRoot = findRepoRoot();
-  const agentJar = getAgentJarSync({ javaVersion: 8 }).jarPath;
+  const agentJar = getAgentJarSync().jarPath;
 
   if (!opts.jarPath) {
     console.error(
@@ -272,6 +301,7 @@ async function main() {
     process.exit(1);
   }
 
+  const jarClasses = getJarClasses(resolvedJar);
   let spawnedProcess: any = null;
   let status = await checkStatus(opts.port);
 
@@ -295,18 +325,14 @@ async function main() {
       '-cp',
       cpStr,
       'org.exoproc.njava.agent.utils.Exoproc',
-      '--standalone',
       '--port',
       String(opts.port),
       '--jar',
       resolvedJar,
     ];
 
-    if (opts.mappings) {
-      javaArgs.push('--mappings', opts.mappings);
-    }
-    if (opts.schema) {
-      javaArgs.push('--schema', opts.schema);
+    if (opts.libs) {
+      javaArgs.push('--libs', opts.libs);
     }
 
     spawnedProcess = spawn('java', javaArgs, {
@@ -341,7 +367,6 @@ async function main() {
 
   const cleanup = async () => {
     if (spawnedProcess && !opts.keepAlive) {
-      await shutdown(opts.port);
       try {
         spawnedProcess.kill('SIGTERM');
       } catch {}
@@ -361,16 +386,14 @@ async function main() {
   try {
     // 1. If filter requested
     if (opts.filter) {
-      const res = await fetch(`http://127.0.0.1:${opts.port}/classes`);
-      const data = (await res.json()) as { count: number; classes: string[] };
       const regex = new RegExp(opts.filter, 'i');
-      const matched = data.classes.filter((c) => regex.test(c));
+      const matched = jarClasses.filter((c) => regex.test(c));
 
-      if (opts.jsonOutput) {
+      if (opts.jsonOutput || !process.stdout.isTTY) {
         console.log(
           JSON.stringify(
             {
-              total: data.count,
+              total: jarClasses.length,
               matchedCount: matched.length,
               classes: matched,
             },
@@ -380,99 +403,108 @@ async function main() {
         );
       } else {
         console.log(
-          `\n🔍 Found ${matched.length} / ${data.count} classes matching "${opts.filter}":`,
+          renderToString(
+            React.createElement(FilterClassesCard, {
+              filter: opts.filter,
+              total: jarClasses.length,
+              matched,
+            }),
+          ),
         );
-        const preview = matched.slice(0, 50);
-        preview.forEach((c) => console.log(`   - ${c}`));
-        if (matched.length > 50) {
-          console.log(`   ... and ${matched.length - 50} more`);
-        }
       }
     }
 
     // 2. If eval requested
     if (opts.evalCode) {
-      const res = await fetch(`http://127.0.0.1:${opts.port}/eval`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: opts.evalCode }),
-      });
-      const evalRes = (await res.json()) as any;
-      if (opts.jsonOutput) {
+      const start = performance.now();
+      const evalRes = await evalRemote(opts.evalCode, undefined, 15000);
+      const dur = (performance.now() - start).toFixed(1);
+
+      if (opts.jsonOutput || !process.stdout.isTTY) {
         console.log(JSON.stringify(evalRes, null, 2));
       } else {
-        console.log('\n⚡ Eval Result:');
-        if (evalRes.success) {
-          console.log(`   Success: ${evalRes.result}`);
-        } else {
-          console.log(`   ❌ Error: ${evalRes.error}`);
-        }
-        if (evalRes.logs && evalRes.logs.length > 0) {
-          console.log('   Logs:');
-          evalRes.logs.forEach((l: string) => console.log(`     > ${l}`));
-        }
-        console.log(`   Elapsed: ${evalRes.executionTimeMs}ms`);
+        console.log(
+          renderToString(
+            React.createElement(EvalCard, {
+              result: {
+                ...evalRes,
+                executionTimeMs: dur,
+              },
+            }),
+          ),
+        );
       }
     }
 
     // 3. If detect requested
     if (opts.detect) {
       const detectCode = `
-        (function() {
-          var results = {};
-          var cl = classLoader != null ? classLoader : java.lang.Thread.currentThread().getContextClassLoader();
-          var CR = Java.type('org.objectweb.asm.ClassReader');
-          var CN = Java.type('org.objectweb.asm.tree.ClassNode');
-
-          // Check Minecraft main / run
-          try {
-            var c = java.lang.Class.forName('net.minecraft.client.main.Main', false, cl);
-            results['main'] = { found: true, name: c.getName() };
-          } catch(e) {
-            results['main'] = { found: false };
-          }
-
-          return JSON.stringify(results);
-        })()
+        const results = {};
+        try {
+          const mainClass = Java.type('net.minecraft.client.main.Main');
+          results['main'] = { found: true, name: 'net.minecraft.client.main.Main' };
+        } catch {
+          results['main'] = { found: false };
+        }
+        try {
+          const mcClass = Java.type('net.minecraft.client.Minecraft');
+          results['minecraft'] = { found: true, name: 'net.minecraft.client.Minecraft' };
+        } catch {
+          results['minecraft'] = { found: false };
+        }
+        return results;
       `;
-      const res = await fetch(`http://127.0.0.1:${opts.port}/eval`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: detectCode }),
-      });
-      const detectRes = (await res.json()) as any;
-      if (opts.jsonOutput) {
+      const detectRes = await evalRemote(detectCode, undefined, 15000);
+      if (opts.jsonOutput || !process.stdout.isTTY) {
         console.log(JSON.stringify(detectRes, null, 2));
       } else {
         console.log('\n🔬 Detection Results:');
-        console.log(detectRes.result);
+        console.log(JSON.stringify(detectRes.result, null, 2));
       }
     }
 
     // 4. Default status summary
     if (!opts.filter && !opts.evalCode && !opts.detect) {
-      if (opts.jsonOutput) {
-        console.log(JSON.stringify(status, null, 2));
-      } else {
-        console.log('\n✅ Standalone Inspector Active');
-        console.log(`   Target JAR:    ${status.targetJar}`);
-        console.log(`   Class Count:   ${status.classCount}`);
-        console.log(`   Agent Port:    ${status.port}`);
-        console.log(`   Java Runtime:  ${process.version}`);
-        console.log('\nEndpoints:');
-        console.log(`   GET  http://127.0.0.1:${opts.port}/status`);
-        console.log(`   GET  http://127.0.0.1:${opts.port}/classes`);
+      const jarStats = statSync(resolvedJar);
+      const sizeMb = (jarStats.size / (1024 * 1024)).toFixed(2);
+
+      if (opts.jsonOutput || !process.stdout.isTTY) {
         console.log(
-          `   POST http://127.0.0.1:${opts.port}/eval {"code": "..."}`,
+          JSON.stringify(
+            {
+              alive: true,
+              targetJar: resolvedJar,
+              fileSizeMb: sizeMb,
+              classCount: jarClasses.length,
+              port: opts.port,
+              buildId: status?.buildId,
+              uptime: status?.uptime,
+            },
+            null,
+            2,
+          ),
+        );
+      } else {
+        console.log(
+          renderToString(
+            React.createElement(InspectorCard, {
+              targetJar: basename(resolvedJar),
+              sizeMb,
+              classCount: jarClasses.length,
+              port: opts.port,
+              buildId: status?.buildId,
+            }),
+          ),
         );
       }
     }
 
     if (opts.keepAlive) {
-      if (!opts.jsonOutput)
+      if (!opts.jsonOutput && process.stdout.isTTY) {
         console.log(
           `\n⏳ Agent inspector kept alive on port ${opts.port}. Press Ctrl+C to exit.`,
         );
+      }
       await new Promise(() => {});
     }
   } finally {

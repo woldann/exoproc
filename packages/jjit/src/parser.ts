@@ -9,6 +9,12 @@ export interface MemberChunk {
   isBlock: boolean;
 }
 
+function isEscaped(str: string, idx: number): boolean {
+  let count = 0;
+  for (let j = idx - 1; j >= 0 && str[j] === '\\'; j--) count++;
+  return count % 2 === 1;
+}
+
 /**
  * Strips comments from Java source outside of string and character literals.
  */
@@ -21,7 +27,6 @@ export function stripComments(code: string): string {
 
   for (let i = 0; i < code.length; i++) {
     const char = code[i];
-    const prev = i > 0 ? code[i - 1] : '';
     const next = i + 1 < code.length ? code[i + 1] : '';
 
     if (inLineComment) {
@@ -39,12 +44,12 @@ export function stripComments(code: string): string {
       continue;
     }
     if (inString) {
-      if (char === '"' && prev !== '\\') inString = false;
+      if (char === '"' && !isEscaped(code, i)) inString = false;
       result += char;
       continue;
     }
     if (inChar) {
-      if (char === "'" && prev !== '\\') inChar = false;
+      if (char === "'" && !isEscaped(code, i)) inChar = false;
       result += char;
       continue;
     }
@@ -91,35 +96,31 @@ export function splitClassMembers(bodyContent: string): MemberChunk[] {
 
   for (let i = 0; i < bodyContent.length; i++) {
     const char = bodyContent[i];
-    const prev = i > 0 ? bodyContent[i - 1] : '';
     const next = i + 1 < bodyContent.length ? bodyContent[i + 1] : '';
 
     if (inLineComment) {
       if (char === '\n') inLineComment = false;
-      if (depth === 0) currentHeader += char;
-      else currentBody += char;
+      if (depth > 0) currentBody += char;
       continue;
     }
     if (inBlockComment) {
       if (char === '*' && next === '/') {
         inBlockComment = false;
-        if (depth === 0) currentHeader += '*/';
-        else currentBody += '*/';
+        if (depth > 0) currentBody += '*/';
         i++;
         continue;
       }
-      if (depth === 0) currentHeader += char;
-      else currentBody += char;
+      if (depth > 0) currentBody += char;
       continue;
     }
     if (inString) {
-      if (char === '"' && prev !== '\\') inString = false;
+      if (char === '"' && !isEscaped(bodyContent, i)) inString = false;
       if (depth === 0) currentHeader += char;
       else currentBody += char;
       continue;
     }
     if (inChar) {
-      if (char === "'" && prev !== '\\') inChar = false;
+      if (char === "'" && !isEscaped(bodyContent, i)) inChar = false;
       if (depth === 0) currentHeader += char;
       else currentBody += char;
       continue;
@@ -127,15 +128,13 @@ export function splitClassMembers(bodyContent: string): MemberChunk[] {
 
     if (char === '/' && next === '/') {
       inLineComment = true;
-      if (depth === 0) currentHeader += '//';
-      else currentBody += '//';
+      if (depth > 0) currentBody += '//';
       i++;
       continue;
     }
     if (char === '/' && next === '*') {
       inBlockComment = true;
-      if (depth === 0) currentHeader += '/*';
-      else currentBody += '/*';
+      if (depth > 0) currentBody += '/*';
       i++;
       continue;
     }
@@ -249,6 +248,28 @@ export function parseParams(paramStr: string): JavaParamDef[] {
 }
 
 /**
+ * Splits string by whitespace while preserving generic types containing spaces (e.g. Map<String, Object>).
+ */
+export function splitTokensRespectingGenerics(str: string): string[] {
+  const tokens: string[] = [];
+  let genericDepth = 0;
+  let cur = '';
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (c === '<') genericDepth++;
+    else if (c === '>') genericDepth--;
+    else if (c && /\s/.test(c) && genericDepth === 0) {
+      if (cur.trim()) tokens.push(cur.trim());
+      cur = '';
+      continue;
+    }
+    cur += c;
+  }
+  if (cur.trim()) tokens.push(cur.trim());
+  return tokens;
+}
+
+/**
  * Parses raw Java source code back into a structured JavaClassBuilder object.
  */
 export function parseJavaSource(
@@ -348,7 +369,7 @@ export function parseJavaSource(
           })
           .trim();
 
-        const tokens = cleanSig.split(/\s+/);
+        const tokens = splitTokensRespectingGenerics(cleanSig);
         const methodName = tokens.pop()!;
         const returnType = tokens.pop() ?? 'void';
         const mods = tokens.join(' ');
@@ -374,7 +395,7 @@ export function parseJavaSource(
           })
           .trim();
 
-        const tokens = cleanLhs.split(/\s+/);
+        const tokens = splitTokensRespectingGenerics(cleanLhs);
         const fieldName = tokens.pop()!;
         const fieldType = tokens.pop() ?? 'Object';
         const mods = tokens.join(' ');
@@ -412,7 +433,7 @@ export function parseJavaSource(
       })
       .trim();
 
-    const tokens = cleanSig.split(/\s+/);
+    const tokens = splitTokensRespectingGenerics(cleanSig);
     const lastIdent = tokens.pop()!;
 
     // Check throws

@@ -1,11 +1,6 @@
-import {
-  existsSync,
-  readFileSync,
-  writeFileSync,
-  unlinkSync,
-  mkdirSync,
-} from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
+import { getCacheDir, getDaemonStatePath } from 'exoproc-utils';
 
 export interface DaemonState {
   daemonPid: number;
@@ -47,19 +42,11 @@ export function findRepoRoot(): string {
   return resolve(process.cwd());
 }
 
-export function getDaemonStatePath(): string {
-  const root = findRepoRoot();
-  const tmpDir = join(root, 'tmp');
-  if (existsSync(tmpDir)) {
-    return join(tmpDir, '.exoproc-daemon.json');
-  }
-  try {
-    mkdirSync(tmpDir, { recursive: true });
-    return join(tmpDir, '.exoproc-daemon.json');
-  } catch {
-    return join(root, '.exoproc-daemon.json');
-  }
+export function getDaemonStateDir(): string {
+  return getCacheDir();
 }
+
+export { getDaemonStatePath };
 
 export function readDaemonState(): DaemonState | null {
   try {

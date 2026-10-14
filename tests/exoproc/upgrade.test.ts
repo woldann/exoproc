@@ -6,11 +6,12 @@ import {
 import { ExoprocClient } from 'exoproc';
 import { runDaemon, clearDaemonState } from 'exoproc/daemon';
 import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 describe('Exoproc Agent Upgrade System (.class loading & elevation)', () => {
   const TEST_PORT = 44522;
-  const tmpClassFile = join(process.cwd(), 'tmp', 'test-upgrade-agent.class');
+  const tmpClassFile = join(tmpdir(), 'test-upgrade-agent.class');
 
   beforeAll(async () => {
     // 1. Prepare sample agent .class file

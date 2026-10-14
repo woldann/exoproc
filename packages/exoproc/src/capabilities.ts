@@ -58,3 +58,30 @@ export function assertNativeCapability(
     );
   }
 }
+
+export type RuntimeMode = 'native' | 'tool';
+
+let _mode: RuntimeMode | null = null;
+
+/**
+ * Returns current runtime mode:
+ * - 'native': Windows x64 environment with low-level FFI (bun-xffi) loaded.
+ * - 'tool': Lightweight client/tool mode (Linux, Node.js, or remote client).
+ */
+export function getRuntimeMode(): RuntimeMode {
+  if (_mode !== null) return _mode;
+  if (process.env.EXOPROC_MODE === 'tool' || process.env.EXOPROC_REMOTE) {
+    _mode = 'tool';
+    return _mode;
+  }
+  _mode = hasNativeXffi() ? 'native' : 'tool';
+  return _mode;
+}
+
+export function isToolMode(): boolean {
+  return getRuntimeMode() === 'tool';
+}
+
+export function isNativeMode(): boolean {
+  return getRuntimeMode() === 'native';
+}

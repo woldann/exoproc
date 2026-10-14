@@ -6,7 +6,8 @@
     "noEmit": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noUncheckedIndexedAccess": false
+    "noUncheckedIndexedAccess": false,
+    "jsx": "react-jsx"
   },
 
   "include": ["."]

@@ -1,6 +1,5 @@
-import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { tmpdir } from 'node:os';
 import zlib from 'node:zlib';
 import chalk from 'chalk';
 let _xffi: any = null;
@@ -463,23 +462,9 @@ export async function captureScreenshotViaNThread(
     }
 
     // Determine output file path
-    let outPath = options.outputPath;
-    if (!outPath) {
-      const workspaceTmp = resolve(process.cwd(), 'tmp');
-      try {
-        if (!existsSync(workspaceTmp)) {
-          mkdirSync(workspaceTmp, { recursive: true });
-        }
-      } catch {}
-      const defaultDir = existsSync(workspaceTmp)
-        ? workspaceTmp
-        : process.env.TEMP || process.env.TMP || tmpdir();
-
-      const timestamp = Date.now();
-      outPath = resolve(defaultDir, `screenshot-${timestamp}.png`);
-    } else {
-      outPath = resolve(process.cwd(), outPath);
-    }
+    const outPath = options.outputPath
+      ? resolve(process.cwd(), options.outputPath)
+      : resolve(process.cwd(), `screenshot-${Date.now()}.png`);
 
     const pngBuffer = encodePng(width, height, pixelBuffer);
     writeFileSync(outPath, pngBuffer);
@@ -666,23 +651,9 @@ export async function captureScreenshot(
   }
 
   // Determine output location
-  let outPath = options.outputPath;
-  if (!outPath) {
-    const workspaceTmp = resolve(process.cwd(), 'tmp');
-    try {
-      if (!existsSync(workspaceTmp)) {
-        mkdirSync(workspaceTmp, { recursive: true });
-      }
-    } catch {}
-    const defaultDir = existsSync(workspaceTmp)
-      ? workspaceTmp
-      : process.env.TEMP || process.env.TMP || tmpdir();
-
-    const timestamp = Date.now();
-    outPath = resolve(defaultDir, `screenshot-${timestamp}.png`);
-  } else {
-    outPath = resolve(process.cwd(), outPath);
-  }
+  const outPath = options.outputPath
+    ? resolve(process.cwd(), options.outputPath)
+    : resolve(process.cwd(), `screenshot-${Date.now()}.png`);
 
   // Encode and save PNG
   const pngBuffer = encodePng(width, height, pixelBuffer);

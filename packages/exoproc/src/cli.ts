@@ -1,8 +1,10 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
-import { existsSync, mkdirSync } from 'node:fs';
-import { resolve, join } from 'node:path';
-import { startApiServer } from './server.js';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { service } from './service.js';
+import { isToolMode, getRuntimeMode } from './capabilities.js';
+import { renderCliResult } from './ui/index.js';
 
 const program = new Command();
 
@@ -11,7 +13,8 @@ program
   .description(
     'Unified external Minecraft automation client, CLI runner, MCP server, and runtime instrumentation framework',
   )
-  .version('0.1.0');
+  .version('0.2.0')
+  .option('--json', 'Output pure JSON instead of human-friendly terminal UI');
 
 function readStdin(): Promise<string> {
   if (typeof Bun !== 'undefined' && (Bun as any).stdin) {
@@ -33,128 +36,72 @@ function readStdin(): Promise<string> {
 }
 
 /**
- * Dispatches command directly via ExoprocService or internal ephemeral API server.
- * Outputs pure structured JSON to stdout.
+ * Direct service execution for CLI commands.
+ * Renders beautiful Ink views for interactive terminal use, or outputs pure JSON with --json / piped stdout.
  */
-async function dispatchApi(
-  path: string,
-  method: 'GET' | 'POST' = 'GET',
-  body?: any,
-) {
-  const server = await startApiServer({ port: 0 });
-  const port = server.port;
-
+async function runService<T>(
+  commandName: string,
+  fn: () => Promise<T>,
+  opts?: { json?: boolean },
+): Promise<void> {
+  const isJson = Boolean(opts?.json ?? program.opts().json);
   try {
-    const url = `http://127.0.0.1:${port}${path}`;
-    const headers: Record<string, string> = {
-      Accept: 'application/json',
-    };
-    if (body !== undefined) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-
-    const data = await res.json();
-    console.log(JSON.stringify(data, null, 2));
-
-    if (!res.ok || (data && (data as any).success === false)) {
+    const data = await fn();
+    await renderCliResult(commandName, data, { json: isJson });
+    if (data && (data as any).success === false) {
       process.exit(1);
     }
   } catch (err: any) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.log(
-      JSON.stringify(
-        {
-          success: false,
-          error: msg,
-        },
-        null,
-        2,
-      ),
-    );
-    process.exit(1);
-  } finally {
-    server.stop();
-  }
-}
-
-async function dispatchStreamApi(
-  path: string,
-  method: 'GET' | 'POST' = 'POST',
-  body?: any,
-) {
-  const server = await startApiServer({ port: 0 });
-  const port = server.port;
-
-  try {
-    const url = `http://127.0.0.1:${port}${path}`;
-    const headers: Record<string, string> = {
-      Accept: 'text/event-stream',
+    const errPayload = {
+      success: false,
+      mode: getRuntimeMode(),
+      error: msg,
     };
-    if (body !== undefined) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-
-    if (!res.ok || !res.body) {
-      const text = await res.text();
-      console.error(text);
-      process.exit(1);
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let hasFailure = false;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      process.stdout.write(chunk);
-      if (chunk.includes('"success": false') || chunk.includes('"error":')) {
-        hasFailure = true;
-      }
-    }
-
-    if (hasFailure) {
-      process.exit(1);
-    }
-  } catch (err: any) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(msg);
+    await renderCliResult(commandName, errPayload, { json: isJson });
     process.exit(1);
-  } finally {
-    server.stop();
   }
 }
 
-// 1. Status & Daemon Control
+// 1. Status & Process Control
 program
   .command('status')
   .description('Get connection and instrumentation status')
-  .action(() => dispatchApi('/status', 'GET'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) =>
+    runService(
+      'status',
+      async () => {
+        const status = await service.getStatus();
+        if (!status) {
+          return {
+            alive: false,
+            connected: false,
+            mode: getRuntimeMode(),
+            message: isToolMode()
+              ? 'No active Exoproc daemon or agent connected. (Running in Tool Mode)'
+              : 'No process attached. (Running in Native Mode)',
+          };
+        }
+        return status;
+      },
+      opts,
+    ),
+  );
 
 program
   .command('procs')
   .description('List candidate Minecraft and target processes')
-  .action(() => dispatchApi('/procs', 'GET'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('procs', () => service.listProcesses(), opts));
 
 program
   .command('attach [pid]')
   .description('Attach to target process (Minecraft / JVM)')
-  .action((pidStr) => {
+  .option('--json', 'Output pure JSON')
+  .action((pidStr, opts) => {
     const pid = pidStr ? parseInt(pidStr, 10) : undefined;
-    return dispatchApi('/attach', 'POST', { pid });
+    return runService('attach', () => service.attach(pid), opts);
   });
 
 program
@@ -164,23 +111,31 @@ program
   )
   .option('-p, --port <port>', 'Agent port (default 43378)', '43378')
   .option('--obfuscate', 'Obfuscate agent bytecode with TinyRemapper')
-  .action((classPath, opts) => {
-    return dispatchApi('/upgrade', 'POST', {
-      classPath,
-      port: opts.port ? parseInt(opts.port, 10) : undefined,
-      obfuscate: opts.obfuscate ?? false,
-    });
-  });
+  .option('--json', 'Output pure JSON')
+  .action((classPath, opts) =>
+    runService(
+      'upgrade',
+      () =>
+        service.upgrade({
+          classPath,
+          port: opts.port ? parseInt(opts.port, 10) : undefined,
+          obfuscate: opts.obfuscate ?? false,
+        }),
+      opts,
+    ),
+  );
 
 program
   .command('detach')
   .description('Detach from current target process')
-  .action(() => dispatchApi('/detach', 'POST'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('detach', () => service.detach(), opts));
 
 program
   .command('shutdown')
   .description('Shut down active session / daemon')
-  .action(() => dispatchApi('/shutdown', 'POST'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('shutdown', () => service.shutdown(), opts));
 
 // 2. Game Telemetry & World State
 program
@@ -189,13 +144,15 @@ program
   .description(
     'Get current player telemetry (coords, rotation, health, motion, etc.)',
   )
-  .action(() => dispatchApi('/player', 'GET'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('player', () => service.getPlayer(), opts));
 
 program
   .command('world')
   .alias('w')
   .description('Get world state (time, weather, entity count, dimension)')
-  .action(() => dispatchApi('/world', 'GET'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('world', () => service.getWorld(), opts));
 
 program
   .command('gui')
@@ -203,41 +160,57 @@ program
   .alias('g')
   .description('Get active GUI screen, buttons, and interaction targets')
   .option('--pool', 'Include resolved pool details')
-  .action((opts) => {
-    const path = `/gui${opts.pool ? '?pool=true' : ''}`;
-    return dispatchApi(path, 'GET');
-  });
+  .option('--json', 'Output pure JSON')
+  .action((opts) =>
+    runService(
+      'gui',
+      () => service.getGui({ includePool: Boolean(opts.pool) }),
+      opts,
+    ),
+  );
 
 program
   .command('state')
   .description('Get combined game snapshot (gui, player, and world)')
-  .action(() => dispatchApi('/state', 'GET'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('state', () => service.getState(), opts));
 
 program
   .command('target')
   .alias('raytrace')
   .description('Raytrace look vector to find aimed block or entity')
   .option('-r, --reach <blocks>', 'Maximum reach distance in blocks', '30')
-  .action((opts) => {
-    const reach = opts.reach || 30;
-    return dispatchApi(`/target?reach=${reach}`, 'GET');
-  });
+  .option('--json', 'Output pure JSON')
+  .action((opts) =>
+    runService(
+      'target',
+      () => service.getTarget(parseFloat(opts.reach) || 30),
+      opts,
+    ),
+  );
 
 program
   .command('entities')
   .alias('radar')
   .description('Scan loaded entities around player')
   .option('-r, --radius <blocks>', 'Search radius in blocks', '64')
-  .action((opts) => {
-    const radius = opts.radius || 64;
-    return dispatchApi(`/entities?radius=${radius}`, 'GET');
-  });
+  .option('--json', 'Output pure JSON')
+  .action((opts) =>
+    runService(
+      'entities',
+      () => service.getEntities(parseFloat(opts.radius) || 64),
+      opts,
+    ),
+  );
 
 program
   .command('inventory')
   .alias('inv')
   .description('Inspect player inventory, hotbar, and equipped armor')
-  .action(() => dispatchApi('/inventory', 'GET'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) =>
+    runService('inventory', () => service.getInventory(), opts),
+  );
 
 program
   .command('java')
@@ -245,46 +218,53 @@ program
   .description(
     'Inspect Java runtime environment, JVM specifications, and classpath',
   )
-  .action(() => dispatchApi('/java', 'GET'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('java', () => service.getJava(), opts));
 
 // 3. GUI Navigation & Automation
 program
   .command('click <idOrText>')
   .description('Click a GUI button by ID number or label text')
-  .action((target) => {
+  .option('--json', 'Output pure JSON')
+  .action((target, opts) => {
     const selector = /^\d+$/.test(target) ? parseInt(target, 10) : target;
-    return dispatchApi('/click', 'POST', { selector });
+    return runService('click', () => service.click(selector), opts);
   });
 
 program
   .command('close-screen')
   .alias('close')
   .description('Close open GUI screen and return to game')
-  .action(() => dispatchApi('/close-screen', 'POST'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) =>
+    runService('close-screen', () => service.closeScreen(), opts),
+  );
 
 program
   .command('resume')
   .description('Resume game from pause menu')
-  .action(() => dispatchApi('/resume', 'POST'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('resume', () => service.resume(), opts));
 
 program
   .command('navigate [target]')
   .option('-t, --target <screen>', 'Target GUI screen (default: InGame)')
-  .option('--json', 'Output final result as JSON instead of streaming SSE')
+  .option('--json', 'Output final result as JSON only')
   .description(
     'Automatically navigate world menus to target screen or singleplayer world',
   )
   .action((targetArg, opts) => {
     const target = targetArg || opts.target || 'InGame';
     if (opts.json) {
-      return dispatchApi(
-        `/navigate?target=${encodeURIComponent(target)}`,
-        'POST',
-      );
+      return runService('navigate', () => service.navigate(target), opts);
     }
-    return dispatchStreamApi(
-      `/navigate?target=${encodeURIComponent(target)}`,
-      'POST',
+    return runService(
+      'navigate',
+      () =>
+        service.navigate(target, (msg) => {
+          console.log(`[navigate] ${msg}`);
+        }),
+      opts,
     );
   });
 
@@ -292,122 +272,57 @@ program
 program
   .command('chat <message...>')
   .description('Send chat message or execute command in-game')
-  .action((words) => {
-    const msg = words.join(' ');
-    return dispatchApi('/chat', 'POST', { message: msg });
-  });
+  .option('--json', 'Output pure JSON')
+  .action((words, opts) =>
+    runService('chat', () => service.chat(words.join(' ')), opts),
+  );
 
 program
   .command('look <yaw> <pitch>')
   .description('Set player camera rotation angles (yaw, pitch)')
-  .action((yawStr, pitchStr) => {
-    const yaw = parseFloat(yawStr);
-    const pitch = parseFloat(pitchStr);
-    return dispatchApi('/look', 'POST', { yaw, pitch });
-  });
+  .option('--json', 'Output pure JSON')
+  .action((yawStr, pitchStr, opts) =>
+    runService(
+      'look',
+      () => service.look(parseFloat(yawStr), parseFloat(pitchStr)),
+      opts,
+    ),
+  );
 
 program
   .command('action <action>')
   .description('Perform player action (swing | attack | use | jump)')
-  .action((act) => dispatchApi('/action', 'POST', { action: act }));
+  .option('--json', 'Output pure JSON')
+  .action((act, opts) => runService('action', () => service.action(act), opts));
 
 program
   .command('jump')
   .description('Make player jump')
-  .action(() => dispatchApi('/jump', 'POST'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('jump', () => service.jump(), opts));
 
 program
   .command('attack')
   .alias('swing')
   .description('Left-click / swing arm / attack')
-  .action(() => dispatchApi('/attack', 'POST'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('attack', () => service.attack(), opts));
 
 program
   .command('use')
   .description('Right-click / use item / place block')
-  .action(() => dispatchApi('/use', 'POST'));
+  .option('--json', 'Output pure JSON')
+  .action((opts) => runService('use', () => service.use(), opts));
 
 program
   .command('slot <index>')
   .description('Select hotbar slot (0-8)')
-  .action((idxStr) => {
-    const idx = parseInt(idxStr, 10);
-    return dispatchApi('/slot', 'POST', { slot: idx });
-  });
+  .option('--json', 'Output pure JSON')
+  .action((idxStr, opts) =>
+    runService('slot', () => service.slot(parseInt(idxStr, 10)), opts),
+  );
 
-// 5. Diagnostics, Mappings & Reflection
-program
-  .command('pool [target]')
-  .description('Inspect classpool class mappings')
-  .action((target) => {
-    const path = `/pool${target ? `?target=${encodeURIComponent(target)}` : ''}`;
-    return dispatchApi(path, 'GET');
-  });
-
-program
-  .command('database [target]')
-  .alias('db')
-  .description('Inspect mapping database')
-  .action((target) => {
-    const path = `/database${target ? `?target=${encodeURIComponent(target)}` : ''}`;
-    return dispatchApi(path, 'GET');
-  });
-
-program
-  .command('crawl [screens...]')
-  .option('--json', 'Output final result as JSON instead of streaming SSE')
-  .description('Crawl and discover all reachable GUI screens and classes')
-  .action((screens, opts) => {
-    const payload = {
-      targets: screens && screens.length > 0 ? screens : undefined,
-    };
-    if (opts.json) {
-      return dispatchApi('/crawl', 'POST', payload);
-    }
-    return dispatchStreamApi('/crawl', 'POST', payload);
-  });
-
-program
-  .command('export-mappings [profileOrOut] [out]')
-  .alias('mappings')
-  .description(
-    'Export complete mappings JSON by crawling GUIs and merging live reflection',
-  )
-  .option(
-    '-m, --minecraft',
-    'Enable Minecraft mode and export Minecraft mappings',
-  )
-  .option('--no-crawl', 'Skip automated GUI crawling')
-  .option('-o, --out <path>', 'Output mappings file path')
-  .option('--json', 'Output final result as JSON instead of streaming SSE')
-  .action((profileOrOut, outArg, opts) => {
-    let profile = '1.8.9';
-    let out = opts.out || outArg;
-
-    if (profileOrOut) {
-      if (
-        profileOrOut.endsWith('.json') ||
-        profileOrOut.includes('/') ||
-        profileOrOut.includes('\\')
-      ) {
-        out = profileOrOut;
-      } else {
-        profile = profileOrOut;
-      }
-    }
-
-    const payload = {
-      profile,
-      crawl: opts.crawl !== false,
-      out,
-      minecraft: Boolean(opts.minecraft),
-    };
-    if (opts.json) {
-      return dispatchApi('/mappings/export', 'POST', payload);
-    }
-    return dispatchStreamApi('/mappings/export', 'POST', payload);
-  });
-
+// 5. Script Execution & Eval
 program
   .command('eval <code...>')
   .description(
@@ -421,14 +336,18 @@ program
     '-p, --pool <path>',
     'Preload mappings JSON file into pool (skips reflection scan if already mapped)',
   )
-  .action((words, opts) => {
-    const code = words.join(' ');
-    return dispatchApi('/eval', 'POST', {
-      code,
-      minecraft: Boolean(opts.minecraft),
-      pool: opts.pool,
-    });
-  });
+  .option('--json', 'Output pure JSON')
+  .action((words, opts) =>
+    runService(
+      'eval',
+      () =>
+        service.evalCode(words.join(' '), {
+          minecraft: Boolean(opts.minecraft),
+          poolPath: opts.pool,
+        }),
+      opts,
+    ),
+  );
 
 program
   .command('run [target...]')
@@ -444,6 +363,7 @@ program
     '-p, --pool <path>',
     'Preload mappings JSON file into pool (skips reflection scan if already mapped)',
   )
+  .option('--json', 'Output pure JSON')
   .action(async (words, opts) => {
     let scriptPath: string | undefined = opts.file;
     let scriptCode: string | undefined;
@@ -486,53 +406,29 @@ program
       process.exit(1);
     }
 
-    return dispatchApi('/run', 'POST', {
-      scriptPath,
-      scriptCode,
-      minecraft: Boolean(opts.minecraft),
-      pool: opts.pool,
-    });
+    return runService(
+      'run',
+      () =>
+        service.runScript(scriptPath, scriptCode, undefined, {
+          minecraft: Boolean(opts.minecraft),
+          poolPath: opts.pool,
+        }),
+      opts,
+    );
   });
 
-program
-  .command('minecraft:init')
-  .description(
-    'Initialize Minecraft class matching and mappings registration on the active agent',
-  )
-  .action(() => dispatchApi('/minecraft/init', 'POST'));
-
-program
-  .command('minecraft:status')
-  .description(
-    'Check if active target is Minecraft and if Minecraft mappings are initialized',
-  )
-  .action(() => dispatchApi('/minecraft/status', 'GET'));
-
-// 6. Screenshot (Captures in-game OpenGL framebuffer, encodes to Base64 PNG)
+// 6. Screenshot (Captures in-game OpenGL framebuffer)
 program
   .command('screenshot [outputPath]')
   .description('Capture in-game screenshot (OpenGL framebuffer -> Base64 PNG)')
   .option('-n, --no-save', 'Do not save to file (keep in-memory/base64 only)')
-  .option('-b, --base64', 'Include base64 string in JSON output')
+  .option('--json', 'Output pure JSON')
   .action((outputPath, opts) => {
-    let target: string | undefined;
-    if (opts.save !== false) {
-      if (outputPath) {
-        target = resolve(process.cwd(), outputPath);
-      } else {
-        const tmpDir = resolve(process.cwd(), 'tmp');
-        if (!existsSync(tmpDir)) {
-          try {
-            mkdirSync(tmpDir, { recursive: true });
-          } catch {}
-        }
-        target = join(tmpDir, `screenshot-${Date.now()}.png`);
-      }
+    let target: string | undefined = outputPath;
+    if (opts.save !== false && !target) {
+      target = resolve(process.cwd(), `screenshot-${Date.now()}.png`);
     }
-    return dispatchApi('/screenshot', 'POST', {
-      path: target,
-      includeBase64: Boolean(opts.base64),
-    });
+    return runService('screenshot', () => service.screenshot(target), opts);
   });
 
 // 7. Dump / Extract Agent (JAR or .class)
@@ -548,49 +444,23 @@ program
     'Extract raw .class bytecode (Exoproc.class) instead of a JAR',
   )
   .option('-j, --jar', 'Extract as a .jar archive')
-  .option(
-    '-m, --mappings [path]',
-    'Extract obfuscation mapping table (.txt or .tiny)',
-  )
-  .option(
-    '--no-obf, --no-obfuscate',
-    'Disable obfuscation (keep original names and debug symbols)',
-  )
-  .option(
-    '--java-version <version>',
-    'Target Java major version (8, 17, 21)',
-    '8',
-  )
-  .option('--java-path <path>', 'Custom path to java binary')
+  .option('--json', 'Output pure JSON')
   .action((outputPath, opts) => {
-    const isMappingOnly =
-      (opts.mappings === true && !outputPath) ||
-      (outputPath &&
-        (outputPath.toLowerCase().endsWith('.tiny') ||
-          outputPath.toLowerCase().endsWith('.txt')));
     const isClass =
       Boolean(opts.class) ||
       (outputPath && outputPath.toLowerCase().endsWith('.class'));
     const isJar = Boolean(opts.jar);
-    const format = isMappingOnly
-      ? 'mapping'
-      : isClass
-        ? 'class'
-        : isJar
-          ? 'jar'
-          : undefined;
-    const javaVersion = parseInt(opts.javaVersion, 10) || 8;
-    const obfuscate = opts.obfuscate !== false;
-    const dumpMappings = opts.mappings;
+    const format = isClass ? 'class' : isJar ? 'jar' : undefined;
 
-    return dispatchApi('/agent/dump', 'POST', {
-      path: outputPath,
-      format,
-      javaVersion,
-      javaPath: opts.javaPath,
-      obfuscate,
-      dumpMappings,
-    });
+    return runService(
+      'agent:dump',
+      () =>
+        service.dumpAgent({
+          path: outputPath,
+          format,
+        }),
+      opts,
+    );
   });
 
 // 8. Standalone HTTP API Server Mode
@@ -600,6 +470,23 @@ program
   .option('-p, --port <port>', 'HTTP port to listen on', '43370')
   .option('-h, --host <host>', 'HTTP hostname to bind to', '127.0.0.1')
   .action(async (opts) => {
+    if (isToolMode()) {
+      console.error(
+        JSON.stringify(
+          {
+            success: false,
+            mode: 'tool',
+            error:
+              'Exoproc cannot run in server mode in Tool Mode (native Windows FFI is not available in this environment). Connect to an active daemon or Minecraft Java agent instead.',
+          },
+          null,
+          2,
+        ),
+      );
+      process.exit(1);
+    }
+
+    const { startApiServer } = await import('./server.js');
     const port = parseInt(opts.port, 10) || 43370;
     const host = opts.host || '127.0.0.1';
     const server = await startApiServer({ port, host });
@@ -610,7 +497,7 @@ program
           status: 'online',
           server: 'exoproc-api',
           url: `http://${server.hostname}:${server.port}`,
-          engine: typeof Bun !== 'undefined' ? 'Bun.serve' : 'node:http',
+          engine: 'Bun.serve',
         },
         null,
         2,
@@ -634,21 +521,21 @@ program
     await import('./mcp.js');
   });
 
-// 10. Daemon Mode (Optional standalone background service)
+// 10. Daemon Mode
 program
   .command('daemon')
   .description('Start background instrumentation daemon service')
   .option('-p, --port <port>', 'Daemon port to listen on', '43370')
   .option('-h, --host <host>', 'Daemon host to bind to', '127.0.0.1')
   .action(async (opts) => {
-    const { hasNativeXffi } = await import('./capabilities.js');
-    if (!hasNativeXffi()) {
+    if (isToolMode()) {
       console.error(
         JSON.stringify(
           {
             success: false,
+            mode: 'tool',
             error:
-              'Exoproc daemon requires native Windows x64 instrumentation with Bun (bun-xffi). On Node.js or non-Windows, run Exoproc in client/tool mode connected to an existing daemon or agent.',
+              'Exoproc daemon requires native Windows x64 instrumentation with Bun (bun-xffi). On Node.js or non-Windows, run Exoproc in tool mode.',
           },
           null,
           2,
@@ -663,31 +550,8 @@ program
   });
 
 if (process.argv.length <= 2) {
-  const port = Number(process.env.API_PORT) || 43370;
-  const host = process.env.API_HOST || '127.0.0.1';
-  const server = await startApiServer({ port, host });
-
-  console.log(
-    JSON.stringify(
-      {
-        status: 'online',
-        server: 'exoproc-api',
-        url: `http://${server.hostname}:${server.port}`,
-        engine: typeof Bun !== 'undefined' ? 'Bun.serve' : 'node:http',
-        hint: 'Direct HTTP & SSE Server running. Use curl, httpie, or chafa.',
-      },
-      null,
-      2,
-    ),
-  );
-
-  const cleanup = () => {
-    server.stop();
-    process.exit(0);
-  };
-
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
-} else {
-  program.parse(process.argv);
+  program.outputHelp();
+  process.exit(0);
 }
+
+program.parse(process.argv);

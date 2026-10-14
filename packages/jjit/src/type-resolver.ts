@@ -122,9 +122,8 @@ export class JavaTypeResolver {
     const genericMatch = trimmed.match(/^([a-zA-Z0-9_.$]+)<(.+)>$/);
     if (genericMatch && genericMatch[1] && genericMatch[2]) {
       const containerType = this.resolve(genericMatch[1]);
-      const typeArgs = genericMatch[2]
-        .split(',')
-        .map((s) => this.resolve(s.trim()));
+      const rawArgs = splitGenericArgs(genericMatch[2]);
+      const typeArgs = rawArgs.map((s) => this.resolve(s.trim()));
       const innerCode = typeArgs.map((t) => t.codeType).join(', ');
       return {
         codeType: `${containerType.codeType}<${innerCode}>`,
@@ -272,4 +271,25 @@ export class JavaTypeResolver {
       requiresImport: false,
     };
   }
+}
+
+function splitGenericArgs(raw: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === '<') depth++;
+    else if (ch === '>') depth--;
+    else if (ch === ',' && depth === 0) {
+      if (current.trim()) parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) {
+    parts.push(current.trim());
+  }
+  return parts;
 }

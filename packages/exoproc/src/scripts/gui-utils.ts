@@ -57,7 +57,7 @@ export function getMinecraft(): any {
         if (MC.theMinecraft && typeof MC.theMinecraft !== 'function')
           return MC.theMinecraft;
       }
-    } catch {}
+    } catch (e) {}
   }
   return null;
 }
@@ -73,7 +73,7 @@ export function disablePauseOnLostFocus(mc?: any): boolean {
       mcInst.gameSettings.pauseOnLostFocus = false;
       return true;
     }
-  } catch {}
+  } catch (e) {}
   return false;
 }
 
@@ -109,7 +109,7 @@ export async function getScreenInfo(mc?: any): Promise<ScreenInfo> {
   ) {
     try {
       realClassName = Java.bridge.getObjectClassNameSync(ptr);
-    } catch {}
+    } catch (e) {}
   }
   if (!realClassName && scr.$realClassName) {
     realClassName = scr.$realClassName;
@@ -124,7 +124,7 @@ export async function getScreenInfo(mc?: any): Promise<ScreenInfo> {
           ? clsObj.getName()
           : clsObj.name || clsObj.$className || '';
         if (nm && nm !== 'GuiScreen') realClassName = nm;
-      } catch {}
+      } catch (e) {}
     }
   }
   if (!realClassName) {
@@ -240,7 +240,7 @@ export async function getScreenInfo(mc?: any): Promise<ScreenInfo> {
       try {
         const clsName = b.getClass().getName();
         if (clsName) realBtnClass = clsName;
-      } catch {}
+      } catch (e) {}
     }
 
     // Resolve deobfuscation for button class if available
@@ -364,7 +364,7 @@ export async function directClickButton(
         try {
           await scr.actionPerformed(targetBtn);
           return { success: true };
-        } catch {}
+        } catch (e) {}
       }
 
       // 2. Discover actionPerformed via scr.$class reflection
@@ -446,7 +446,7 @@ export async function directCloseScreen(
         try {
           await mc.displayGuiScreen(null);
           return { success: true };
-        } catch {}
+        } catch (e) {}
       }
 
       // 2. Discover displayGuiScreen via mc.$class reflection

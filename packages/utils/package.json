@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Simple file-based logger for the Exoproc ecosystem",
   "main": "./dist/index.js",
   "exports": {

@@ -7,7 +7,7 @@
 
 import { getMinecraft } from './gui-utils';
 
-await (async () => {
+(() => {
   const mc = getMinecraft();
   const p = mc ? mc.thePlayer : null;
   const scr = mc ? mc.currentScreen : null;
@@ -48,7 +48,7 @@ await (async () => {
       } else if (p.health !== undefined && p.health !== null) {
         health = String(Math.round(Number(p.health)));
       }
-    } catch {}
+    } catch (e) {}
 
     let air = 'N/A';
     try {
@@ -57,7 +57,7 @@ await (async () => {
       } else if (p.air !== undefined && p.air !== null) {
         air = String(Math.round(Number(p.air)));
       }
-    } catch {}
+    } catch (e) {}
 
     let flying = 'false';
     let creative = 'false';
@@ -69,7 +69,7 @@ await (async () => {
         creative = String(Boolean(cap.isCreativeMode));
         allowFly = String(Boolean(cap.allowFlying));
       }
-    } catch {}
+    } catch (e) {}
 
     print(
       'PLAYER|' +

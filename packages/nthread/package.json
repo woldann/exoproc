@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Non-invasive x64 Windows thread redirection library for Bun — delegate execution to existing threads without machineCode, remote allocation, or CreateRemoteThread.",
   "main": "./dist/index.js",
   "exports": {

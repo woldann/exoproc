@@ -692,22 +692,33 @@ export async function inspectState(): Promise<{
   player: PlayerInfo;
   world: WorldInfo;
 }> {
-  const code = loadScript('inspect-state');
-  const resp = await evalRemote(code, undefined, 10000);
-  if (!resp.success) {
-    throw new Error(resp.error || 'Failed to inspect state');
-  }
+  const [gui, player, world] = await Promise.all([
+    inspectGui().catch(
+      (err) =>
+        ({
+          hasScreen: false,
+          screenName: 'None',
+          buttons: [],
+          error: err?.message,
+        }) as any,
+    ),
+    inspectPlayer().catch(
+      (err) =>
+        ({
+          inGame: false,
+          error: err?.message,
+        }) as any,
+    ),
+    inspectWorld().catch(
+      (err) =>
+        ({
+          inGame: false,
+          error: err?.message,
+        }) as any,
+    ),
+  ]);
 
-  for (const log of resp.logs) {
-    if (log.startsWith('RESULT:SNAPSHOT|')) {
-      return JSON.parse(log.substring('RESULT:SNAPSHOT|'.length));
-    }
-    if (log.startsWith('RESULT:ERROR|')) {
-      throw new Error(log.substring('RESULT:ERROR|'.length));
-    }
-  }
-
-  throw new Error('No snapshot data returned from daemon');
+  return { gui, player, world };
 }
 
 export interface JavaInfo {

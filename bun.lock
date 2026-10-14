@@ -122,7 +122,7 @@
     },
     "packages/accessors": {
       "name": "exoproc-accessors",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-nhook": "workspace:*",
         "bun-njava": "workspace:*",
@@ -138,11 +138,11 @@
     },
     "packages/asm": {
       "name": "exoproc-asm",
-      "version": "0.2.0",
+      "version": "0.3.0",
     },
     "packages/capstone": {
       "name": "bun-capstone",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-capstone-abi": "workspace:*",
         "bun-xffi": "workspace:*",
@@ -150,21 +150,21 @@
     },
     "packages/capstone-abi": {
       "name": "bun-capstone-abi",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
       },
     },
     "packages/dummy": {
       "name": "exoproc-dummy",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
       },
     },
     "packages/exoproc": {
       "name": "@woldann/exoproc",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "bin": {
         "exoproc": "./dist/cli.js",
         "exoproc-daemon": "./dist/daemon/cli.js",
@@ -173,6 +173,7 @@
         "@modelcontextprotocol/sdk": "^1.32.1",
         "chalk": "^5.3.0",
         "commander": "^12.1.0",
+        "exoproc-utils": "workspace:*",
         "ink": "^7.1.1",
         "react": "^19.2.8",
         "terminal-image": "^5.0.1",
@@ -181,7 +182,7 @@
     },
     "packages/jjit": {
       "name": "exoproc-jjit",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "exoproc-mappings": "workspace:*",
       },
@@ -191,7 +192,7 @@
     },
     "packages/minecraft": {
       "name": "exoproc-minecraft",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "exoproc-mappings": "workspace:*",
       },
@@ -203,7 +204,7 @@
     },
     "packages/minhook": {
       "name": "bun-minhook",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-capstone": "workspace:*",
         "bun-winapi": "workspace:*",
@@ -213,7 +214,7 @@
     },
     "packages/nhook": {
       "name": "bun-nhook",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-capstone": "workspace:*",
         "bun-nthread": "workspace:*",
@@ -225,7 +226,7 @@
     },
     "packages/njava": {
       "name": "bun-njava",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
@@ -236,9 +237,10 @@
     },
     "packages/njava-agent": {
       "name": "njava-agent",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "exoproc-jjit": "workspace:*",
+        "exoproc-utils": "workspace:*",
       },
       "devDependencies": {
         "typescript": "^5.8.2",
@@ -246,14 +248,14 @@
     },
     "packages/njava-mappings": {
       "name": "exoproc-mappings",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "typescript": "^5.8.2",
       },
     },
     "packages/njava-nashorn": {
       "name": "exoproc-nashorn",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "exoproc-mappings": "workspace:*",
         "typescript": "^5.8.2",
@@ -261,7 +263,7 @@
     },
     "packages/njava-runtime": {
       "name": "exoproc-runtime",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "exoproc-jjit": "workspace:*",
         "exoproc-mappings": "workspace:*",
@@ -274,7 +276,7 @@
     },
     "packages/nshm": {
       "name": "bun-nshm",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
         "exoproc-dummy": "workspace:*",
@@ -283,7 +285,7 @@
     },
     "packages/nthread": {
       "name": "bun-nthread",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-winapi": "workspace:*",
         "bun-xffi": "workspace:*",
@@ -292,7 +294,7 @@
     },
     "packages/simulate": {
       "name": "@exoproc/simulate",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@exoproc/win32-abi": "workspace:*",
         "bun-capstone-abi": "workspace:*",
@@ -307,7 +309,7 @@
     },
     "packages/thunks": {
       "name": "bun-thunks",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
         "exoproc-asm": "workspace:*",
@@ -315,7 +317,7 @@
     },
     "packages/utils": {
       "name": "exoproc-utils",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@t3-oss/env-core": "^0.11.1",
         "dotenv": "^16.6.1",
@@ -326,14 +328,14 @@
     },
     "packages/win32-abi": {
       "name": "@exoproc/win32-abi",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@types/bun": "latest",
       },
     },
     "packages/winapi": {
       "name": "bun-winapi",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "bun-xffi": "workspace:*",
         "exoproc-utils": "workspace:*",
@@ -341,7 +343,7 @@
     },
     "packages/xffi": {
       "name": "bun-xffi",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@exoproc/win32-abi": "workspace:*",
         "exoproc-utils": "workspace:*",

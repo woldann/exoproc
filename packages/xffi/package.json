@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Win32-optimized Cross-Process FFI foundation for Bun.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

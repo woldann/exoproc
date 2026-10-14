@@ -38,16 +38,22 @@ export class JavaFieldBuilder {
   }
 
   public public(): this {
+    this._modifiers.delete('protected');
+    this._modifiers.delete('private');
     this._modifiers.add('public');
     return this;
   }
 
   public protected(): this {
+    this._modifiers.delete('public');
+    this._modifiers.delete('private');
     this._modifiers.add('protected');
     return this;
   }
 
   public private(): this {
+    this._modifiers.delete('public');
+    this._modifiers.delete('protected');
     this._modifiers.add('private');
     return this;
   }
@@ -80,6 +86,12 @@ export class JavaFieldBuilder {
 
   public modifier(mod: ModifierInput): this {
     for (const m of parseModifiers(mod)) {
+      if (m === 'private' || m === 'protected') {
+        this._modifiers.delete('public');
+      } else if (m === 'public') {
+        this._modifiers.delete('private');
+        this._modifiers.delete('protected');
+      }
       this._modifiers.add(m);
     }
     return this;
@@ -295,16 +307,22 @@ export class JavaMethodBuilder {
   }
 
   public public(): this {
+    this._modifiers.delete('protected');
+    this._modifiers.delete('private');
     this._modifiers.add('public');
     return this;
   }
 
   public protected(): this {
+    this._modifiers.delete('public');
+    this._modifiers.delete('private');
     this._modifiers.add('protected');
     return this;
   }
 
   public private(): this {
+    this._modifiers.delete('public');
+    this._modifiers.delete('protected');
     this._modifiers.add('private');
     return this;
   }
@@ -331,6 +349,12 @@ export class JavaMethodBuilder {
 
   public modifier(mod: ModifierInput): this {
     for (const m of parseModifiers(mod)) {
+      if (m === 'private' || m === 'protected') {
+        this._modifiers.delete('public');
+      } else if (m === 'public') {
+        this._modifiers.delete('private');
+        this._modifiers.delete('protected');
+      }
       this._modifiers.add(m);
     }
     return this;

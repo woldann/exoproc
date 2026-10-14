@@ -1,6 +1,12 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
+import {
+  getCacheDir,
+  getAgentCacheDir,
+  getDaemonStatePath,
+} from 'exoproc-utils';
 
 /**
  * Load a compiled script from dist/scripts/ directory
@@ -62,6 +68,8 @@ export interface StatusResponse {
   profile?: string | null;
   port: number;
   uptime: number;
+  version?: string;
+  buildId?: string;
   upgraded?: boolean;
   agentPort?: number | null;
   nativeSupported?: boolean;
@@ -101,11 +109,15 @@ export function findRepoRoot(): string {
   return resolve(process.cwd());
 }
 
+export function getDaemonStateDir(): string {
+  return getCacheDir();
+}
+
 export function getDaemonState(): DaemonState | null {
-  const root = findRepoRoot();
   const paths = [
-    join(root, 'tmp', '.exoproc-daemon.json'),
-    join(root, 'tmp', '.exoproc-tool-daemon.json'),
+    getDaemonStatePath(),
+    join(tmpdir(), '.exoproc-daemon.json'),
+    join(tmpdir(), '.exoproc-tool-daemon.json'),
   ];
   for (const p of paths) {
     if (existsSync(p)) {
@@ -150,7 +162,11 @@ export async function checkDaemonAlive(
       signal: AbortSignal.timeout(2000),
     });
     if (!res.ok) return null;
-    return (await res.json()) as StatusResponse;
+    const json = (await res.json()) as StatusResponse;
+    if (json.alive && (json as any).buildId) {
+      loadAgentMappingsForBuildId((json as any).buildId);
+    }
+    return json;
   } catch {
     return null;
   }
@@ -166,14 +182,30 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
     }
   }
 
+  // If no daemon port was explicitly reachable, probe the default agent port (43378)
+  if (!port || port === 43370) {
+    const agentStatus = await checkDaemonAlive(host, DEFAULT_AGENT_PORT);
+    if (agentStatus && agentStatus.alive) {
+      return { host, port: DEFAULT_AGENT_PORT };
+    }
+  }
+
   if (isRemote) {
     throw new Error(
       `Remote Exoproc daemon at ${host}:${port} is not reachable.`,
     );
   }
 
+  const { isToolMode, hasNativeXffi } = await import('../capabilities.js');
+
+  // In Tool Mode, do not attempt to spawn native Windows background daemon
+  if (isToolMode()) {
+    throw new Error(
+      `No active Exoproc daemon or agent found at ${host}:${port || 43370}. In Tool Mode (non-Windows), please start the daemon on Windows/Wine or connect to an in-process Java Agent.`,
+    );
+  }
+
   // On Windows with native XFFI, Exoproc acts directly as the tool without requiring a background daemon
-  const { hasNativeXffi } = await import('../capabilities.js');
   if (hasNativeXffi() && !process.env.EXOPROC_FORCE_DAEMON) {
     return { host: '127.0.0.1', port: port || 0 };
   }
@@ -399,6 +431,10 @@ export async function evalRemote(
   options?: any,
 ): Promise<{ success: boolean; result?: any; logs: string[]; error?: string }> {
   const { host, port } = await ensureDaemon();
+  const mode = await getTargetMode(host, port);
+  if (mode === 'agent') {
+    return await executeScriptWithAgent(host, port, code, globals, options);
+  }
   const res = await fetch(`http://${host}:${port}/eval`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -423,6 +459,11 @@ export async function runRemote(
       throw new Error(`Local script file not found: ${abs}`);
     }
     code = readFileSync(abs, 'utf8');
+  }
+
+  const mode = await getTargetMode(host, port);
+  if (mode === 'agent') {
+    return await executeScriptWithAgent(host, port, code, globals, options);
   }
 
   const res = await fetch(`http://${host}:${port}/run`, {
@@ -459,14 +500,7 @@ export async function screenshotRemote(
 
     let localOutPath = outputPath;
     if (!localOutPath) {
-      const root = findRepoRoot();
-      const tmpDir = join(root, 'tmp');
-      if (!existsSync(tmpDir)) {
-        try {
-          mkdirSync(tmpDir, { recursive: true });
-        } catch {}
-      }
-      localOutPath = join(tmpDir, `screenshot-${Date.now()}.png`);
+      localOutPath = resolve(process.cwd(), `screenshot-${Date.now()}.png`);
     } else {
       localOutPath = resolve(process.cwd(), localOutPath);
     }
@@ -548,7 +582,11 @@ export const DEFAULT_EXOPROC_PORT = 43377;
 export async function probeEndpoint(
   host: string,
   port: number,
-): Promise<{ mode: 'daemon' | 'agent' | 'none'; alive: boolean }> {
+): Promise<{
+  mode: 'daemon' | 'agent' | 'none';
+  alive: boolean;
+  buildId?: string;
+}> {
   try {
     const res = await fetch(`http://${host}:${port}/status`, {
       signal: AbortSignal.timeout(1500),
@@ -556,10 +594,13 @@ export async function probeEndpoint(
     if (!res.ok) return { mode: 'none', alive: false };
     const json = (await res.json()) as any;
     if (json.alive) {
-      if (typeof json.uptime === 'number' && json.daemonPid === undefined) {
-        return { mode: 'agent', alive: true };
+      if (json.buildId) {
+        loadAgentMappingsForBuildId(json.buildId);
       }
-      return { mode: 'daemon', alive: true };
+      if (typeof json.uptime === 'number' && json.daemonPid === undefined) {
+        return { mode: 'agent', alive: true, buildId: json.buildId };
+      }
+      return { mode: 'daemon', alive: true, buildId: json.buildId };
     }
   } catch {}
   return { mode: 'none', alive: false };
@@ -669,12 +710,42 @@ export function loadAgentMappingPool(sourcePath?: string): any {
   return pool;
 }
 
-export function getAgentJavaContext(host: string, port: number): any {
+const loadedAgentBuildIds = new Set<string>();
+
+/**
+ * Automatically loads the cached Tiny v1 mapping file (<buildId>.tiny) matching
+ * the running agent build into the shared agentMappingPool.
+ */
+export function loadAgentMappingsForBuildId(buildId: string): boolean {
+  if (!buildId || loadedAgentBuildIds.has(buildId)) return false;
+  try {
+    const tinyPath = join(getAgentCacheDir(), `${buildId}.tiny`);
+    if (existsSync(tinyPath)) {
+      const pool = getAgentMappingPool();
+      const mappingsMod = resolveMappingsPkg();
+      if (mappingsMod?.loadMappings) {
+        mappingsMod.loadMappings(tinyPath, pool);
+        loadedAgentBuildIds.add(buildId);
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
+export function getAgentJavaContext(
+  host: string,
+  port: number,
+  options?: { pool?: any; buildId?: string },
+): any {
+  if (options?.buildId) {
+    loadAgentMappingsForBuildId(options.buildId);
+  }
   const key = `${host}:${port}`;
   if (agentContextCache && agentContextCache.key === key) {
     return agentContextCache.context;
   }
-  const pool = getAgentMappingPool();
+  const pool = options?.pool ?? getAgentMappingPool();
   const njavaPkg = 'bun-njava';
   const { createAgentContext } = require(njavaPkg);
   const context = createAgentContext({ host, port, sync: true, pool });
@@ -802,4 +873,160 @@ export async function upgradeRemote(options?: {
     body: JSON.stringify(payload),
   });
   return (await res.json()) as any;
+}
+
+export async function executeScriptWithAgent(
+  host: string,
+  port: number,
+  sourceCode: string,
+  globals?: Record<string, any>,
+  options?: any,
+): Promise<{ success: boolean; result?: any; logs: string[]; error?: string }> {
+  const logs: string[] = [];
+  const printFn = (...args: any[]) => {
+    const line = args
+      .map((a) => {
+        if (typeof a === 'object' && a !== null) {
+          try {
+            return JSON.stringify(a);
+          } catch {
+            return String(a);
+          }
+        }
+        return String(a);
+      })
+      .join(' ');
+    logs.push(line);
+  };
+
+  try {
+    const context = getAgentJavaContext(host, port, options);
+    const Java = Object.assign(context, {
+      type: context.type.bind(context),
+      from: context.from?.bind(context),
+      to: context.to?.bind(context),
+      extend: context.extend?.bind(context),
+      super: context.super?.bind(context),
+    });
+
+    const javaProxy = new Proxy(
+      {},
+      {
+        get(_t, pkg) {
+          function makePkgProxy(current: string): any {
+            return new Proxy(
+              {},
+              {
+                get(_t2, member) {
+                  const fullName = `${current}.${String(member)}`;
+                  try {
+                    return context.type(fullName);
+                  } catch {
+                    return makePkgProxy(fullName);
+                  }
+                },
+              },
+            );
+          }
+          return makePkgProxy(String(pkg));
+        },
+      },
+    );
+
+    let mc: any = null;
+    try {
+      mc = await ensureMinecraft(host, port, options);
+    } catch {}
+
+    const allGlobals: Record<string, any> = {
+      Java,
+      java: javaProxy,
+      print: printFn,
+      console: {
+        log: printFn,
+        error: printFn,
+        warn: printFn,
+        info: printFn,
+      },
+      mc,
+      minecraft: mc,
+      ...(globals || {}),
+    };
+
+    let cleanCode = sourceCode;
+    const rawTrimmed = sourceCode.trim();
+
+    // Check if the script should auto-return its final expression
+    const lines = rawTrimmed.split('\n');
+    let lastIdx = lines.length - 1;
+    while (lastIdx >= 0) {
+      const line = lines[lastIdx];
+      if (line !== undefined && line.trim() === '') {
+        lastIdx--;
+      } else {
+        break;
+      }
+    }
+    const lastLine = lines[lastIdx]?.trim();
+    if (lastIdx >= 0 && lastLine !== undefined) {
+      const isEligible =
+        !lastLine.startsWith('return ') &&
+        !lastLine.startsWith('const ') &&
+        !lastLine.startsWith('let ') &&
+        !lastLine.startsWith('var ') &&
+        !lastLine.startsWith('function ') &&
+        !lastLine.startsWith('class ') &&
+        !lastLine.startsWith('import ') &&
+        !lastLine.startsWith('export ') &&
+        !lastLine.startsWith('if ') &&
+        !lastLine.startsWith('if(') &&
+        !lastLine.startsWith('while ') &&
+        !lastLine.startsWith('while(') &&
+        !lastLine.startsWith('for ') &&
+        !lastLine.startsWith('for(') &&
+        !lastLine.startsWith('try ') &&
+        !lastLine.startsWith('try{') &&
+        !lastLine.startsWith('catch') &&
+        !lastLine.startsWith('finally') &&
+        !lastLine.startsWith('throw ') &&
+        !lastLine.startsWith('}') &&
+        !lastLine.startsWith('//') &&
+        !lastLine.startsWith('/*') &&
+        !lastLine.startsWith('*') &&
+        (lastLine.endsWith(';')
+          ? !lastLine.slice(0, -1).includes(';')
+          : !lastLine.includes(';'));
+
+      if (isEligible && !/\breturn\b/.test(rawTrimmed)) {
+        const stripped = lastLine.replace(/;+$/, '');
+        lines[lastIdx] = `return (${stripped});`;
+        cleanCode = lines.join('\n');
+      }
+    }
+
+    try {
+      if (typeof (globalThis as any).Bun?.Transpiler === 'function') {
+        const transpiler = new (globalThis as any).Bun.Transpiler({
+          loader: 'ts',
+        });
+        cleanCode = transpiler.transformSync(cleanCode);
+      }
+    } catch {}
+
+    const paramNames = Object.keys(allGlobals);
+    const paramValues = Object.values(allGlobals);
+
+    const AsyncFunction = Object.getPrototypeOf(
+      async function () {},
+    ).constructor;
+    const scriptFn = new AsyncFunction(...paramNames, cleanCode);
+    const result = await scriptFn(...paramValues);
+    return { success: true, result, logs };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.stack || err?.message || String(err),
+      logs,
+    };
+  }
 }

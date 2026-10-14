@@ -5,7 +5,7 @@
  * RESULT:JAVA|<json>
  */
 
-await (async () => {
+(() => {
   try {
     const S =
       typeof Java !== 'undefined' && Java.type
@@ -48,7 +48,7 @@ await (async () => {
         freeMemoryMb = Math.round(Number(r.freeMemory()) / (1024 * 1024));
         maxMemoryMb = Math.round(Number(r.maxMemory()) / (1024 * 1024));
       }
-    } catch {}
+    } catch (e) {}
 
     const result = {
       version,

@@ -1,12 +1,5 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve, relative } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
   compileJava,
   compileJavaSync,
@@ -15,7 +8,12 @@ import {
   resolveDefaultJavaPath,
 } from 'exoproc-jjit';
 import { buildJarBuffer, writeJarSync, type JarEntry } from './jar.js';
-import { EMBEDDED_AGENT_SOURCES } from './agent-sources.js';
+import {
+  EMBEDDED_AGENT_SOURCES,
+  getGeneratedAgentSources,
+} from './agent-sources.js';
+import { generateBuildId } from './agent-class-builder.js';
+import { getAgentCacheDir } from 'exoproc-utils';
 
 export interface AgentBuildOptions {
   /**
@@ -51,6 +49,12 @@ export interface AgentBuildOptions {
    * Whether to obfuscate and shrink bytecode using tiny-remapper and strip debug symbols.
    */
   obfuscate?: boolean;
+
+  /**
+   * Optional custom build ID for this build.
+   * If omitted, a unique build ID is generated.
+   */
+  buildId?: string;
 }
 
 export interface AgentBuildResult {
@@ -64,8 +68,12 @@ export interface AgentBuildResult {
   classesCount: number;
   /** Whether this result was retrieved from cache */
   cached: boolean;
+  /** Unique build ID embedded into this agent */
+  buildId?: string;
   /** Tiny v1 obfuscation mappings if obfuscation was performed */
   mappings?: string;
+  /** Path to cached Tiny v1 mappings file */
+  mappingsPath?: string;
   /** Helper to load this build's exact mappings directly into a MappingPool or JavaMappingRegistry */
   loadMappings?: (poolOrRegistry: any) => string;
 }
@@ -77,47 +85,25 @@ export interface AgentBytecodeResult {
   bytecode: Uint8Array;
   /** Java major version targeted */
   javaVersion: number;
+  /** Unique build ID embedded into this agent */
+  buildId?: string;
   /** Tiny v1 obfuscation mappings if obfuscation was performed */
   mappings?: string;
+  /** Path to cached Tiny v1 mappings file */
+  mappingsPath?: string;
   /** Helper to load this build's exact mappings directly into a MappingPool or JavaMappingRegistry */
   loadMappings?: (poolOrRegistry: any) => string;
 }
 
 /**
- * Resolves the agent Java source files, preferring live filesystem files in agent-src/
- * if available, falling back to EMBEDDED_AGENT_SOURCES.
+ * Resolves the agent Java source files dynamically using JavaClassBuilder.
  */
-export function getAgentSources(): Record<string, string> {
-  const candidateDirs = [
-    join(import.meta.dir, '..', 'agent-src'),
-    join(import.meta.dir, 'agent-src'),
-    join(process.cwd(), 'packages', 'njava-agent', 'agent-src'),
-    join(process.cwd(), 'agent-src'),
-  ];
-
-  for (const dir of candidateDirs) {
-    if (existsSync(dir)) {
-      try {
-        const sources: Record<string, string> = {};
-        const collect = (curr: string) => {
-          for (const ent of readdirSync(curr, { withFileTypes: true })) {
-            const full = join(curr, ent.name);
-            if (ent.isDirectory()) {
-              collect(full);
-            } else if (ent.isFile() && ent.name.endsWith('.java')) {
-              const rel = relative(dir, full).replace(/\\/g, '/');
-              sources[rel] = readFileSync(full, 'utf8');
-            }
-          }
-        };
-        collect(dir);
-        if (Object.keys(sources).length > 0) {
-          return sources;
-        }
-      } catch {}
-    }
+export function getAgentSources(options?: {
+  buildId?: string;
+}): Record<string, string> {
+  if (options?.buildId) {
+    return getGeneratedAgentSources(options);
   }
-
   return { ...EMBEDDED_AGENT_SOURCES };
 }
 
@@ -125,16 +111,7 @@ export function getAgentSources(): Record<string, string> {
  * Returns default cache directory for agent jars.
  */
 export function getDefaultAgentCacheDir(): string {
-  const home = process.env.USERPROFILE || process.env.HOME || tmpdir();
-  const dir = join(home, '.cache', 'exoproc', 'agents');
-  if (!existsSync(dir)) {
-    try {
-      mkdirSync(dir, { recursive: true });
-    } catch {
-      return tmpdir();
-    }
-  }
-  return dir;
+  return getAgentCacheDir();
 }
 
 const MANIFEST_CONTENT =
@@ -155,12 +132,16 @@ export function getAgentBytecodeSync(
     javaVersion?: number;
     javaPath?: string;
     obfuscate?: boolean;
+    buildId?: string;
+    cacheDir?: string;
   } = {},
 ): AgentBytecodeResult {
   const javaPath = options.javaPath ?? resolveDefaultJavaPath();
   const javaVersion =
     options.javaVersion ?? detectJavaVersionSync(javaPath) ?? 8;
-  const sources = getAgentSources();
+  const cacheDir = options.cacheDir ?? getDefaultAgentCacheDir();
+  const buildId = options.buildId ?? generateBuildId();
+  const sources = getAgentSources({ buildId });
   const exoprocSrc = sources['org/exoproc/njava/agent/utils/Exoproc.java'];
   if (!exoprocSrc) {
     throw new Error('Exoproc.java source not found');
@@ -195,11 +176,21 @@ export function getAgentBytecodeSync(
     );
   }
 
+  let mappingsPath: string | undefined;
+  if (compileRes.mappings) {
+    try {
+      mappingsPath = join(cacheDir, `${buildId}.tiny`);
+      writeFileSync(mappingsPath, compileRes.mappings, 'utf8');
+    } catch {}
+  }
+
   const result: AgentBytecodeResult = {
     className: 'org.exoproc.njava.agent.utils.Exoproc',
     bytecode,
     javaVersion,
+    buildId,
     mappings: compileRes.mappings,
+    mappingsPath,
   };
   result.loadMappings = (target: any) => loadAgentMappings(target, result);
   return result;
@@ -215,12 +206,16 @@ export async function getAgentBytecode(
     javaVersion?: number;
     javaPath?: string;
     obfuscate?: boolean;
+    buildId?: string;
+    cacheDir?: string;
   } = {},
 ): Promise<AgentBytecodeResult> {
   const javaPath = options.javaPath ?? resolveDefaultJavaPath();
   const javaVersion =
     options.javaVersion ?? (await detectJavaVersion(javaPath)) ?? 8;
-  const sources = getAgentSources();
+  const cacheDir = options.cacheDir ?? getDefaultAgentCacheDir();
+  const buildId = options.buildId ?? generateBuildId();
+  const sources = getAgentSources({ buildId });
   const exoprocSrc = sources['org/exoproc/njava/agent/utils/Exoproc.java'];
   if (!exoprocSrc) {
     throw new Error('Exoproc.java source not found');
@@ -255,11 +250,21 @@ export async function getAgentBytecode(
     );
   }
 
+  let mappingsPath: string | undefined;
+  if (compileRes.mappings) {
+    try {
+      mappingsPath = join(cacheDir, `${buildId}.tiny`);
+      writeFileSync(mappingsPath, compileRes.mappings, 'utf8');
+    } catch {}
+  }
+
   const result: AgentBytecodeResult = {
     className: 'org.exoproc.njava.agent.utils.Exoproc',
     bytecode,
     javaVersion,
+    buildId,
     mappings: compileRes.mappings,
+    mappingsPath,
   };
   result.loadMappings = (target: any) => loadAgentMappings(target, result);
   return result;
@@ -314,7 +319,8 @@ export function getAgentJarSync(
   }
 
   // Compile on-the-fly dynamically
-  const sources = getAgentSources();
+  const buildId = options.buildId ?? generateBuildId();
+  const sources = getAgentSources({ buildId });
   const targetVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
   const sourceVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
 
@@ -355,6 +361,11 @@ export function getAgentJarSync(
   if (compileRes.mappings) {
     try {
       writeFileSync(targetTinyPath, compileRes.mappings, 'utf8');
+      writeFileSync(
+        join(cacheDir, `${buildId}.tiny`),
+        compileRes.mappings,
+        'utf8',
+      );
     } catch {}
   }
 
@@ -364,7 +375,9 @@ export function getAgentJarSync(
     javaVersion,
     classesCount: compileRes.classes.size,
     cached: false,
+    buildId,
     mappings: compileRes.mappings,
+    mappingsPath: targetTinyPath,
   };
   buildRes.loadMappings = (target: any) => loadAgentMappings(target, buildRes);
   return buildRes;
@@ -419,7 +432,8 @@ export async function getAgentJar(
   }
 
   // Compile on-the-fly dynamically
-  const sources = getAgentSources();
+  const buildId = options.buildId ?? generateBuildId();
+  const sources = getAgentSources({ buildId });
   const targetVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
   const sourceVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
 
@@ -462,6 +476,11 @@ export async function getAgentJar(
   if (compileRes.mappings) {
     try {
       writeFileSync(targetTinyPath, compileRes.mappings, 'utf8');
+      writeFileSync(
+        join(cacheDir, `${buildId}.tiny`),
+        compileRes.mappings,
+        'utf8',
+      );
     } catch {}
   }
 
@@ -471,7 +490,9 @@ export async function getAgentJar(
     javaVersion,
     classesCount: classes.size,
     cached: false,
+    buildId,
     mappings: compileRes.mappings,
+    mappingsPath: targetTinyPath,
   };
   buildRes.loadMappings = (target: any) => loadAgentMappings(target, buildRes);
   return buildRes;
@@ -510,6 +531,7 @@ export function loadAgentMappings(
   sourceOrOptions: any = {},
 ): string {
   let mappings = '';
+  const cacheDir = getDefaultAgentCacheDir();
 
   if (typeof sourceOrOptions === 'string') {
     if (existsSync(sourceOrOptions)) {
@@ -519,18 +541,35 @@ export function loadAgentMappings(
         mappings = sourceOrOptions;
       }
     } else {
-      mappings = sourceOrOptions;
+      const cachedTiny = join(cacheDir, `${sourceOrOptions}.tiny`);
+      if (existsSync(cachedTiny)) {
+        try {
+          mappings = readFileSync(cachedTiny, 'utf8');
+        } catch {}
+      }
+      if (!mappings) {
+        mappings = sourceOrOptions;
+      }
     }
   } else if (sourceOrOptions && typeof sourceOrOptions === 'object') {
-    if (typeof sourceOrOptions.mappings === 'string') {
+    if (sourceOrOptions.buildId) {
+      const cachedTiny = join(cacheDir, `${sourceOrOptions.buildId}.tiny`);
+      if (existsSync(cachedTiny)) {
+        try {
+          mappings = readFileSync(cachedTiny, 'utf8');
+        } catch {}
+      }
+    }
+
+    if (!mappings && typeof sourceOrOptions.mappings === 'string') {
       mappings = sourceOrOptions.mappings;
-    } else if (typeof sourceOrOptions.tiny === 'string') {
+    } else if (!mappings && typeof sourceOrOptions.tiny === 'string') {
       mappings = sourceOrOptions.tiny;
-    } else if (sourceOrOptions.buildResult?.mappings) {
+    } else if (!mappings && sourceOrOptions.buildResult?.mappings) {
       mappings = sourceOrOptions.buildResult.mappings;
-    } else if (sourceOrOptions.build?.mappings) {
+    } else if (!mappings && sourceOrOptions.build?.mappings) {
       mappings = sourceOrOptions.build.mappings;
-    } else if (typeof sourceOrOptions.jarPath === 'string') {
+    } else if (!mappings && typeof sourceOrOptions.jarPath === 'string') {
       const tinyPath = sourceOrOptions.jarPath.replace(/\.jar$/, '.tiny');
       if (existsSync(tinyPath)) {
         try {

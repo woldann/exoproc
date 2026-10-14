@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Universal dynamic in-process Java instrumentation agent and headless reflection bridge builder.",
   "main": "./dist/index.js",
   "exports": {
@@ -22,11 +22,15 @@
     "./jar": {
       "types": "./dist/jar.d.ts",
       "import": "./dist/jar.js"
+    },
+    "./agent-class-builder": {
+      "types": "./dist/agent-class-builder.d.ts",
+      "import": "./dist/agent-class-builder.js"
     }
   },
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "bun build ./src/index.ts ./src/agent-builder.ts ./src/agent-sources.ts ./src/loader.ts ./src/jar.ts --outdir ./dist --target bun && tsc -p tsconfig.json --emitDeclarationOnly",
+    "build": "bun build ./src/index.ts ./src/agent-builder.ts ./src/agent-sources.ts ./src/agent-class-builder.ts ./src/loader.ts ./src/jar.ts --outdir ./dist --target bun && tsc -p tsconfig.json --emitDeclarationOnly",
     "test": "bun test"
   },
   "type": "module",
@@ -36,7 +40,6 @@
   },
   "files": [
     "dist",
-    "agent-src",
     "LICENSE"
   ],
   "license": "AGPL-3.0-or-later",
@@ -53,7 +56,8 @@
   "author": "Serkan",
   "homepage": "https://github.com/woldann/exoproc#readme",
   "dependencies": {
-    "exoproc-jjit": "workspace:*"
+    "exoproc-jjit": "workspace:*",
+    "exoproc-utils": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

@@ -10,6 +10,7 @@ export interface AgentStatus {
   alive: boolean;
   port: number;
   uptime: number;
+  buildId?: string;
   isStandalone?: boolean;
   targetJar?: string;
   classCount?: number;
@@ -103,6 +104,14 @@ export class AgentClient {
       throw new Error(`Agent status failed: HTTP ${res.status}`);
     }
     return (await res.json()) as AgentStatus;
+  }
+
+  /**
+   * Retrieves the running agent's unique build ID.
+   */
+  public async getBuildId(): Promise<string | undefined> {
+    const status = await this.getStatus();
+    return status.buildId;
   }
 
   /**
