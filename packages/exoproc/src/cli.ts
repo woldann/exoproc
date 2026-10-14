@@ -9,9 +9,28 @@ const program = new Command();
 program
   .name('exoproc')
   .description(
-    'Unified external Minecraft automation client, CLI runner, MCP server, and runtime instrumentation framework for Bun',
+    'Unified external Minecraft automation client, CLI runner, MCP server, and runtime instrumentation framework',
   )
   .version('0.1.0');
+
+function readStdin(): Promise<string> {
+  if (typeof Bun !== 'undefined' && (Bun as any).stdin) {
+    try {
+      return (Bun as any).stdin.text();
+    } catch {}
+  }
+  if (process.stdin.isTTY) return Promise.resolve('');
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    process.stdin.on('data', (c) =>
+      chunks.push(typeof c === 'string' ? Buffer.from(c) : c),
+    );
+    process.stdin.on('end', () =>
+      resolve(Buffer.concat(chunks).toString('utf8')),
+    );
+    process.stdin.on('error', () => resolve(''));
+  });
+}
 
 /**
  * Dispatches command directly via ExoprocService or internal ephemeral API server.
@@ -22,7 +41,7 @@ async function dispatchApi(
   method: 'GET' | 'POST' = 'GET',
   body?: any,
 ) {
-  const server = startApiServer({ port: 0 });
+  const server = await startApiServer({ port: 0 });
   const port = server.port;
 
   try {
@@ -69,7 +88,7 @@ async function dispatchStreamApi(
   method: 'GET' | 'POST' = 'POST',
   body?: any,
 ) {
-  const server = startApiServer({ port: 0 });
+  const server = await startApiServer({ port: 0 });
   const port = server.port;
 
   try {
@@ -445,7 +464,7 @@ program
 
     if (!scriptPath && !scriptCode) {
       try {
-        const stdin = await Bun.stdin.text();
+        const stdin = await readStdin();
         if (stdin.trim()) {
           scriptCode = stdin;
         }
@@ -580,10 +599,10 @@ program
   .description('Start standalone HTTP & SSE server on specified port')
   .option('-p, --port <port>', 'HTTP port to listen on', '43370')
   .option('-h, --host <host>', 'HTTP hostname to bind to', '127.0.0.1')
-  .action((opts) => {
+  .action(async (opts) => {
     const port = parseInt(opts.port, 10) || 43370;
     const host = opts.host || '127.0.0.1';
-    const server = startApiServer({ port, host });
+    const server = await startApiServer({ port, host });
 
     console.log(
       JSON.stringify(
@@ -591,7 +610,7 @@ program
           status: 'online',
           server: 'exoproc-api',
           url: `http://${server.hostname}:${server.port}`,
-          engine: 'Bun.serve',
+          engine: typeof Bun !== 'undefined' ? 'Bun.serve' : 'node:http',
         },
         null,
         2,
@@ -611,13 +630,8 @@ program
 program
   .command('mcp')
   .description('Start Model Context Protocol (MCP) server over stdio')
-  .action(() => {
-    const mcpPath = resolve(import.meta.dir, 'mcp.js');
-    const proc = Bun.spawn(['bun', 'run', mcpPath], {
-      stdio: ['inherit', 'inherit', 'inherit'],
-    });
-    process.on('SIGINT', () => proc.kill());
-    process.on('SIGTERM', () => proc.kill());
+  .action(async () => {
+    await import('./mcp.js');
   });
 
 // 10. Daemon Mode (Optional standalone background service)
@@ -636,7 +650,7 @@ program
 if (process.argv.length <= 2) {
   const port = Number(process.env.API_PORT) || 43370;
   const host = process.env.API_HOST || '127.0.0.1';
-  const server = startApiServer({ port, host });
+  const server = await startApiServer({ port, host });
 
   console.log(
     JSON.stringify(
@@ -644,7 +658,7 @@ if (process.argv.length <= 2) {
         status: 'online',
         server: 'exoproc-api',
         url: `http://${server.hostname}:${server.port}`,
-        engine: 'Bun.serve',
+        engine: typeof Bun !== 'undefined' ? 'Bun.serve' : 'node:http',
         hint: 'Direct HTTP & SSE Server running. Use curl, httpie, or chafa.',
       },
       null,

@@ -324,7 +324,7 @@ async function main() {
     // Wait for agent to start
     let ready = false;
     for (let i = 0; i < 30; i++) {
-      await Bun.sleep(200);
+      await new Promise((resolve) => setTimeout(resolve, 200));
       status = await checkStatus(opts.port);
       if (status && status.alive) {
         ready = true;

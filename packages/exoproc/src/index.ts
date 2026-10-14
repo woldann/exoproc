@@ -8,7 +8,7 @@ export * from './remote/index.js';
 export * from './service.js';
 export { startApiServer } from './server.js';
 
-export {
+import {
   AgentClient,
   createAgentClient,
   evalAgent,
@@ -20,7 +20,18 @@ export {
   type AgentClientOptions,
 } from 'njava-agent';
 
-import { createAgentContext } from 'bun-njava';
+export {
+  AgentClient,
+  createAgentClient,
+  evalAgent,
+  dumpAgent,
+  type AgentStatus,
+  type AgentEvalResult,
+  type AgentDumpOptions,
+  type AgentDumpResult,
+  type AgentClientOptions,
+};
+
 import { getDaemonState } from './remote/client.js';
 
 if (typeof (globalThis as any).print === 'undefined') {
@@ -40,24 +51,6 @@ function resolveAgentPort(): number {
   if (state?.agentPort) {
     return state.agentPort;
   }
-  try {
-    const res78 = Bun.spawnSync([
-      'curl',
-      '-s',
-      '-m',
-      '0.2',
-      'http://127.0.0.1:43378/status',
-    ]);
-    if (res78.exitCode === 0) return 43378;
-    const res79 = Bun.spawnSync([
-      'curl',
-      '-s',
-      '-m',
-      '0.2',
-      'http://127.0.0.1:43379/status',
-    ]);
-    if (res79.exitCode === 0) return 43379;
-  } catch {}
   return 43378;
 }
 
@@ -65,9 +58,18 @@ export function getActiveJava(options?: { host?: string; port?: number }): any {
   if (_cachedJavaContext && !options) return _cachedJavaContext;
   const host = options?.host ?? '127.0.0.1';
   const port = options?.port ?? resolveAgentPort();
-  const ctx = createAgentContext({ host, port, sync: true });
-  if (!options) _cachedJavaContext = ctx;
-  return ctx;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createAgentContext } = require('bun-njava');
+    if (typeof createAgentContext === 'function') {
+      const ctx = createAgentContext({ host, port, sync: true });
+      if (!options) _cachedJavaContext = ctx;
+      return ctx;
+    }
+  } catch {}
+  const client = new AgentClient({ host, port });
+  if (!options) _cachedJavaContext = client;
+  return client;
 }
 
 export const Java: any = new Proxy(
