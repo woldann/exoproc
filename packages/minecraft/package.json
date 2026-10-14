@@ -25,5 +25,6 @@
     "bun-njava": "workspace:*",
     "bun-xffi": "workspace:*",
     "exoproc-accessors": "workspace:*"
-  }
+  },
+  "private": true
 }

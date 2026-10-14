@@ -48,5 +48,6 @@
   },
   "dependencies": {
     "bun-xffi": "workspace:*"
-  }
+  },
+  "private": true
 }

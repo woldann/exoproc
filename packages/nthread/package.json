@@ -52,5 +52,6 @@
     "bun-winapi": "workspace:*",
     "bun-xffi": "workspace:*",
     "exoproc-utils": "workspace:*"
-  }
+  },
+  "private": true
 }

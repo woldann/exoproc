@@ -34,5 +34,6 @@
     "assembler",
     "machine-code",
     "exoproc"
-  ]
+  ],
+  "private": true
 }

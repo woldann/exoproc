@@ -54,10 +54,10 @@ jobs:
           npm pack --workspace=packages/exoproc
           TARBALL=$(ls woldann-exoproc-*.tgz exoproc-*.tgz 2>/dev/null | head -n 1)
           if [ -n "$TARBALL" ]; then
-            TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            if [ -n "$TAG" ]; then
-              gh release upload "$TAG" "$TARBALL" --clobber || true
-            fi
+            VERSION=$(node -p "require('./packages/exoproc/package.json').version")
+            TAG="@woldann/exoproc@$VERSION"
+            echo "Uploading $TARBALL to release $TAG..."
+            gh release upload "$TAG" "$TARBALL" --clobber || gh release upload "v$VERSION" "$TARBALL" --clobber || true
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -36,5 +36,6 @@
     "abi",
     "ffi",
     "dll"
-  ]
+  ],
+  "private": true
 }

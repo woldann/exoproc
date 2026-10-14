@@ -59,5 +59,6 @@
     "exoproc-utils": "workspace:*",
     "exoproc-jjit": "workspace:*",
     "njava-agent": "workspace:*"
-  }
+  },
+  "private": true
 }

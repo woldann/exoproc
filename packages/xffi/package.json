@@ -64,5 +64,6 @@
   "dependencies": {
     "exoproc-utils": "workspace:*",
     "@exoproc/win32-abi": "workspace:*"
-  }
+  },
+  "private": true
 }

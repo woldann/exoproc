@@ -267,9 +267,20 @@ async function buildAll() {
       const npmDeps = Object.keys(
         (pkgJson.dependencies as Record<string, string>) ?? {},
       );
-      const optionals = Object.keys(
-        (pkgJson.optionalDependencies as Record<string, string>) ?? {},
-      );
+      const optionals = [
+        'bun-capstone',
+        'bun-minhook',
+        'bun-nhook',
+        'bun-njava',
+        'bun-nshm',
+        'bun-nthread',
+        'bun-winapi',
+        'bun-xffi',
+        'exoproc-accessors',
+        ...Object.keys(
+          (pkgJson.optionalDependencies as Record<string, string>) ?? {},
+        ),
+      ];
       for (const ext of [...npmDeps, ...optionals]) {
         buildArgs.push('--external', ext);
       }

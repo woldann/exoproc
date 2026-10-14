@@ -53,5 +53,6 @@
     "bun-xffi": "workspace:*",
     "exoproc-utils": "workspace:*",
     "bun-capstone": "workspace:*"
-  }
+  },
+  "private": true
 }

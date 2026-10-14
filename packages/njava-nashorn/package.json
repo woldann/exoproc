@@ -39,5 +39,6 @@
   "devDependencies": {
     "exoproc-mappings": "workspace:*",
     "typescript": "^5.8.2"
-  }
+  },
+  "private": true
 }

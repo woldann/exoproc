@@ -82,16 +82,5 @@
     "react": "^19.2.8",
     "terminal-image": "^5.0.1",
     "zod": "^3.24.1"
-  },
-  "optionalDependencies": {
-    "bun-capstone": "^0.2.0",
-    "bun-minhook": "^0.2.0",
-    "bun-nhook": "^0.2.0",
-    "bun-njava": "^0.2.0",
-    "bun-nshm": "^0.2.0",
-    "bun-nthread": "^0.2.0",
-    "bun-winapi": "^0.2.0",
-    "bun-xffi": "^0.2.0",
-    "exoproc-accessors": "^0.2.0"
   }
 }

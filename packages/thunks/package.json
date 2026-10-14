@@ -54,5 +54,6 @@
   "dependencies": {
     "bun-xffi": "workspace:*",
     "exoproc-asm": "workspace:*"
-  }
+  },
+  "private": true
 }

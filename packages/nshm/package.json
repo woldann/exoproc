@@ -51,5 +51,6 @@
     "bun-xffi": "workspace:*",
     "exoproc-dummy": "workspace:*",
     "exoproc-utils": "workspace:*"
-  }
+  },
+  "private": true
 }

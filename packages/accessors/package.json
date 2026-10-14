@@ -59,5 +59,6 @@
     "bun-njava": "workspace:*",
     "bun-nhook": "workspace:*",
     "exoproc-utils": "workspace:*"
-  }
+  },
+  "private": true
 }

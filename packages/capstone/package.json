@@ -55,5 +55,6 @@
   "dependencies": {
     "bun-capstone-abi": "workspace:*",
     "bun-xffi": "workspace:*"
-  }
+  },
+  "private": true
 }
