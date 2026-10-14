@@ -31,7 +31,7 @@ export class MinecraftServer extends EventEmitter {
     this.server = createServer((socket: Socket) =>
       this.handleNewSocket(socket),
     );
-    this.server.on('error', (err: Error) => {
+    (this.server as any).on('error', (err: Error) => {
       this.emit('error', err);
     });
   }
@@ -54,7 +54,7 @@ export class MinecraftServer extends EventEmitter {
       this.emit('quit', client);
     });
 
-    client.on('error', (err) => {
+    client.on('error', (err: any) => {
       this.emit('clientError', client, err);
     });
   }
@@ -64,9 +64,9 @@ export class MinecraftServer extends EventEmitter {
     if (host) this.host = host;
 
     return new Promise((resolve, reject) => {
-      this.server.once('error', reject);
-      this.server.listen(this.port, this.host, () => {
-        this.server.removeListener('error', reject);
+      (this.server as any).once('error', reject);
+      (this.server as any).listen(this.port, this.host, () => {
+        (this.server as any).removeListener('error', reject);
         this.emit('listening', this.port, this.host);
         resolve();
       });
@@ -80,7 +80,7 @@ export class MinecraftServer extends EventEmitter {
     this.connections.clear();
 
     return new Promise((resolve, reject) => {
-      this.server.close((err) => {
+      (this.server as any).close((err: any) => {
         if (err) reject(err);
         else {
           this.emit('close');
