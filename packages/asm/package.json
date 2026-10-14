@@ -22,7 +22,8 @@
     "test": "bun test ../../tests/asm/assembler.test.ts"
   },
   "engines": {
-    "bun": ">=1.3.11"
+    "node": ">=18.0.0",
+    "bun": ">=1.3.0"
   },
   "publishConfig": {
     "access": "public"

@@ -20,6 +20,7 @@
     "build": "bun x tsc"
   },
   "engines": {
+    "node": ">=18.0.0",
     "bun": ">=1.3.0"
   },
   "devDependencies": {
