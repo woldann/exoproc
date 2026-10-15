@@ -15,6 +15,7 @@ import {
   GenericCard,
   SelectCard,
   AgentDumpCard,
+  NavigateCard,
 } from './views.js';
 
 export interface RenderOptions {
@@ -41,7 +42,8 @@ export async function renderCliResult(
     data.success === false &&
     data.error &&
     cmd !== 'eval' &&
-    cmd !== 'run'
+    cmd !== 'run' &&
+    cmd !== 'navigate'
   ) {
     element = <ActionCard action={command} result={data} />;
   } else {
@@ -106,7 +108,6 @@ export async function renderCliResult(
       case 'slot':
       case 'look':
       case 'chat':
-      case 'navigate':
       case 'close-screen':
       case 'close':
       case 'resume':
@@ -115,6 +116,10 @@ export async function renderCliResult(
       case 'shutdown':
       case 'upgrade':
         element = <ActionCard action={command} result={data} />;
+        break;
+
+      case 'navigate':
+        element = <NavigateCard result={data} />;
         break;
 
       case 'select':

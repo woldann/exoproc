@@ -259,22 +259,60 @@ program
 
 program
   .command('navigate [target]')
-  .option('-t, --target <screen>', 'Target GUI screen (default: InGame)')
+  .option(
+    '-t, --target <screen>',
+    'Target GUI screen (e.g. options, video, sounds, controls, InGame)',
+  )
+  .option('-v, --verbose', 'Log step-by-step progress details')
   .option('--json', 'Output final result as JSON only')
   .description(
-    'Automatically navigate world menus to target screen or singleplayer world',
+    'Automatically navigate world menus to target screen (options, video, sounds, controls, InGame)',
   )
   .action((targetArg, opts) => {
-    const target = targetArg || opts.target || 'InGame';
+    const target = targetArg || opts.target;
+    if (!target) {
+      return runService(
+        'navigate',
+        async () => {
+          let currentScreen = 'Unknown';
+          try {
+            const gui = await service.getGui();
+            currentScreen = gui.screenName || 'Unknown';
+          } catch {}
+          const availableTargets = [
+            'options',
+            'video',
+            'sounds',
+            'controls',
+            'skin',
+            'chat',
+            'singleplayer',
+            'multiplayer',
+            'InGame',
+          ];
+          return {
+            success: true,
+            isHelp: true,
+            currentScreen,
+            availableTargets,
+            message: `Currently on: ${currentScreen}. Please specify a destination screen.`,
+          };
+        },
+        opts,
+      );
+    }
+
     if (opts.json) {
       return runService('navigate', () => service.navigate(target), opts);
     }
+
     return runService(
       'navigate',
       () =>
-        service.navigate(target, (msg) => {
-          console.log(`[navigate] ${msg}`);
-        }),
+        service.navigate(
+          target,
+          opts.verbose ? (msg) => console.log(`[navigate] ${msg}`) : undefined,
+        ),
       opts,
     );
   });

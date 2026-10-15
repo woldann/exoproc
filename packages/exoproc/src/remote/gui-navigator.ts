@@ -529,7 +529,7 @@ export class GuiNavigationGraph {
         continue;
       }
 
-      // Special case: When in Select World and target is InGame, enter via Create New World (or play if enabled)
+      // Special case: When in Select World and target is InGame, enter via play if enabled
       if (currentSimple === 'GuiSelectWorld' && target === 'InGame') {
         const playBtn = gui.buttons.find((b) =>
           (b.text || '').toLowerCase().includes('play'),
@@ -547,15 +547,14 @@ export class GuiNavigationGraph {
             continue;
           }
         }
-        onProgress?.('At Select World: Clicking "Create New World"...');
-        const createRes = await api.clickButton('Create New World');
-        if (createRes.success) {
-          executedSteps.push(
-            'GuiSelectWorld -> Click button "Create New World"',
-          );
-          await sleep(1500);
-          continue;
-        }
+
+        return {
+          success: false,
+          message:
+            'At Select World: No world is selected to play. Please select a world or specify a menu target.',
+          steps: executedSteps,
+          currentScreen: currentSimple,
+        };
       }
 
       // Special case: When in Create World and target is InGame, trigger world generation

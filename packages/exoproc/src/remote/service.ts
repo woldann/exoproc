@@ -425,8 +425,11 @@ export class ExoprocService {
   ): Promise<{
     success: boolean;
     inGame: boolean;
+    target?: string;
     screenName?: string;
+    currentScreen?: string;
     steps: string[];
+    message?: string;
     error?: string;
     coords?: { x: number; y: number; z: number };
   }> {
@@ -442,9 +445,12 @@ export class ExoprocService {
     return {
       success: res.success,
       inGame: res.currentScreen === 'InGame',
+      target,
       screenName: res.currentScreen,
+      currentScreen: res.currentScreen,
       steps: res.steps,
       coords: res.coords,
+      message: res.message,
       error: res.success ? undefined : res.message,
     };
   }

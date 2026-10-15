@@ -1134,3 +1134,149 @@ export const AgentDumpCard: React.FC<{ data: any }> = ({ data }) => {
     </Box>
   );
 };
+
+/**
+ * 14. Navigate Card: Shows navigation destination, current screen, steps traversed, and help.
+ */
+export const NavigateCard: React.FC<{ result: any }> = ({ result }) => {
+  const isHelp = Boolean(result?.isHelp);
+  const ok = result?.success !== false && !isHelp;
+  const borderColor = isHelp ? 'cyan' : ok ? 'green' : 'red';
+  const badgeColor = isHelp ? 'cyan' : ok ? 'green' : 'red';
+  const badgeText = isHelp ? 'HELP' : ok ? 'REACHED' : 'FAILED';
+
+  return (
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor={borderColor}
+      paddingX={1}
+      width={72}
+    >
+      <Box justifyContent="space-between" marginBottom={1}>
+        <Text bold color={borderColor}>
+          🧭 Minecraft GUI Navigator
+        </Text>
+        <Text color="black" backgroundColor={badgeColor}>
+          {' '}
+          {badgeText}{' '}
+        </Text>
+      </Box>
+
+      {/* Main Details */}
+      <Box
+        flexDirection="column"
+        borderStyle="single"
+        borderColor="gray"
+        paddingX={1}
+        marginBottom={1}
+      >
+        {result?.target ? (
+          <Box justifyContent="space-between">
+            <Text color="gray">Target Screen:</Text>
+            <Text bold color="white">
+              {result.target}
+            </Text>
+          </Box>
+        ) : null}
+
+        <Box justifyContent="space-between">
+          <Text color="gray">Current Screen:</Text>
+          <Text bold color={ok ? 'green' : isHelp ? 'yellow' : 'red'}>
+            {result?.screenName || result?.currentScreen || 'Unknown'}
+          </Text>
+        </Box>
+
+        {result?.coords ? (
+          <Box justifyContent="space-between">
+            <Text color="gray">Player Coordinates:</Text>
+            <Text color="cyan">
+              ({result.coords.x.toFixed(1)}, {result.coords.y.toFixed(1)},{' '}
+              {result.coords.z.toFixed(1)})
+            </Text>
+          </Box>
+        ) : null}
+
+        {result?.steps && result.steps.length > 0 ? (
+          <Box justifyContent="space-between">
+            <Text color="gray">Steps Executed:</Text>
+            <Text color="white">{result.steps.length} step(s)</Text>
+          </Box>
+        ) : null}
+      </Box>
+
+      {/* Steps Traversed */}
+      {result?.steps && result.steps.length > 0 ? (
+        <Box
+          flexDirection="column"
+          borderStyle="single"
+          borderColor="gray"
+          paddingX={1}
+          marginBottom={1}
+        >
+          <Box marginBottom={1}>
+            <Text bold color="gray">
+              PATH TRAVERSED
+            </Text>
+          </Box>
+          {result.steps.map((step: string, i: number) => (
+            <Box key={i} justifyContent="flex-start">
+              <Text color="gray">{i + 1}. </Text>
+              <Text color="white">{step}</Text>
+            </Box>
+          ))}
+        </Box>
+      ) : null}
+
+      {/* Available Destinations for Help */}
+      {isHelp &&
+      result?.availableTargets &&
+      result.availableTargets.length > 0 ? (
+        <Box
+          flexDirection="column"
+          borderStyle="single"
+          borderColor="gray"
+          paddingX={1}
+          marginBottom={1}
+        >
+          <Box marginBottom={1}>
+            <Text bold color="gray">
+              AVAILABLE TARGET SCREENS
+            </Text>
+          </Box>
+          <Box flexWrap="wrap">
+            {result.availableTargets.map((t: string, i: number) => (
+              <Box key={i} marginRight={2}>
+                <Text color="cyan">• {t}</Text>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      ) : null}
+
+      {/* Message & Error */}
+      {result?.message ? (
+        <Box marginBottom={result?.error ? 1 : 0}>
+          <Text color={ok ? 'white' : 'yellow'}>{result.message}</Text>
+        </Box>
+      ) : null}
+
+      {result?.error ? (
+        <Box>
+          <Text color="red">{result.error}</Text>
+        </Box>
+      ) : null}
+
+      {isHelp ? (
+        <Box marginTop={1}>
+          <Text color="gray">
+            Navigate to screen:{' '}
+            <Text bold color="white">
+              exoproc navigate &lt;target&gt;
+            </Text>
+          </Text>
+        </Box>
+      ) : null}
+    </Box>
+  );
+};
