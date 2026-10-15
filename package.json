@@ -36,6 +36,7 @@
   },
   "packageManager": "bun@1.4.3",
   "bin": {
+    "exoproc": "./bin/exoproc",
     "bun-wine": "./bun-wine"
   },
   "scripts": {

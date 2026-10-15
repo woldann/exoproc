@@ -1,0 +1,23 @@
+#!/usr/bin/env bun
+import { existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { spawnSync } from 'node:child_process';
+
+const rootDir = dirname(import.meta.dirname || __dirname);
+const distCli = join(rootDir, 'packages/exoproc/dist/cli.js');
+
+if (!existsSync(distCli) || !existsSync(join(rootDir, 'node_modules'))) {
+  console.log('⚡ Initializing Exoproc (first-time setup)...');
+  spawnSync('bun', ['install', '--frozen-lockfile'], {
+    cwd: rootDir,
+    stdio: 'inherit',
+  });
+  spawnSync('bun', ['run', 'build'], { cwd: rootDir, stdio: 'inherit' });
+}
+
+const result = spawnSync('bun', [distCli, ...process.argv.slice(2)], {
+  stdio: 'inherit',
+  env: process.env,
+});
+
+process.exit(result.status ?? 0);
