@@ -2,7 +2,7 @@ import {
   ConsoleScreenPresenter,
   Win32CommandPrompt,
   type HostConsoleScreen,
-} from '@woldann/simulate';
+} from '@woldann/win32-simulate';
 import {
   TerminalChannel,
   type TerminalCreateOptions,

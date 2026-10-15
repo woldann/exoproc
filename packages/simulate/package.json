@@ -1,5 +1,5 @@
 {
-  "name": "@woldann/simulate",
+  "name": "@woldann/win32-simulate",
   "version": "0.4.0",
   "description": "Virtual Windows OS simulation engine and browser mock FFI layer for Exoproc.",
   "type": "module",

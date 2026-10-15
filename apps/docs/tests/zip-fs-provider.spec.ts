@@ -1,4 +1,4 @@
-import { ResourceUri } from '@woldann/simulate/files';
+import { ResourceUri } from '@woldann/win32-simulate/files';
 import { ZipFsProvider } from '../src/shell/main/fs/zip-fs-provider';
 
 /**

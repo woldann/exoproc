@@ -32,8 +32,8 @@
       "dependencies": {
         "@base-ui/react": "^1.6.0",
         "@monaco-editor/react": "^4.7.0",
-        "@woldann/simulate": "workspace:*",
         "@woldann/win32-abi": "workspace:*",
+        "@woldann/win32-simulate": "workspace:*",
         "@xterm/addon-fit": "^0.11.0",
         "@xterm/xterm": "^6.0.0",
         "class-variance-authority": "^0.7.1",
@@ -282,7 +282,7 @@
       },
     },
     "packages/simulate": {
-      "name": "@woldann/simulate",
+      "name": "@woldann/win32-simulate",
       "version": "0.4.0",
       "dependencies": {
         "@woldann/bun-capstone-abi": "workspace:*",
@@ -1396,9 +1396,9 @@
 
     "@woldann/njava-agent": ["@woldann/njava-agent@workspace:packages/njava-agent"],
 
-    "@woldann/simulate": ["@woldann/simulate@workspace:packages/simulate"],
-
     "@woldann/win32-abi": ["@woldann/win32-abi@workspace:packages/win32-abi"],
+
+    "@woldann/win32-simulate": ["@woldann/win32-simulate@workspace:packages/simulate"],
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.9.12", "", {}, "sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A=="],
 
@@ -3198,9 +3198,9 @@
 
     "@woldann/njava-agent/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
-    "@woldann/simulate/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
-
     "@woldann/win32-abi/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
+
+    "@woldann/win32-simulate/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
     "ajv-formats/ajv": ["ajv@8.20.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="],
 

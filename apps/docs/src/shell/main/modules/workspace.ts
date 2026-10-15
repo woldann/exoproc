@@ -1,4 +1,4 @@
-import { WIN32_WORKSPACE_PATH } from '@woldann/simulate';
+import { WIN32_WORKSPACE_PATH } from '@woldann/win32-simulate';
 import {
   WorkspaceChannel,
   type DirectoryEntryDto,

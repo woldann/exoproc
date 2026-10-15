@@ -5,7 +5,7 @@ import {
   type Win64FirstScanOptions,
   type Win64NextScanOptions,
   type Win64ScanReport,
-} from '@woldann/simulate';
+} from '@woldann/win32-simulate';
 import {
   ScanChannel,
   type FirstScanOptions,

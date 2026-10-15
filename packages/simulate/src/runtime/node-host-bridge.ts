@@ -1065,9 +1065,13 @@ export class NodeHostBridge {
 
   private async createWorkerRuntimeBindings(): Promise<WorkerRuntimeBindings> {
     const workspaceAliases = await this.getWorkspacePackageAliases();
-    const simulateEntry = workspaceAliases['@woldann/simulate'];
+    const simulateEntry =
+      workspaceAliases['@woldann/win32-simulate'] ??
+      workspaceAliases['@woldann/simulate'];
     if (!simulateEntry) {
-      throw new Error('Workspace package @woldann/simulate was not found');
+      throw new Error(
+        'Workspace package @woldann/win32-simulate was not found',
+      );
     }
     const workerDirectory = new URL('./worker/', simulateEntry);
     const workerUrl = (filename: string) =>

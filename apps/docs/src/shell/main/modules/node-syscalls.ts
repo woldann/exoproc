@@ -3,7 +3,7 @@ import type {
   Win64Process,
   Win64Thread,
   X64Registers,
-} from '@woldann/simulate';
+} from '@woldann/win32-simulate';
 
 /**
  * Generic dispatch machinery for `node.dll!createJSProcess`/

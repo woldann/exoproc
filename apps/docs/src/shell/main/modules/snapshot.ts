@@ -5,7 +5,7 @@ import type {
   Win64Module,
   Win64Process,
   Win64Thread,
-} from '@woldann/simulate';
+} from '@woldann/win32-simulate';
 import type {
   InstructionDto,
   MappingDto,

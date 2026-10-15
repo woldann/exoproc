@@ -33,6 +33,8 @@ const eslintConfig = defineConfig([
           patterns: [
             {
               group: [
+                '@woldann/win32-simulate',
+                '@woldann/win32-simulate/*',
                 '@woldann/simulate',
                 '@woldann/simulate/*',
                 '@exoproc/simulate',

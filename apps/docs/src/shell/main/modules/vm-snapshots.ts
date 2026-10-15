@@ -1,4 +1,4 @@
-import { Win64Machine } from '@woldann/simulate';
+import { Win64Machine } from '@woldann/win32-simulate';
 import { SnapshotChannel, type SnapshotMetaDto } from '../../common/channels';
 import { ipc } from '../ipc';
 import { SnapshotStore } from '../snapshots/snapshot-store';

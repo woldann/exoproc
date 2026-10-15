@@ -1,4 +1,4 @@
-import type { Win32FileSystemEntry } from '@woldann/simulate';
+import type { Win32FileSystemEntry } from '@woldann/win32-simulate';
 import {
   FsChannel,
   type DeleteOptions,

@@ -1,4 +1,4 @@
-import { type Win64Machine } from '@woldann/simulate';
+import { type Win64Machine } from '@woldann/win32-simulate';
 import { bootExoprocIdeProcess } from './js-host-programs';
 import { registerNodeSyscalls } from './node-syscalls';
 import { initializeWorkspace } from './workspace';

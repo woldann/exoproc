@@ -80,11 +80,18 @@
       "@woldann/win32-abi": ["packages/win32-abi/src/index.ts"],
       "@exoproc/simulate": ["packages/simulate/src/index.ts"],
       "@woldann/simulate": ["packages/simulate/src/index.ts"],
+      "@woldann/win32-simulate": ["packages/simulate/src/index.ts"],
       "@exoproc/simulate/files": [
         "packages/simulate/src/platform/files/index.ts"
       ],
       "@woldann/simulate/files": [
         "packages/simulate/src/platform/files/index.ts"
+      ],
+      "@woldann/win32-simulate/files": [
+        "packages/simulate/src/platform/files/index.ts"
+      ],
+      "@woldann/win32-simulate/bun-ffi": [
+        "packages/simulate/src/runtime/bun-ffi.ts"
       ],
       "exoproc-minecraft": ["packages/minecraft/src/index.ts"],
       "@woldann/exoproc-minecraft": ["packages/minecraft/src/index.ts"],

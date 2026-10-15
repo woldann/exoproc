@@ -1,4 +1,4 @@
-import type { CpuStepResult, Win64Thread } from '@woldann/simulate';
+import type { CpuStepResult, Win64Thread } from '@woldann/win32-simulate';
 import {
   DebugChannel,
   type DebugThreadRef,

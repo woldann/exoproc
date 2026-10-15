@@ -3954,7 +3954,7 @@ export class Win64Machine {
   }
 }
 
-const GLOBAL_MACHINE_KEY = Symbol.for('@woldann/simulate/win64-machine');
+const GLOBAL_MACHINE_KEY = Symbol.for('@woldann/win32-simulate/win64-machine');
 
 export function getGlobalWin64Machine(): Win64Machine {
   const scope = globalThis as typeof globalThis & {
