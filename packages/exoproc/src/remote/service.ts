@@ -245,12 +245,60 @@ export class ExoprocService {
     slot?: number;
     className?: string;
     upgraded?: boolean;
+    message?: string;
     error?: string;
   }> {
     try {
-      const { getNextAvailableAgentSlot, getSlotForPort, setActiveTarget } =
-        await import('../session.js');
+      const { isToolMode } = await import('../capabilities.js');
+      if (isToolMode()) {
+        throw new Error(
+          `Upgrading an accessor session requires native Windows x64 memory APIs.\n` +
+            `You are running under Linux Bun. Please run via bun-wine instead:\n` +
+            `  ./bun-wine dist-tests/exoproc-cli.js upgrade-agent`,
+        );
+      }
 
+      const {
+        getActiveTarget,
+        setActiveTarget,
+        listSavedSessions,
+        getNextAvailableAgentSlot,
+        getSlotForPort,
+      } = await import('../session.js');
+      const { existsSync, unlinkSync, readFileSync } = await import('node:fs');
+      const { withFileLock } = await import('bun-xffi');
+
+      // 1. Identify the target accessor session
+      const active = getActiveTarget();
+      let sessionPath: string | null = null;
+      let targetPid: number | null = null;
+      let processName = 'Minecraft (Java Agent)';
+      let windowTitle: string | undefined;
+
+      if (active?.type === 'accessor') {
+        sessionPath = active.sessionPath;
+        targetPid = active.pid;
+        processName = active.processName || processName;
+        windowTitle = active.windowTitle;
+      } else {
+        // Fallback: auto-discover saved accessor session
+        const sessions = listSavedSessions();
+        if (sessions.length > 0 && sessions[0]) {
+          const s = sessions[0];
+          sessionPath = s.sessionPath;
+          targetPid = s.pid;
+          processName = s.metadata?.processName || processName;
+          windowTitle = s.metadata?.windowTitle;
+        }
+      }
+
+      if (!sessionPath || !existsSync(sessionPath)) {
+        throw new Error(
+          'No active accessor session found to upgrade. Please attach to a Java process first with `exoproc attach [pid]`.',
+        );
+      }
+
+      // 2. Select next available agent slot
       let targetPort = options?.port;
       let targetSlot: number | null = null;
 
@@ -262,24 +310,149 @@ export class ExoprocService {
         targetSlot = getSlotForPort(targetPort);
       }
 
-      const res = await client.upgradeRemote({
-        ...options,
-        port: targetPort,
-      });
+      // 3. Load accessor from file lock, inject agent into JVM, and close accessor
+      let className =
+        options?.className || 'org.exoproc.njava.agent.utils.Exoproc';
+      let injectedPort = targetPort;
 
-      if (res.success && targetPort) {
-        setActiveTarget({
-          type: 'agent',
-          slot: (targetSlot as any) || 1,
-          port: targetPort,
-          processName: 'Minecraft (Java Agent)',
-          updatedAt: new Date().toISOString(),
-        });
-      }
+      await withFileLock(
+        sessionPath + '.lock',
+        async () => {
+          const { createAccessorFromFile } = await import('exoproc-accessors');
+          const accessor = await createAccessorFromFile(sessionPath!, {
+            consume: false,
+          } as any);
+
+          try {
+            // Get Java context from accessor
+            const njava = await import('bun-njava');
+            const java =
+              typeof (accessor as any).getJavaSync === 'function'
+                ? (accessor as any).getJavaSync()
+                : (njava as any).getJavaSync?.(accessor);
+
+            if (!java) {
+              throw new Error(
+                'Failed to acquire Java context from accessor. Ensure the target process is a JVM.',
+              );
+            }
+
+            // Probe target JVM java version if not explicitly passed
+            let javaVersion = options?.targetVersion;
+            if (!javaVersion) {
+              try {
+                const System = java.type('java.lang.System');
+                const verStr = String(System.getProperty('java.version') || '');
+                if (verStr.startsWith('1.8')) javaVersion = 8;
+                else if (verStr.startsWith('17')) javaVersion = 17;
+                else if (verStr.startsWith('21')) javaVersion = 21;
+                else {
+                  const match = verStr.match(/^(\d+)/);
+                  if (match && match[1]) javaVersion = parseInt(match[1], 10);
+                }
+              } catch {}
+            }
+
+            // Prepare agent bytecode
+            const {
+              injectAgentInMemory,
+              getAgentBytecode,
+              extractClassNameFromClassBytes,
+            } = await import('njava-agent');
+
+            let bytecode: Uint8Array | undefined;
+            let mappings: string | undefined;
+
+            if (options?.classPath) {
+              if (!existsSync(options.classPath)) {
+                throw new Error(
+                  `Agent .class file not found at: ${options.classPath}`,
+                );
+              }
+              bytecode = new Uint8Array(readFileSync(options.classPath));
+              className =
+                options.className ||
+                extractClassNameFromClassBytes(bytecode) ||
+                className;
+            } else if (options?.bytecode) {
+              bytecode =
+                typeof options.bytecode === 'string'
+                  ? new Uint8Array(Buffer.from(options.bytecode, 'base64'))
+                  : options.bytecode;
+              className =
+                options.className ||
+                extractClassNameFromClassBytes(bytecode) ||
+                className;
+            } else {
+              const buildRes = await getAgentBytecode({
+                javaVersion: javaVersion ?? 8,
+                obfuscate: options?.obfuscate ?? false,
+              });
+              bytecode = buildRes.bytecode;
+              className = options?.className || buildRes.className || className;
+              mappings = buildRes.mappings;
+            }
+
+            // Inject Exoproc agent class into target JVM memory (ClassLoader.defineClass) and start server
+            const injectRes = await injectAgentInMemory(java, {
+              port: targetPort,
+              classPath: options?.classPath,
+              bytecode,
+              className,
+              mappings,
+              verbose: true,
+              timeoutMs: 15000,
+              buildResult: {
+                bytecode,
+                className,
+                javaVersion: javaVersion ?? 8,
+                mappings,
+              },
+            });
+
+            injectedPort = injectRes.port;
+            className = injectRes.className || className;
+          } finally {
+            // Close accessor directly instead of saving
+            try {
+              if (typeof (accessor as any).close === 'function') {
+                (accessor as any).close();
+              } else if (typeof (accessor as any).closeSync === 'function') {
+                (accessor as any).closeSync();
+              }
+            } catch {}
+
+            // Remove the accessor session file since target is now upgraded to in-process agent
+            try {
+              if (existsSync(sessionPath!)) {
+                unlinkSync(sessionPath!);
+              }
+            } catch {}
+          }
+        },
+        30000,
+      );
+
+      // 4. Set as active target and auto-select
+      const newTarget: any = {
+        type: 'agent',
+        slot: (targetSlot as any) || 1,
+        port: injectedPort,
+        host: '127.0.0.1',
+        pid: targetPid ?? undefined,
+        processName,
+        windowTitle,
+        updatedAt: new Date().toISOString(),
+      };
+      setActiveTarget(newTarget);
 
       return {
-        ...res,
-        slot: targetSlot || undefined,
+        success: true,
+        port: injectedPort,
+        slot: targetSlot || 1,
+        className,
+        upgraded: true,
+        message: `Upgraded target to in-process Java Agent in Slot ${targetSlot || 1} (Port ${injectedPort}). Closed accessor and set active target.`,
       };
     } catch (err: any) {
       return { success: false, error: err?.message || String(err) };
@@ -354,21 +527,20 @@ export class ExoprocService {
   async screenshot(
     outputPath?: string,
   ): Promise<client.ScreenshotRemoteResult> {
-    const { getActiveTarget } = await import('../session.js');
+    const { getActiveTarget, checkAllAgentSlots } =
+      await import('../session.js');
     const active = getActiveTarget();
     if (active?.type === 'agent') {
       return await client.screenshotRemote(outputPath);
     }
 
+    const slots = await checkAllAgentSlots();
+    const liveAgent = slots.find((s) => s.alive);
+    if (liveAgent) {
+      return await client.screenshotRemote(outputPath);
+    }
+
     if (isDirectSupported()) {
-      const endpoint = client.getDaemonEndpoint();
-      if (endpoint.port) {
-        const alive = await client.checkDaemonAlive(
-          endpoint.host,
-          endpoint.port,
-        );
-        if (alive) return await client.screenshotRemote(outputPath);
-      }
       const { captureScreenshot } = await import('../screenshot/index.js');
       const res = await captureScreenshot({ outputPath });
       return {

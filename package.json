@@ -75,6 +75,7 @@
     "tool:procs": "bun run --cwd packages/exoproc dist/cli.js procs",
     "tool:attach": "bun run --cwd packages/exoproc dist/cli.js attach",
     "tool:upgrade": "bun run --cwd packages/exoproc dist/cli.js upgrade",
+    "tool:upgrade-agent": "bun run --cwd packages/exoproc dist/cli.js upgrade-agent",
     "tool:detach": "bun run --cwd packages/exoproc dist/cli.js detach",
     "tool:player": "bun run --cwd packages/exoproc dist/cli.js player",
     "tool:world": "bun run --cwd packages/exoproc dist/cli.js world",

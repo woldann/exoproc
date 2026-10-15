@@ -149,7 +149,7 @@ export function getDaemonEndpoint(): {
   return { host, port, isRemote };
 }
 
-export async function checkDaemonAlive(
+export async function checkAgentAlive(
   portOrHost: number | string,
   port?: number,
 ): Promise<StatusResponse | null> {
@@ -170,33 +170,30 @@ export async function checkDaemonAlive(
     return null;
   }
 }
+export const checkDaemonAlive = checkAgentAlive;
 
-export async function ensureDaemon(): Promise<{ host: string; port: number }> {
-  const { getActiveTarget, AGENT_SLOTS } = await import('../session.js');
+export async function ensureAgentEndpoint(): Promise<{
+  host: string;
+  port: number;
+}> {
+  const { getActiveTarget, checkAgentSlot } = await import('../session.js');
   const active = getActiveTarget();
 
   if (active?.type === 'agent') {
     return { host: active.host || '127.0.0.1', port: active.port };
   }
 
-  const { host, port } = getDaemonEndpoint();
-  if (port) {
-    const status = await checkDaemonAlive(host, port);
-    if (status && status.alive) {
-      return { host, port };
-    }
-  }
-
   // Probe agent slots 1, 2, 3
-  for (const p of AGENT_SLOTS) {
-    const agentStatus = await checkDaemonAlive('127.0.0.1', p);
-    if (agentStatus && agentStatus.alive) {
-      return { host: '127.0.0.1', port: p };
+  for (const slot of [1, 2, 3] as const) {
+    const info = await checkAgentSlot(slot);
+    if (info.alive) {
+      return { host: '127.0.0.1', port: info.port };
     }
   }
 
   return { host: '127.0.0.1', port: 0 };
 }
+export const ensureDaemon = ensureAgentEndpoint;
 
 export async function attachRemote(options?: {
   pid?: number;
@@ -271,7 +268,7 @@ export async function evalRemote(
   const active = getActiveTarget();
 
   if (active?.type === 'agent') {
-    const isAlive = await checkDaemonAlive(
+    const isAlive = await checkAgentAlive(
       active.host ?? '127.0.0.1',
       active.port,
     );
@@ -944,17 +941,9 @@ export async function upgradeRemote(options?: {
   upgraded?: boolean;
   error?: string;
 }> {
-  const { host, port } = await ensureDaemon();
-  const payload: any = { ...options };
-  if (options?.bytecode instanceof Uint8Array) {
-    payload.bytecode = Buffer.from(options.bytecode).toString('base64');
-  }
-  const res = await fetch(`http://${host}:${port}/upgrade`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  return (await res.json()) as any;
+  const { ExoprocService } = await import('./service.js');
+  const service = new ExoprocService();
+  return (await service.upgrade(options)) as any;
 }
 
 export async function executeScriptWithAgent(

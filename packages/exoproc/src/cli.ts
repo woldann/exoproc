@@ -117,16 +117,20 @@ program
   );
 
 program
-  .command('upgrade [classPath]')
+  .command('upgrade-agent [classPath]')
+  .alias('upgrade')
   .description(
     'Upgrade target connection to in-process Java Agent by loading .class bytecode',
   )
-  .option('-p, --port <port>', 'Agent port (default 43378)', '43378')
+  .option(
+    '-p, --port <port>',
+    'Agent port (defaults to next available agent slot)',
+  )
   .option('--obfuscate', 'Obfuscate agent bytecode with TinyRemapper')
   .option('--json', 'Output pure JSON')
   .action((classPath, opts) =>
     runService(
-      'upgrade',
+      'upgrade-agent',
       () =>
         service.upgrade({
           classPath,

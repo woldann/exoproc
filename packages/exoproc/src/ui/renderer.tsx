@@ -115,6 +115,7 @@ export async function renderCliResult(
       case 'detach':
       case 'shutdown':
       case 'upgrade':
+      case 'upgrade-agent':
         element = <ActionCard action={command} result={data} />;
         break;
 

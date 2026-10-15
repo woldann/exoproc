@@ -2090,7 +2090,7 @@ export async function screenshot(
 }
 
 /**
- * Upgrades the remote connection/daemon to in-process Java Agent by loading and defining the agent .class.
+ * Upgrades the active target connection to in-process Java Agent by loading and defining the agent .class.
  */
 export async function upgrade(options?: {
   classPath?: string;
@@ -2103,3 +2103,5 @@ export async function upgrade(options?: {
   const { upgradeRemote } = await import('./client.js');
   return await upgradeRemote(options);
 }
+
+export const upgradeAgent = upgrade;
