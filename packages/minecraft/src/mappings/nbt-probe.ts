@@ -2,7 +2,7 @@ import type {
   ReflectionBridge,
   ReflectedClass,
   ReflectedMethod,
-} from 'bun-njava';
+} from '@woldann/bun-njava';
 
 export interface NbtFieldProbeRule {
   canonicalFieldName: string;

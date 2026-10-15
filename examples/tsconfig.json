@@ -9,14 +9,14 @@
     // workspace-package paths alongside the new "@/*" alias (for shadcn/ui's
     // CLI-generated imports) rather than losing them.
     "paths": {
-      "exoproc-utils": ["packages/utils/src/index.ts"],
-      "bun-xffi": ["packages/xffi/src/index.ts"],
-      "bun-capstone": ["packages/capstone/src/index.ts"],
-      "bun-winapi": ["packages/winapi/src/index.ts"],
-      "bun-nthread": ["packages/nthread/src/index.ts"],
-      "bun-nhook": ["packages/nhook/src/index.ts"],
-      "bun-minhook": ["packages/minhook/src/index.ts"],
-      "exoproc-dummy": ["packages/dummy/src/index.ts"],
+      "@woldann/exoproc-utils": ["packages/utils/src/index.ts"],
+      "@woldann/bun-xffi": ["packages/xffi/src/index.ts"],
+      "@woldann/bun-capstone": ["packages/capstone/src/index.ts"],
+      "@woldann/bun-winapi": ["packages/winapi/src/index.ts"],
+      "@woldann/bun-nthread": ["packages/nthread/src/index.ts"],
+      "@woldann/bun-nhook": ["packages/nhook/src/index.ts"],
+      "@woldann/bun-minhook": ["packages/minhook/src/index.ts"],
+      "@woldann/exoproc-dummy": ["packages/dummy/src/index.ts"],
       "exoproc": ["packages/exoproc/src/index.ts"],
       "@woldann/exoproc": ["packages/exoproc/src/index.ts"],
       "@/*": ["examples/*"]

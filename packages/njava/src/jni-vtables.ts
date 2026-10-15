@@ -1,4 +1,4 @@
-import { compileStruct, type AddressLike } from 'bun-xffi';
+import { compileStruct, type AddressLike } from '@woldann/bun-xffi';
 
 /**
  * `JNIInvokeInterface_` field order, transcribed verbatim from

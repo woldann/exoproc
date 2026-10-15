@@ -1,4 +1,4 @@
-import type { ReflectionBridge, ReflectedClass } from 'bun-njava';
+import type { ReflectionBridge, ReflectedClass } from '@woldann/bun-njava';
 import type { MinecraftMappings } from '../mappings/types.js';
 
 export interface Vector3D {

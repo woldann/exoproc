@@ -6,14 +6,14 @@ import {
   detectJavaVersion,
   detectJavaVersionSync,
   resolveDefaultJavaPath,
-} from 'exoproc-jjit';
+} from '@woldann/exoproc-jjit';
 import { buildJarBuffer, writeJarSync, type JarEntry } from './jar.js';
 import {
   EMBEDDED_AGENT_SOURCES,
   getGeneratedAgentSources,
 } from './agent-sources.js';
 import { generateBuildId } from './agent-class-builder.js';
-import { getAgentCacheDir } from 'exoproc-utils';
+import { getAgentCacheDir } from '@woldann/exoproc-utils';
 
 export interface AgentBuildOptions {
   /**

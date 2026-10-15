@@ -1,7 +1,7 @@
 /** Win64 argument collector and fixed-destination capture-adapter builders. */
 
-import { X64Assembler, qword } from 'exoproc-asm';
-import { type CMachineCode, type CTypeOrString } from 'bun-xffi';
+import { X64Assembler, qword } from '@woldann/exoproc-asm';
+import { type CMachineCode, type CTypeOrString } from '@woldann/bun-xffi';
 import {
   assertValidMask,
   CALL_REGISTER_SLOTS,

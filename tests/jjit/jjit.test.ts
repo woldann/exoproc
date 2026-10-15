@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { createPool } from 'exoproc-mappings';
+import { createPool } from '@woldann/exoproc-mappings';
 import {
   jjit,
   JavaClassBuilder,

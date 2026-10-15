@@ -1,7 +1,8 @@
 {
-  "name": "bun-nhook",
+  "name": "@woldann/bun-nhook",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Cross-process function hooking for Bun using thread redirection and instruction simulation.",
@@ -48,11 +49,11 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-winapi": "workspace:*",
-    "bun-xffi": "workspace:*",
-    "bun-nthread": "workspace:*",
-    "exoproc-accessors": "workspace:*",
-    "exoproc-utils": "workspace:*",
-    "bun-capstone": "workspace:*"
+    "@woldann/bun-winapi": "workspace:*",
+    "@woldann/bun-xffi": "workspace:*",
+    "@woldann/bun-nthread": "workspace:*",
+    "@woldann/exoproc-accessors": "workspace:*",
+    "@woldann/exoproc-utils": "workspace:*",
+    "@woldann/bun-capstone": "workspace:*"
   }
 }

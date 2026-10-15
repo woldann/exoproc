@@ -1,4 +1,4 @@
-import type { MappingPool } from 'exoproc-mappings';
+import type { MappingPool } from '@woldann/exoproc-mappings';
 import { JavaClassBuilder } from './builder.js';
 import { JavaTypeResolver } from './type-resolver.js';
 import type { JavaParamDef } from './types.js';

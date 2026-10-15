@@ -1,7 +1,7 @@
 import { expect, test, describe } from 'bun:test';
-import { cmachinecode, CType, createCFunction } from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+import { cmachinecode, CType, createCFunction } from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Moved from tests/xffi/cmachinecode.test.ts -- the injected shell itself calls
 // VirtualAlloc/VirtualFree, which needs to run on an already-live thread rather

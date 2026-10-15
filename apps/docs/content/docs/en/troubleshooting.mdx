@@ -26,7 +26,7 @@ On GitHub Actions' virtualized Wine runners (never on real hardware), real WinAP
 
 ### Cross-package `src/` imports can resolve to a stale `dist/` build
 
-Every package's `package.json` `"main"` points to `./dist/index.js`, not `./src/index.ts`. Files under `tests/` see live `src/` via tsconfig `paths`, but a package's own source importing another package (e.g. `packages/nthread/src/*.ts` importing `bun-xffi`) resolves through the `node_modules` symlink to the **built** `dist/`. **After editing a `packages/*/src/` file that another package imports across the workspace boundary, run `bun run build` before trusting a Wine test result that touches the consuming package** — a clean typecheck/lint doesn't guarantee this, since both only ever see live `src/`.
+Every package's `package.json` `"main"` points to `./dist/index.js`, not `./src/index.ts`. Files under `tests/` see live `src/` via tsconfig `paths`, but a package's own source importing another package (e.g. `packages/nthread/src/*.ts` importing `@woldann/bun-xffi`) resolves through the `node_modules` symlink to the **built** `dist/`. **After editing a `packages/*/src/` file that another package imports across the workspace boundary, run `bun run build` before trusting a Wine test result that touches the consuming package** — a clean typecheck/lint doesn't guarantee this, since both only ever see live `src/`.
 
 ### `instanceof` against a class from another package is unreliable under Wine
 

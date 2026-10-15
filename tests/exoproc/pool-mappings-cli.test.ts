@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { resolve } from 'node:path';
 import { existsSync, writeFileSync, unlinkSync } from 'node:fs';
 import { loadAgentMappingPool } from 'exoproc/remote';
-import { MinecraftMatcher } from 'exoproc-minecraft';
+import { MinecraftMatcher } from '@woldann/exoproc-minecraft';
 
 describe('exoproc-tool > pool preloading and Minecraft mappings reuse', () => {
   const tmpMappingPath = resolve(process.cwd(), 'tmp-test-mappings.json');

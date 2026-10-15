@@ -1,7 +1,12 @@
 import { log } from './logger.js';
-import { Kernel32Impl, INFINITE, WaitReturn, waitAsync } from 'bun-xffi';
+import {
+  Kernel32Impl,
+  INFINITE,
+  WaitReturn,
+  waitAsync,
+} from '@woldann/bun-xffi';
 type HANDLE = bigint;
-import { NativePointer } from 'bun-xffi';
+import { NativePointer } from '@woldann/bun-xffi';
 import { InvalidHandleError } from './errors.js';
 
 function getHandleLog() {

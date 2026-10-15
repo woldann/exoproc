@@ -5,7 +5,7 @@ import {
   localMemoryAccessor,
   resolveAddress,
   type ISyncMemoryAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import { Thread } from './thread.js';
 import {
   Kernel32Impl,
@@ -13,7 +13,7 @@ import {
   ThreadCreationFlags,
   type SecurityAttributes,
   ToolhelpSnapshotFlag,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 type HANDLE = bigint;
 type SIZE_T = bigint;
 

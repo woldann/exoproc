@@ -1,4 +1,4 @@
-import { Ws2_32Dll } from '@exoproc/win32-abi';
+import { Ws2_32Dll } from '@woldann/win32-abi';
 import type { Win32GuestDllSource } from './types.js';
 
 export const Ws2_32GuestDll = {

@@ -49,7 +49,7 @@
  * argument data itself, which is exactly what `hit.args`/`resume()` are for.
  *
  * Scope/ethics: this only spawns and watches *its own* freshly-spawned
- * notepad.exe instance (via `exoproc-dummy`'s `DummyProcess`) --
+ * notepad.exe instance (via `@woldann/exoproc-dummy`'s `DummyProcess`) --
  * `NHook.poll()` only scans threads belonging to that one pid, so nothing
  * outside this script's own test process is ever touched, logged, or
  * affected.
@@ -79,7 +79,7 @@ import {
   createAccessor,
   createAccessorOptions,
 } from 'exoproc';
-import { DummyProcess } from 'exoproc-dummy';
+import { DummyProcess } from '@woldann/exoproc-dummy';
 import { createDemo } from '../kit/server.js';
 
 const HOOK_DURATION_MS = 60_000;

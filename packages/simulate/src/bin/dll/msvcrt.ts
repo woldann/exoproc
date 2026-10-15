@@ -2,7 +2,7 @@ import {
   MsvcrtDll,
   Win32Api,
   type Win32FunctionReference,
-} from '@exoproc/win32-abi';
+} from '@woldann/win32-abi';
 import type { Win32ExportBindingRegistry } from '../../runtime/win32-dlls.js';
 import { STD_OUTPUT_HANDLE } from '../../runtime/types.js';
 import { byte, dword, qword, X64Assembler } from '../compiler.js';

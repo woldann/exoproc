@@ -6,7 +6,7 @@ import {
   type CMachineCode,
   type CTypeOrString,
   type ICallableMemoryAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import { CALL_REGISTER_SLOTS } from './abi.js';
 import { createCallThunk } from './call-bytes.js';
 import {

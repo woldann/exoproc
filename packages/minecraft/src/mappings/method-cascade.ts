@@ -1,4 +1,4 @@
-import type { ReflectionBridge, ReflectedMethod } from 'bun-njava';
+import type { ReflectionBridge, ReflectedMethod } from '@woldann/bun-njava';
 import {
   MINECRAFT_CANONICAL_SCHEMA,
   type CanonicalClassSchema,

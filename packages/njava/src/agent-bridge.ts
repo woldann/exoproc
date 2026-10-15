@@ -7,7 +7,7 @@ import {
 import type { ParsedAccessibleObject } from './reflection-parser.js';
 import { JavaContext, createJavaContext } from './proxy.js';
 import { JavaMappingRegistry } from './mapping.js';
-import type { MappingPool } from 'exoproc-mappings';
+import type { MappingPool } from '@woldann/exoproc-mappings';
 import { adaptBridgeArgument, globalCallbackRegistry } from './adapter.js';
 
 export interface AgentBridgeOptions {

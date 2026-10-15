@@ -1,4 +1,4 @@
-import { cdefines } from 'bun-xffi/cdefine';
+import { cdefines } from '@woldann/bun-xffi/cdefine';
 
 export const x86_insn = cdefines(
   {

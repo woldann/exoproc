@@ -52,9 +52,9 @@ Exoproc provides two distinct operational bridges to interact with target Java V
 `ReflectionBridge` operates by querying the target process's memory space for `jvm.dll`, locating the active `JavaVM` instance via `JNI_GetCreatedJavaVMs`, and attaching a cross-process thread context:
 
 ```typescript
-import { Process } from 'bun-winapi';
-import { RemoteCallableMemoryAccessor } from 'bun-xffi';
-import { attachJvm, createJavaContext } from 'bun-njava';
+import { Process } from '@woldann/bun-winapi';
+import { RemoteCallableMemoryAccessor } from '@woldann/bun-xffi';
+import { attachJvm, createJavaContext } from '@woldann/bun-njava';
 
 const proc = Process.findByName('javaw.exe');
 const memory = new RemoteCallableMemoryAccessor(proc.pid);
@@ -90,7 +90,7 @@ const entities = agentJava.type('net.minecraft.client.Minecraft')
 The agent is never written as a `.jar` file on disk. Exoproc compiles and packages `Exoproc.java` into an in-memory byte buffer via `buildAgentJar()`:
 
 ```typescript
-import { buildAgentJar, loadAgent } from 'njava-agent';
+import { buildAgentJar, loadAgent } from '@woldann/njava-agent';
 
 // Build in-memory JAR
 const agentBytes = await buildAgentJar();

@@ -10,12 +10,12 @@ import {
   writeJarSync,
   writeJarFromClassesSync,
   compileJavaSync,
-} from 'exoproc-jjit';
+} from '@woldann/exoproc-jjit';
 import {
   getAgentJarSync,
   getAgentBytecodeSync,
   waitForAgentReady,
-} from 'njava-agent';
+} from '@woldann/njava-agent';
 import { getTestJavaPath } from './java-test-helpers.js';
 
 describe('jjit: Centralized JAR Packaging & URLClassLoader Agent Loading', () => {

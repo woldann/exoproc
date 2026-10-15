@@ -19,14 +19,14 @@ bun-njava      njava-agent    njava-runtime   exoproc-mappings  exoproc-jjit
 
 ## Ekosistemdeki Paketler
 
-### 1. `bun-njava`
+### 1. `@woldann/bun-njava`
 Temel JVM köprü katmanıdır.
 - Süreçler arası bellek erişimcileriyle doğrudan `jvm.dll` modülüne bağlanır.
 - `JNIEnv` fonksiyon tablolarını çözer (`FindClass`, `GetMethodID`, `CallObjectMethod` vb.).
 - Java sınıflarını ve nesne örneklerini dinamik TypeScript/JavaScript nesneleri olarak şeffafça vekiller.
 - Java `Throwable` istisnalarını yerel JavaScript hatalarına dönüştürür.
 
-### 2. `njava-agent`
+### 2. `@woldann/njava-agent`
 Yüksek hızlı süreç içi Java ajanıdır.
 - Tamamen RAM üzerinde `ClassLoader.defineClass` ile enjekte edilir (diske JAR yazılmaz).
 - Saniyede 50.000'den fazla çağrı için `127.0.0.1` üzerinde hafif bir HTTP/İkili RPC sunucusu çalıştırır.
@@ -38,13 +38,13 @@ Modüler betik çalıştırma ve Nashorn uyumluluk katmanıdır.
 - Dört temel `ClassDefiner` stratejisini içerir (`auto`, `unsafe`, `classLoader`, `agent`).
 - Güvenli betik yürütme için `ScriptRunner` motorunu sağlar.
 
-### 4. `exoproc-mappings`
+### 4. `@woldann/exoproc-mappings`
 Çoklu sürüm karartma çözme (deobfuscation) motorudur.
 - Mojang, Fabric Intermediary, Yarn, Forge MCP ve Searge harita formatlarını destekler.
 - Metot, alan ve sınıf isimlerinin hızlı çözümlenmesi için SQLite ve JSON tabanlı dizinleyiciler kullanır.
 - Dinamik `JavaMappingRegistry` ile karartılmış sembolleri çalışma anında şeffafça çözer.
 
-### 5. `exoproc-jjit`
+### 5. `@woldann/exoproc-jjit`
 Bellek içi Java derleyicisi ve bayt kodu yeniden haritalayıcısıdır.
 - Çift sürüm gömülü Eclipse Compiler for Java içerir (Java 8 için ECJ 3.26, Java 17+ için ECJ 3.46).
 - Harici derleyiciye ihtiyaç duymadan RAM üzerinde doğrudan bayt kodu (`0xCAFEBABE`) üretir.

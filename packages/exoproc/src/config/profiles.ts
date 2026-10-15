@@ -1,4 +1,4 @@
-import type { MatchOptions } from 'exoproc-minecraft';
+import type { MatchOptions } from '@woldann/exoproc-minecraft';
 
 export interface GameProfile {
   id: string;

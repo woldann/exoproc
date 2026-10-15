@@ -1,4 +1,4 @@
-import { DummyProcess } from 'exoproc-dummy';
+import { DummyProcess } from '@woldann/exoproc-dummy';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { compileJavaSync } from '../../packages/njava/src/compiler.js';

@@ -1,5 +1,5 @@
-import type { X64Register64, X64XmmRegister } from 'exoproc-asm';
-import { normalizeType, type CTypeOrString } from 'bun-xffi';
+import type { X64Register64, X64XmmRegister } from '@woldann/exoproc-asm';
+import { normalizeType, type CTypeOrString } from '@woldann/bun-xffi';
 
 /** Register-argument slots (RCX/RDX/R8/R9 or XMM0-3) a variant mask covers. */
 export const CALL_REGISTER_SLOTS = 4;

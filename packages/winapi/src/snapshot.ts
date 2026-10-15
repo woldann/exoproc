@@ -6,7 +6,7 @@ import {
   HEAPLIST32_SIZE,
   HEAPENTRY32_SIZE,
   ToolhelpSnapshotFlag,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 type HANDLE = bigint;
 import { decodeStringW } from './decoding.js';
 import { Handle } from './handle.js';

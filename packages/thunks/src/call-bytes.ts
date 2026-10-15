@@ -3,8 +3,8 @@
  * installation and payload API on top of the machine code emitted here.
  */
 
-import { X64Assembler, qword, type X64Register64 } from 'exoproc-asm';
-import type { CMachineCode, CTypeOrString } from 'bun-xffi';
+import { X64Assembler, qword, type X64Register64 } from '@woldann/exoproc-asm';
+import type { CMachineCode, CTypeOrString } from '@woldann/bun-xffi';
 import {
   assertValidMask,
   CALL_REGISTER_SLOTS,

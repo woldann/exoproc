@@ -9,7 +9,7 @@ export {
   xmmForSlot,
   type Operand,
 } from './abi.js';
-export type { X64Register64, X64XmmRegister } from 'exoproc-asm';
+export type { X64Register64, X64XmmRegister } from '@woldann/exoproc-asm';
 export {
   buildCallBytes,
   buildCallThunkBytes,

@@ -5,7 +5,7 @@ import {
   getCacheDir,
   getAgentCacheDir,
   getDaemonStatePath,
-} from 'exoproc-utils';
+} from '@woldann/exoproc-utils';
 
 /**
  * Load a compiled script from dist/scripts/ directory
@@ -516,7 +516,7 @@ export async function executeScriptWithAccessor(
   try {
     let Java: any = null;
     try {
-      const njava = await import('bun-njava');
+      const njava = await import('@woldann/bun-njava');
       Java =
         typeof accessor.getJavaSync === 'function'
           ? accessor.getJavaSync()
@@ -553,7 +553,7 @@ export async function executeScriptWithAccessor(
     let rawMc: any = null;
     try {
       const { MinecraftClient, MinecraftMatcher } =
-        await import('exoproc-minecraft');
+        await import('@woldann/exoproc-minecraft');
       const mcClient = await MinecraftClient.attach(accessor, options);
       if (Java) {
         const matcher = new MinecraftMatcher(mcClient.bridge);
@@ -705,7 +705,7 @@ export async function getTargetMode(
 
 function resolveMappingsPkg(): any {
   try {
-    return require('exoproc-mappings');
+    return require('@woldann/exoproc-mappings');
   } catch {}
   try {
     return require('njava-mappings');
@@ -714,8 +714,8 @@ function resolveMappingsPkg(): any {
   const candidates = [
     join(root, 'packages', 'njava-mappings', 'dist', 'index.js'),
     join(root, 'packages', 'njava-mappings', 'src', 'index.ts'),
-    join(root, 'packages', 'exoproc-mappings', 'dist', 'index.js'),
-    join(root, 'packages', 'exoproc-mappings', 'src', 'index.ts'),
+    join(root, 'packages', '@woldann/exoproc-mappings', 'dist', 'index.js'),
+    join(root, 'packages', '@woldann/exoproc-mappings', 'src', 'index.ts'),
   ];
   for (const c of candidates) {
     if (existsSync(c)) {
@@ -825,7 +825,7 @@ export function getAgentJavaContext(
     return agentContextCache.context;
   }
   const pool = options?.pool ?? getAgentMappingPool();
-  const njavaPkg = 'bun-njava';
+  const njavaPkg = '@woldann/bun-njava';
   const { createAgentContext } = require(njavaPkg);
   const context = createAgentContext({ host, port, sync: true, pool });
   agentContextCache = { key, context };
@@ -893,7 +893,7 @@ export async function ensureMinecraft(
   minecraftInitPromise = (async () => {
     try {
       const java = getAgentJavaContext(effectiveHost, effectivePort);
-      const { MinecraftClient } = await import('exoproc-minecraft');
+      const { MinecraftClient } = await import('@woldann/exoproc-minecraft');
       activeMinecraftClient =
         typeof (MinecraftClient as any).from === 'function'
           ? await (MinecraftClient as any).from(java, options)

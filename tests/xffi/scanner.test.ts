@@ -11,7 +11,7 @@ import {
   InvalidPatternError,
   MemoryProtection,
 } from '../../packages/xffi/src/index';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 describe('xffi > Scanner & Pattern Scanning API', () => {
   describe('Pattern Parsing', () => {

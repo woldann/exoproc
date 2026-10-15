@@ -1,10 +1,10 @@
-import * as Native from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
 import {
   registerStub,
   type Stub,
   type StubDescriptor,
   type StubScanRegion,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import { log } from './logger.js';
 
 const globalsLog = log.add('Globals');

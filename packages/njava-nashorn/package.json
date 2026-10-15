@@ -1,7 +1,8 @@
 {
-  "name": "exoproc-nashorn",
+  "name": "@woldann/exoproc-nashorn",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Pure TypeScript Nashorn runtime shims, template generators, and script simulator for the Exoproc / NJava ecosystem.",
@@ -37,7 +38,7 @@
     "test": "bun test"
   },
   "devDependencies": {
-    "exoproc-mappings": "workspace:*",
+    "@woldann/exoproc-mappings": "workspace:*",
     "typescript": "^5.8.2"
   }
 }

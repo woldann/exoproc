@@ -4,7 +4,7 @@ import type {
   CMachineCode,
   CTypeOrString,
   ICallableMemoryAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import type { CallInvokeStyle } from './call-bytes.js';
 
 /** The ABI shape a thunk adapts without requiring a callable local address. */

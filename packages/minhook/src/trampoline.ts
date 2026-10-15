@@ -1,11 +1,11 @@
-import { type IMemoryAccessor, resolveAddress } from 'bun-xffi';
+import { type IMemoryAccessor, resolveAddress } from '@woldann/bun-xffi';
 import {
   CapstoneX86,
   type Instruction,
   x86_reg,
   x86_op_type,
   type X86Detail,
-} from 'bun-capstone';
+} from '@woldann/bun-capstone';
 import { TrampolineRelocationError, TrampolineSpaceError } from './errors.js';
 
 /** Size of the JMP written at the hooked function: `E9 rel32`. */

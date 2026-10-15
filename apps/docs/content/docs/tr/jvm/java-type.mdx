@@ -109,7 +109,7 @@ console.log(StringClass.class.getName());// "java.lang.String"
 Düşük seviyeli JNI veya bellek erişimlerinde ham 64-bit işaretçiye (`jobject` veya `jclass`) ihtiyaç duyarsanız `Java.unwrap()` kullanabilirsiniz:
 
 ```typescript
-import { unwrapJava } from 'bun-njava';
+import { unwrapJava } from '@woldann/bun-njava';
 
 const rawPtr: bigint = Java.unwrap(myInstance);
 // veya

@@ -1,4 +1,4 @@
-import type { Win32FileSystemEntry } from '@exoproc/simulate';
+import type { Win32FileSystemEntry } from '@woldann/simulate';
 import {
   FsChannel,
   type DeleteOptions,

@@ -6,8 +6,8 @@ description: "Çoğu kullanıcı IndirectNThreadHostAccessor sınıfını doğru
 Çoğu kullanıcı `IndirectNThreadHostAccessor` sınıfını doğrudan kurmaz. `createAccessor()` varsayılan accessor zincirini kurar, başlatır ve kullanıma hazır halde döndürür. Varsayılan `idType`, `processAllThreadIds`'dır: verilen kimlik PID kabul edilir ve aday thread'ler eşzamanlı denenir; ilk başarıyla yönlendirilen thread kazanır.
 
 ```ts
-import { createAccessor } from 'exoproc-accessors';
-import { struct } from 'bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { struct } from '@woldann/bun-xffi';
 
 const memory = await createAccessor(processId, {
   hostOptions: {

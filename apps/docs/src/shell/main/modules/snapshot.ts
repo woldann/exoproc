@@ -5,7 +5,7 @@ import type {
   Win64Module,
   Win64Process,
   Win64Thread,
-} from '@exoproc/simulate';
+} from '@woldann/simulate';
 import type {
   InstructionDto,
   MappingDto,

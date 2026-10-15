@@ -2,7 +2,7 @@ import type {
   ReflectedClass,
   ReflectedField,
   ReflectedConstructor,
-} from 'bun-njava';
+} from '@woldann/bun-njava';
 
 /**
  * Structural Fingerprint and Classification Engine for Minecraft Classes and Members.

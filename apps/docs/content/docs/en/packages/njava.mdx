@@ -19,14 +19,14 @@ bun-njava      njava-agent    njava-runtime   exoproc-mappings  exoproc-jjit
 
 ## Packages in the Suite
 
-### 1. `bun-njava`
+### 1. `@woldann/bun-njava`
 The foundational JVM bridge.
 - Connects to `jvm.dll` via cross-process memory accessors.
 - Resolves `JNIEnv` function tables (`FindClass`, `GetMethodID`, `CallObjectMethod`, etc.).
 - Transparently proxies Java classes and instances with dynamic TypeScript/JavaScript objects.
 - Unwraps Java `Throwable` exceptions into native JavaScript errors.
 
-### 2. `njava-agent`
+### 2. `@woldann/njava-agent`
 High-speed in-process Java agent.
 - Injected entirely in-memory via `ClassLoader.defineClass` (no JAR written to disk).
 - Serves a lightweight HTTP/Binary RPC server on `127.0.0.1` for 50,000+ calls/second.
@@ -38,13 +38,13 @@ Modular script execution and Nashorn compatibility.
 - Implements the 4 `ClassDefiner` strategies (`auto`, `unsafe`, `classLoader`, `agent`).
 - Provides `ScriptRunner` for sandboxed script execution.
 
-### 4. `exoproc-mappings`
+### 4. `@woldann/exoproc-mappings`
 Multi-version deobfuscation engine.
 - Supports Mojang, Fabric Intermediary, Yarn, Forge MCP, and Searge mapping formats.
 - SQLite and JSON backed indexers for fast method, field, and class name resolution.
 - Dynamic `JavaMappingRegistry` resolves obfuscated game symbols transparently at runtime.
 
-### 5. `exoproc-jjit`
+### 5. `@woldann/exoproc-jjit`
 In-memory Java compiler and bytecode remapper.
 - Dual bundled Eclipse Compiler for Java (ECJ 3.26 for Java 8, ECJ 3.46 for Java 17+).
 - In-memory bytecode production (`0xCAFEBABE`) with zero external build tools.

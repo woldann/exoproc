@@ -31,9 +31,9 @@
       "version": "0.0.8",
       "dependencies": {
         "@base-ui/react": "^1.6.0",
-        "@exoproc/simulate": "workspace:*",
-        "@exoproc/win32-abi": "workspace:*",
         "@monaco-editor/react": "^4.7.0",
+        "@woldann/simulate": "workspace:*",
+        "@woldann/win32-abi": "workspace:*",
         "@xterm/addon-fit": "^0.11.0",
         "@xterm/xterm": "^6.0.0",
         "class-variance-authority": "^0.7.1",
@@ -76,10 +76,10 @@
       "name": "exoproc-examples",
       "dependencies": {
         "@woldann/exoproc": "workspace:*",
+        "@woldann/exoproc-dummy": "workspace:*",
         "ansi-escapes": "^7.3.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "exoproc-dummy": "workspace:*",
         "hono": "^4.12.28",
         "lucide-react": "^1.23.0",
         "radix-ui": "^1.6.2",
@@ -97,45 +97,44 @@
       },
     },
     "packages/accessors": {
-      "name": "exoproc-accessors",
+      "name": "@woldann/exoproc-accessors",
       "version": "0.4.0",
       "dependencies": {
-        "bun-nhook": "workspace:*",
-        "bun-njava": "workspace:*",
-        "bun-nshm": "workspace:*",
-        "bun-nthread": "workspace:*",
-        "bun-winapi": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/bun-njava": "workspace:*",
+        "@woldann/bun-nshm": "workspace:*",
+        "@woldann/bun-nthread": "workspace:*",
+        "@woldann/bun-winapi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
       },
     },
     "packages/asm": {
-      "name": "exoproc-asm",
+      "name": "@woldann/exoproc-asm",
       "version": "0.4.0",
     },
     "packages/capstone": {
-      "name": "bun-capstone",
+      "name": "@woldann/bun-capstone",
       "version": "0.4.0",
       "dependencies": {
-        "bun-capstone-abi": "workspace:*",
-        "bun-xffi": "workspace:*",
+        "@woldann/bun-capstone-abi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
       },
     },
     "packages/capstone-abi": {
-      "name": "bun-capstone-abi",
+      "name": "@woldann/bun-capstone-abi",
       "version": "0.4.0",
       "dependencies": {
-        "bun-xffi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
       },
     },
     "packages/dummy": {
-      "name": "exoproc-dummy",
+      "name": "@woldann/exoproc-dummy",
       "version": "0.4.0",
       "dependencies": {
-        "bun-xffi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
       },
     },
     "packages/exoproc": {
@@ -147,18 +146,18 @@
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.32.1",
-        "bun-njava": "workspace:*",
-        "bun-winapi": "workspace:*",
-        "bun-xffi": "workspace:*",
+        "@woldann/bun-njava": "workspace:*",
+        "@woldann/bun-winapi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-accessors": "workspace:*",
+        "@woldann/exoproc-asm": "workspace:*",
+        "@woldann/exoproc-mappings": "workspace:*",
+        "@woldann/exoproc-minecraft": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
+        "@woldann/njava-agent": "workspace:*",
         "chalk": "^5.3.0",
         "commander": "^12.1.0",
-        "exoproc-accessors": "workspace:*",
-        "exoproc-asm": "workspace:*",
-        "exoproc-mappings": "workspace:*",
-        "exoproc-minecraft": "workspace:*",
-        "exoproc-utils": "workspace:*",
         "ink": "^7.1.1",
-        "njava-agent": "workspace:*",
         "react": "^19.2.8",
         "terminal-image": "^5.0.1",
         "zod": "^3.24.1",
@@ -168,127 +167,127 @@
       },
     },
     "packages/jjit": {
-      "name": "exoproc-jjit",
+      "name": "@woldann/exoproc-jjit",
       "version": "0.4.0",
       "dependencies": {
-        "exoproc-mappings": "workspace:*",
+        "@woldann/exoproc-mappings": "workspace:*",
       },
       "devDependencies": {
         "typescript": "^5.8.2",
       },
     },
     "packages/minecraft": {
-      "name": "exoproc-minecraft",
+      "name": "@woldann/exoproc-minecraft",
       "version": "0.4.0",
       "dependencies": {
-        "bun-njava": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "exoproc-mappings": "workspace:*",
+        "@woldann/bun-njava": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-mappings": "workspace:*",
       },
       "optionalDependencies": {
-        "bun-njava": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "exoproc-accessors": "workspace:*",
+        "@woldann/bun-njava": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-accessors": "workspace:*",
       },
     },
     "packages/minhook": {
-      "name": "bun-minhook",
+      "name": "@woldann/bun-minhook",
       "version": "0.4.0",
       "dependencies": {
-        "bun-capstone": "workspace:*",
-        "bun-winapi": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/bun-capstone": "workspace:*",
+        "@woldann/bun-winapi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
     },
     "packages/nhook": {
-      "name": "bun-nhook",
+      "name": "@woldann/bun-nhook",
       "version": "0.4.0",
       "dependencies": {
-        "bun-capstone": "workspace:*",
-        "bun-nthread": "workspace:*",
-        "bun-winapi": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "exoproc-accessors": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/bun-capstone": "workspace:*",
+        "@woldann/bun-nthread": "workspace:*",
+        "@woldann/bun-winapi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-accessors": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
     },
     "packages/njava": {
-      "name": "bun-njava",
+      "name": "@woldann/bun-njava",
       "version": "0.4.0",
       "dependencies": {
-        "bun-winapi": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "exoproc-jjit": "workspace:*",
-        "exoproc-mappings": "workspace:*",
-        "exoproc-utils": "workspace:*",
-        "njava-agent": "workspace:*",
+        "@woldann/bun-winapi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-jjit": "workspace:*",
+        "@woldann/exoproc-mappings": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
+        "@woldann/njava-agent": "workspace:*",
       },
     },
     "packages/njava-agent": {
-      "name": "njava-agent",
+      "name": "@woldann/njava-agent",
       "version": "0.4.0",
       "dependencies": {
-        "exoproc-jjit": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/exoproc-jjit": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
       "devDependencies": {
         "typescript": "^5.8.2",
       },
     },
     "packages/njava-mappings": {
-      "name": "exoproc-mappings",
+      "name": "@woldann/exoproc-mappings",
       "version": "0.4.0",
       "devDependencies": {
         "typescript": "^5.8.2",
       },
     },
     "packages/njava-nashorn": {
-      "name": "exoproc-nashorn",
+      "name": "@woldann/exoproc-nashorn",
       "version": "0.4.0",
       "devDependencies": {
-        "exoproc-mappings": "workspace:*",
+        "@woldann/exoproc-mappings": "workspace:*",
         "typescript": "^5.8.2",
       },
     },
     "packages/njava-runtime": {
-      "name": "exoproc-runtime",
+      "name": "@woldann/exoproc-runtime",
       "version": "0.4.0",
       "dependencies": {
-        "exoproc-jjit": "workspace:*",
-        "exoproc-mappings": "workspace:*",
-        "exoproc-nashorn": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/exoproc-jjit": "workspace:*",
+        "@woldann/exoproc-mappings": "workspace:*",
+        "@woldann/exoproc-nashorn": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
       "devDependencies": {
         "typescript": "^5.8.2",
       },
     },
     "packages/nshm": {
-      "name": "bun-nshm",
+      "name": "@woldann/bun-nshm",
       "version": "0.4.0",
       "dependencies": {
-        "bun-xffi": "workspace:*",
-        "exoproc-dummy": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-dummy": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
     },
     "packages/nthread": {
-      "name": "bun-nthread",
+      "name": "@woldann/bun-nthread",
       "version": "0.4.0",
       "dependencies": {
-        "bun-winapi": "workspace:*",
-        "bun-xffi": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/bun-winapi": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
     },
     "packages/simulate": {
-      "name": "@exoproc/simulate",
+      "name": "@woldann/simulate",
       "version": "0.4.0",
       "dependencies": {
-        "@exoproc/win32-abi": "workspace:*",
-        "bun-capstone-abi": "workspace:*",
-        "exoproc-asm": "workspace:*",
+        "@woldann/bun-capstone-abi": "workspace:*",
+        "@woldann/exoproc-asm": "workspace:*",
+        "@woldann/win32-abi": "workspace:*",
         "expect": "^30.4.1",
       },
       "devDependencies": {
@@ -298,15 +297,15 @@
       },
     },
     "packages/thunks": {
-      "name": "bun-thunks",
+      "name": "@woldann/bun-thunks",
       "version": "0.4.0",
       "dependencies": {
-        "bun-xffi": "workspace:*",
-        "exoproc-asm": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-asm": "workspace:*",
       },
     },
     "packages/utils": {
-      "name": "exoproc-utils",
+      "name": "@woldann/exoproc-utils",
       "version": "0.4.0",
       "dependencies": {
         "@t3-oss/env-core": "^0.11.1",
@@ -317,26 +316,26 @@
       },
     },
     "packages/win32-abi": {
-      "name": "@exoproc/win32-abi",
+      "name": "@woldann/win32-abi",
       "version": "0.4.0",
       "devDependencies": {
         "@types/bun": "latest",
       },
     },
     "packages/winapi": {
-      "name": "bun-winapi",
+      "name": "@woldann/bun-winapi",
       "version": "0.4.0",
       "dependencies": {
-        "bun-xffi": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/bun-xffi": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
       },
     },
     "packages/xffi": {
-      "name": "bun-xffi",
+      "name": "@woldann/bun-xffi",
       "version": "0.4.0",
       "dependencies": {
-        "@exoproc/win32-abi": "workspace:*",
-        "exoproc-utils": "workspace:*",
+        "@woldann/exoproc-utils": "workspace:*",
+        "@woldann/win32-abi": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -698,10 +697,6 @@
     "@eslint/object-schema": ["@eslint/object-schema@2.1.7", "", {}, "sha512-VtAOaymWVfZcmZbp6E2mympDIHvyjXs/12LqWYjVw6qjrfF+VK+fyG33kChz3nnK+SU5/NeHOqrTEHS8sXO3OA=="],
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
-
-    "@exoproc/simulate": ["@exoproc/simulate@workspace:packages/simulate"],
-
-    "@exoproc/win32-abi": ["@exoproc/win32-abi@workspace:packages/win32-abi"],
 
     "@floating-ui/core": ["@floating-ui/core@1.8.0", "", { "dependencies": { "@floating-ui/utils": "^0.2.12" } }, "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="],
 
@@ -1359,7 +1354,51 @@
 
     "@unrs/resolver-binding-win32-x64-msvc": ["@unrs/resolver-binding-win32-x64-msvc@1.12.2", "", { "os": "win32", "cpu": "x64" }, "sha512-nAB74NfSNKknqQ1RrYj6uz8FcXEomu/MATJZxh/x+BArzN2U3JbOYC0APYzUIGhVY3m5hRxA8VPNdPBoG8txlA=="],
 
+    "@woldann/bun-capstone": ["@woldann/bun-capstone@workspace:packages/capstone"],
+
+    "@woldann/bun-capstone-abi": ["@woldann/bun-capstone-abi@workspace:packages/capstone-abi"],
+
+    "@woldann/bun-minhook": ["@woldann/bun-minhook@workspace:packages/minhook"],
+
+    "@woldann/bun-nhook": ["@woldann/bun-nhook@workspace:packages/nhook"],
+
+    "@woldann/bun-njava": ["@woldann/bun-njava@workspace:packages/njava"],
+
+    "@woldann/bun-nshm": ["@woldann/bun-nshm@workspace:packages/nshm"],
+
+    "@woldann/bun-nthread": ["@woldann/bun-nthread@workspace:packages/nthread"],
+
+    "@woldann/bun-thunks": ["@woldann/bun-thunks@workspace:packages/thunks"],
+
+    "@woldann/bun-winapi": ["@woldann/bun-winapi@workspace:packages/winapi"],
+
+    "@woldann/bun-xffi": ["@woldann/bun-xffi@workspace:packages/xffi"],
+
     "@woldann/exoproc": ["@woldann/exoproc@workspace:packages/exoproc"],
+
+    "@woldann/exoproc-accessors": ["@woldann/exoproc-accessors@workspace:packages/accessors"],
+
+    "@woldann/exoproc-asm": ["@woldann/exoproc-asm@workspace:packages/asm"],
+
+    "@woldann/exoproc-dummy": ["@woldann/exoproc-dummy@workspace:packages/dummy"],
+
+    "@woldann/exoproc-jjit": ["@woldann/exoproc-jjit@workspace:packages/jjit"],
+
+    "@woldann/exoproc-mappings": ["@woldann/exoproc-mappings@workspace:packages/njava-mappings"],
+
+    "@woldann/exoproc-minecraft": ["@woldann/exoproc-minecraft@workspace:packages/minecraft"],
+
+    "@woldann/exoproc-nashorn": ["@woldann/exoproc-nashorn@workspace:packages/njava-nashorn"],
+
+    "@woldann/exoproc-runtime": ["@woldann/exoproc-runtime@workspace:packages/njava-runtime"],
+
+    "@woldann/exoproc-utils": ["@woldann/exoproc-utils@workspace:packages/utils"],
+
+    "@woldann/njava-agent": ["@woldann/njava-agent@workspace:packages/njava-agent"],
+
+    "@woldann/simulate": ["@woldann/simulate@workspace:packages/simulate"],
+
+    "@woldann/win32-abi": ["@woldann/win32-abi@workspace:packages/win32-abi"],
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.9.12", "", {}, "sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A=="],
 
@@ -1499,27 +1538,7 @@
 
     "buffer-from": ["buffer-from@1.1.2", "", {}, "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="],
 
-    "bun-capstone": ["bun-capstone@workspace:packages/capstone"],
-
-    "bun-capstone-abi": ["bun-capstone-abi@workspace:packages/capstone-abi"],
-
-    "bun-minhook": ["bun-minhook@workspace:packages/minhook"],
-
-    "bun-nhook": ["bun-nhook@workspace:packages/nhook"],
-
-    "bun-njava": ["bun-njava@workspace:packages/njava"],
-
-    "bun-nshm": ["bun-nshm@workspace:packages/nshm"],
-
-    "bun-nthread": ["bun-nthread@workspace:packages/nthread"],
-
-    "bun-thunks": ["bun-thunks@workspace:packages/thunks"],
-
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
-
-    "bun-winapi": ["bun-winapi@workspace:packages/winapi"],
-
-    "bun-xffi": ["bun-xffi@workspace:packages/xffi"],
 
     "bundle-name": ["bundle-name@4.1.1", "", { "dependencies": { "run-applescript": "^7.0.0" } }, "sha512-DdH81/zPLVS11EUgWq3tEu/xn+EzljlMYooDNdzWEnFha3R3NBMpMV1UqYIpjYHV/SgpFKMIX1Oh7o06SjM/oA=="],
 
@@ -1833,25 +1852,7 @@
 
     "exif-parser": ["exif-parser@0.1.12", "", {}, "sha512-c2bQfLNbMzLPmzQuOr8fy0csy84WmwnER81W88DzTp9CYNPJ6yzOj2EZAh9pywYpqHnshVLHQJ8WzldAyfY+Iw=="],
 
-    "exoproc-accessors": ["exoproc-accessors@workspace:packages/accessors"],
-
-    "exoproc-asm": ["exoproc-asm@workspace:packages/asm"],
-
-    "exoproc-dummy": ["exoproc-dummy@workspace:packages/dummy"],
-
     "exoproc-examples": ["exoproc-examples@workspace:examples"],
-
-    "exoproc-jjit": ["exoproc-jjit@workspace:packages/jjit"],
-
-    "exoproc-mappings": ["exoproc-mappings@workspace:packages/njava-mappings"],
-
-    "exoproc-minecraft": ["exoproc-minecraft@workspace:packages/minecraft"],
-
-    "exoproc-nashorn": ["exoproc-nashorn@workspace:packages/njava-nashorn"],
-
-    "exoproc-runtime": ["exoproc-runtime@workspace:packages/njava-runtime"],
-
-    "exoproc-utils": ["exoproc-utils@workspace:packages/utils"],
 
     "expect": ["expect@30.5.2", "", { "dependencies": { "@jest/expect-utils": "30.5.2", "@jest/get-type": "30.5.0", "jest-matcher-utils": "30.5.2", "jest-message-util": "30.5.1", "jest-mock": "30.5.2", "jest-util": "30.5.1" } }, "sha512-0LNuMvs8/5mRYhnCR4k+lGV7fqPMs6Bnksda4S3zsCUmdxBpAn4zU4NNzXdq1pMKe/H4W5t/zVIDSJ/H3e0vDA=="],
 
@@ -2452,8 +2453,6 @@
     "next": ["next@16.2.11", "", { "dependencies": { "@next/env": "16.2.11", "@swc/helpers": "0.5.15", "baseline-browser-mapping": "^2.9.19", "caniuse-lite": "^1.0.30001579", "postcss": "8.4.31", "styled-jsx": "5.1.6" }, "optionalDependencies": { "@next/swc-darwin-arm64": "16.2.11", "@next/swc-darwin-x64": "16.2.11", "@next/swc-linux-arm64-gnu": "16.2.11", "@next/swc-linux-arm64-musl": "16.2.11", "@next/swc-linux-x64-gnu": "16.2.11", "@next/swc-linux-x64-musl": "16.2.11", "@next/swc-win32-arm64-msvc": "16.2.11", "@next/swc-win32-x64-msvc": "16.2.11", "sharp": "^0.34.5" }, "peerDependencies": { "@opentelemetry/api": "^1.1.0", "@playwright/test": "^1.51.1", "babel-plugin-react-compiler": "*", "react": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "react-dom": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "sass": "^1.3.0" }, "optionalPeers": ["@opentelemetry/api", "@playwright/test", "babel-plugin-react-compiler", "sass"], "bin": { "next": "dist/bin/next" } }, "sha512-B339zaqbyK8cmxhoAvLrcwoabwCP1wz21zSzfqxqXAemTu2BXnH7tQnfcglKv1vnMUIDBc+Hth7XODQriTZiRQ=="],
 
     "next-themes": ["next-themes@0.4.6", "", { "peerDependencies": { "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc", "react-dom": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc" } }, "sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA=="],
-
-    "njava-agent": ["njava-agent@workspace:packages/njava-agent"],
 
     "node-addon-api": ["node-addon-api@7.1.1", "", {}, "sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ=="],
 
@@ -3113,10 +3112,6 @@
 
     "@eslint/eslintrc/globals": ["globals@13.24.0", "", { "dependencies": { "type-fest": "^0.20.2" } }, "sha512-AhO5QUcj8llrbG09iWhPU2B204J1xnPeL8kQmVorSsy+Sjj1sk8gIyh6cUocGmH4L0UuhAJy+hJMRA4mgA4mFQ=="],
 
-    "@exoproc/simulate/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
-
-    "@exoproc/win32-abi/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
-
     "@img/sharp-freebsd-wasm32/@img/sharp-wasm32": ["@img/sharp-wasm32@0.35.5", "", { "dependencies": { "@emnapi/runtime": "^1.11.3" } }, "sha512-Ptsga1su4tQx+LLF1ECS9U6nz5kmrXKo6XVbtR48Ke3ZRxxgaWBu7IDtEe1quo8hiupwm6WFqxVlXaSf7IINGQ=="],
 
     "@img/sharp-webcontainers-wasm32/@img/sharp-wasm32": ["@img/sharp-wasm32@0.35.5", "", { "dependencies": { "@emnapi/runtime": "^1.11.3" } }, "sha512-Ptsga1su4tQx+LLF1ECS9U6nz5kmrXKo6XVbtR48Ke3ZRxxgaWBu7IDtEe1quo8hiupwm6WFqxVlXaSf7IINGQ=="],
@@ -3187,13 +3182,31 @@
 
     "@unrs/resolver-binding-wasm32-wasi/@emnapi/runtime": ["@emnapi/runtime@1.10.0", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA=="],
 
+    "@woldann/bun-xffi/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
+
+    "@woldann/exoproc-accessors/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
+
+    "@woldann/exoproc-jjit/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@woldann/exoproc-mappings/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@woldann/exoproc-nashorn/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@woldann/exoproc-runtime/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@woldann/exoproc-utils/dotenv": ["dotenv@16.6.1", "", {}, "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow=="],
+
+    "@woldann/njava-agent/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@woldann/simulate/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
+
+    "@woldann/win32-abi/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
+
     "ajv-formats/ajv": ["ajv@8.20.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="],
 
     "app-path/execa": ["execa@5.1.1", "", { "dependencies": { "cross-spawn": "^7.0.3", "get-stream": "^6.0.0", "human-signals": "^2.1.0", "is-stream": "^2.0.0", "merge-stream": "^2.0.0", "npm-run-path": "^4.0.1", "onetime": "^5.1.2", "signal-exit": "^3.0.3", "strip-final-newline": "^2.0.0" } }, "sha512-8uSpZZocAZRBAPIEINJj3Lo9HyGitllczc27Eh5YYojjMFMn8yHMDMaUHE2Jqfq05D/wucwI4JGURyXt1vchyg=="],
 
     "body-parser/content-type": ["content-type@2.1.0", "", {}, "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag=="],
-
-    "bun-xffi/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
 
     "cliui/string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
 
@@ -3259,8 +3272,6 @@
 
     "execa/signal-exit": ["signal-exit@4.1.0", "", {}, "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="],
 
-    "exoproc-accessors/@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
-
     "exoproc-examples/@types/react": ["@types/react@18.3.31", "", { "dependencies": { "@types/prop-types": "*", "csstype": "^3.2.2" } }, "sha512-vfEqpXTvwT91yhmwdfouStN2hSKwTvyRs8qpLfADyrq/kxDw0hZM7Wk9Ug1FELj8hIby+S/+kQCSRFF32nv2Qw=="],
 
     "exoproc-examples/@types/react-dom": ["@types/react-dom@18.3.7", "", { "peerDependencies": { "@types/react": "^18.0.0" } }, "sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ=="],
@@ -3268,16 +3279,6 @@
     "exoproc-examples/react": ["react@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ=="],
 
     "exoproc-examples/react-dom": ["react-dom@18.3.1", "", { "dependencies": { "loose-envify": "^1.1.0", "scheduler": "^0.23.2" }, "peerDependencies": { "react": "^18.3.1" } }, "sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw=="],
-
-    "exoproc-jjit/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "exoproc-mappings/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "exoproc-nashorn/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "exoproc-runtime/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "exoproc-utils/dotenv": ["dotenv@16.6.1", "", {}, "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow=="],
 
     "express/content-type": ["content-type@2.1.0", "", {}, "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag=="],
 
@@ -3336,8 +3337,6 @@
     "negotiator/content-type": ["content-type@2.1.0", "", {}, "sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag=="],
 
     "next/postcss": ["postcss@8.4.31", "", { "dependencies": { "nanoid": "^3.3.6", "picocolors": "^1.0.0", "source-map-js": "^1.0.2" } }, "sha512-PS08Iboia9mts/2ygV3eLpY5ghnUcfLV/EXTOW1E2qYxJKGGBUtNjN76FYHnMs36RmARn41bC0AZmn+rR0OVpQ=="],
-
-    "njava-agent/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "node-exports-info/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
@@ -3424,8 +3423,6 @@
     "@commitlint/config-validator/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
     "@eslint/eslintrc/globals/type-fest": ["type-fest@0.20.2", "", {}, "sha512-Ne+eE4r0/iWnpAxD852z3A+N0Bt5RN//NjJwRd2VFHEmrywxf5vsZlh4R6lixl6B+wz/8d+maTSAkN1FIkI3LQ=="],
-
-    "@exoproc/win32-abi/@types/bun/bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
 
     "@isaacs/cliui/strip-ansi/ansi-regex": ["ansi-regex@6.2.2", "", {}, "sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg=="],
 
@@ -3517,6 +3514,12 @@
 
     "@typescript-eslint/typescript-estree/minimatch/brace-expansion": ["brace-expansion@2.1.4", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-hGfVzPxthbf3+2yjg/RBs60cB0FhqBS/zvdV/4wn4/BmN0bNMMHPc4V/BbFieqf1TKAGGAHnY4eSjajCl0f2Xg=="],
 
+    "@woldann/bun-xffi/@types/bun/bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
+
+    "@woldann/exoproc-accessors/@types/bun/bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
+
+    "@woldann/win32-abi/@types/bun/bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
+
     "ajv-formats/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
     "app-path/execa/get-stream": ["get-stream@6.0.1", "", {}, "sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg=="],
@@ -3528,8 +3531,6 @@
     "app-path/execa/onetime": ["onetime@5.1.2", "", { "dependencies": { "mimic-fn": "^2.1.0" } }, "sha512-kbpaSSGJTWdAY5KPVeMOKXSrPtr8C8C7wodJbcsd51jRnmD+GZu8Y0VoU6Dm5Z4vWr0Ig/1NKuWRKf7j5aaYSg=="],
 
     "app-path/execa/strip-final-newline": ["strip-final-newline@2.0.0", "", {}, "sha512-BrpvfNAE3dcvq7ll3xVumzjKjZQ5tI1sEUIKr3Uoks0XUl45St3FlatVqef9prk4jRDzhW6WZg+3bk93y6pLjA=="],
-
-    "bun-xffi/@types/bun/bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
 
     "cliui/string-width/emoji-regex": ["emoji-regex@8.0.0", "", {}, "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A=="],
 
@@ -3578,8 +3579,6 @@
     "eslint/chalk/supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
 
     "eslint/globals/type-fest": ["type-fest@0.20.2", "", {}, "sha512-Ne+eE4r0/iWnpAxD852z3A+N0Bt5RN//NjJwRd2VFHEmrywxf5vsZlh4R6lixl6B+wz/8d+maTSAkN1FIkI3LQ=="],
-
-    "exoproc-accessors/@types/bun/bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
 
     "exoproc-examples/react-dom/scheduler": ["scheduler@0.23.2", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ=="],
 

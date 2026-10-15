@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import * as Native from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
 import {
   MemoryProtection,
   NativePointer,
@@ -7,11 +7,11 @@ import {
   createCFunction,
   resolveAddress,
   type HostAccessor,
-} from 'bun-xffi';
-import { CapstoneX86, type Instruction } from 'bun-capstone';
-import { createAccessor } from 'exoproc-accessors';
-import { NHook, NHookInstance, type NHookPoolResult } from 'bun-nhook';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/bun-xffi';
+import { CapstoneX86, type Instruction } from '@woldann/bun-capstone';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { NHook, NHookInstance, type NHookPoolResult } from '@woldann/bun-nhook';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // `simulateDisplacedInstructions` is private; these tests reach past that with
 // an `any` cast to exercise it directly against hand-encoded byte sequences,

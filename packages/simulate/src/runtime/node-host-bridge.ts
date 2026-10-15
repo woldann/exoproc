@@ -1065,7 +1065,7 @@ export class NodeHostBridge {
 
   private async createWorkerRuntimeBindings(): Promise<WorkerRuntimeBindings> {
     const workspaceAliases = await this.getWorkspacePackageAliases();
-    const simulateEntry = workspaceAliases['@exoproc/simulate'];
+    const simulateEntry = workspaceAliases['@woldann/simulate'];
     if (!simulateEntry) {
       throw new Error('Workspace package @exoproc/simulate was not found');
     }

@@ -7,7 +7,7 @@ import type {
   Win64ScanValueType,
   Win64ThreadState,
   X64RegisterName,
-} from '@exoproc/simulate';
+} from '@woldann/simulate';
 import type {
   FirstScanCompare,
   MemoryProtection,

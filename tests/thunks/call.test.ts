@@ -7,16 +7,16 @@ import {
   MemoryProtection,
   type CFunction,
   type CTypeOrString,
-} from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 import {
   installCallThunk,
   installCaptureArgsThunk,
   installCaptureHookThunk,
   packCallArgs,
   type ThunkSignature,
-} from 'bun-thunks';
+} from '@woldann/bun-thunks';
 import {
   buildCallBytes,
   createCallThunk,
@@ -25,8 +25,8 @@ import {
   xmmForSlot,
   CALL_REGISTER_SLOTS,
   CALL_VARIANT_COUNT,
-} from 'bun-thunks/machine-code';
-import { X64Assembler, qword } from 'exoproc-asm';
+} from '@woldann/bun-thunks/machine-code';
+import { X64Assembler, qword } from '@woldann/exoproc-asm';
 
 type IndirectAccessor = Awaited<ReturnType<typeof createAccessor>>;
 

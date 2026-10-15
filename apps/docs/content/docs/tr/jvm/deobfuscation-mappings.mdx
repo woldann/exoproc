@@ -66,13 +66,13 @@ mc.toggleFullscreen();
 
 ## Eşleme Havuzları (Mapping Pools) ile Entegrasyon
 
-Büyük ölçekli projelerde (örneğin Minecraft otomasyonu) binlerce sınıfı tek tek eşlemek yerine **`exoproc-mappings`** (veya `njava-mappings`) veritabanları kullanılır.
+Büyük ölçekli projelerde (örneğin Minecraft otomasyonu) binlerce sınıfı tek tek eşlemek yerine **`@woldann/exoproc-mappings`** (veya `njava-mappings`) veritabanları kullanılır.
 
 Exoproc; **Mojang Official**, **Fabric Yarn**, **MCP (Mod Coder Pack)** ve **Intermediary** formatlarını destekler:
 
 ```typescript
-import { JavaMappingRegistry } from 'bun-njava';
-import { loadMojangMappings } from 'exoproc-mappings';
+import { JavaMappingRegistry } from '@woldann/bun-njava';
+import { loadMojangMappings } from '@woldann/exoproc-mappings';
 
 // 1. Mojang resmi eşleme tablosunu yükle
 const mappings = await loadMojangMappings('1.20.4');

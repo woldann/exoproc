@@ -1,7 +1,14 @@
-import { Thread, Module } from 'bun-winapi';
-import { Kernel32Impl, type ISyncCallableMemoryAccessor } from 'bun-xffi';
-import { CallThreadDiedError, NThread, type NThreadOptions } from 'bun-nthread';
-import { NShm } from 'bun-nshm';
+import { Thread, Module } from '@woldann/bun-winapi';
+import {
+  Kernel32Impl,
+  type ISyncCallableMemoryAccessor,
+} from '@woldann/bun-xffi';
+import {
+  CallThreadDiedError,
+  NThread,
+  type NThreadOptions,
+} from '@woldann/bun-nthread';
+import { NShm } from '@woldann/bun-nshm';
 import {
   attachNJava,
   findNJava,
@@ -12,7 +19,7 @@ import {
   type NJavaAccessor,
   type ReflectionBridge,
   type ReflectedClass,
-} from 'bun-njava';
+} from '@woldann/bun-njava';
 import {
   HostAccessor,
   type HostAccessorSession,

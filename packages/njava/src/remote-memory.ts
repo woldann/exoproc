@@ -1,4 +1,4 @@
-import { resolveAddress, type IMemoryAccessor } from 'bun-xffi';
+import { resolveAddress, type IMemoryAccessor } from '@woldann/bun-xffi';
 
 /**
  * Writes a null-terminated UTF-8 string into `accessor`'s process and

@@ -1,5 +1,5 @@
 import { ToolhelpSnapshot } from '../packages/winapi/src/index.js';
-import { ToolhelpSnapshotFlag } from 'bun-xffi';
+import { ToolhelpSnapshotFlag } from '@woldann/bun-xffi';
 import { createAccessor } from '../packages/accessors/src/index.js';
 import { getNJava } from '../packages/njava/src/index.js';
 import { MinecraftMatcher } from '../packages/minecraft/src/index.js';

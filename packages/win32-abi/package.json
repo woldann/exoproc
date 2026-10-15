@@ -1,5 +1,5 @@
 {
-  "name": "@exoproc/win32-abi",
+  "name": "@woldann/win32-abi",
   "version": "0.4.0",
   "description": "Runtime-neutral Win32 x64 DLL and function ABI manifests.",
   "type": "module",
@@ -27,7 +27,8 @@
     "@types/bun": "latest"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "license": "AGPL-3.0-or-later",
   "keywords": [

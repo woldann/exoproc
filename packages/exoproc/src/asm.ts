@@ -1,1 +1,1 @@
-export * from 'exoproc-asm';
+export * from '@woldann/exoproc-asm';

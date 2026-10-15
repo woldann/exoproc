@@ -16,7 +16,7 @@ export function hasNativeXffi(): boolean {
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('bun-xffi');
+    require('@woldann/bun-xffi');
     _hasXffi = true;
   } catch {
     _hasXffi = false;
@@ -35,7 +35,7 @@ export function hasNativeNJava(): boolean {
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('bun-njava');
+    require('@woldann/bun-njava');
     _hasNJava = true;
   } catch {
     _hasNJava = false;

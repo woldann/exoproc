@@ -8,7 +8,7 @@ import {
   isObfuscatedFieldName,
   type JavaClassSchema,
   type JavaDatabaseProvider,
-} from 'exoproc-mappings';
+} from '@woldann/exoproc-mappings';
 
 export {
   JAVA_PRIMITIVES,

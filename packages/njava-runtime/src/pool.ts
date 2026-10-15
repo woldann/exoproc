@@ -3,7 +3,7 @@
  * Guarantees singleton identity preservation across canonical, obfuscated, and alias names.
  */
 
-import type { MappingPool } from 'exoproc-mappings';
+import type { MappingPool } from '@woldann/exoproc-mappings';
 import type { IJavaBridge, IRuntimeExecutionContext } from './types.js';
 import type { ClassRegistry } from './registry.js';
 import { RuntimeClass } from './class-model.js';

@@ -4,8 +4,8 @@ import {
   globalCallbackRegistry,
 } from '../../packages/njava/src/adapter.js';
 import { AgentReflectionBridge } from '../../packages/njava/src/agent-bridge.js';
-import { createJavaCode } from 'exoproc-nashorn';
-import { createRuntimeContext } from 'exoproc-runtime';
+import { createJavaCode } from '@woldann/exoproc-nashorn';
+import { createRuntimeContext } from '@woldann/exoproc-runtime';
 
 describe('njava: Agent Callback Adapter & Registration', () => {
   it('adapts ScriptFunction to Runnable with Exoproc.dispatchCallback', () => {

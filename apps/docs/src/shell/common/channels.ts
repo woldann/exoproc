@@ -414,7 +414,7 @@ export interface ScanApi {
 /**
  * Restates the engine's `FileType` enum as a string union rather than
  * importing it, for the same reason every other DTO in this file does:
- * `@exoproc/simulate/files` is itself part of the simulate package, and
+ * `@woldann/simulate/files` is itself part of the simulate package, and
  * this file is reachable from the renderer.
  *
  * Paths are plain POSIX-style strings, not `ResourceUri` -- the renderer

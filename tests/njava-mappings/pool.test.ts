@@ -218,7 +218,7 @@ describe('njava-mappings: canonical database and obfuscated pool', () => {
   });
 
   it('loads agent obfuscation mappings into pool with loadAgentMappings', async () => {
-    const { loadAgentMappings } = await import('njava-agent');
+    const { loadAgentMappings } = await import('@woldann/njava-agent');
     const pool = createPool();
 
     const tinyMappings = loadAgentMappings(pool);

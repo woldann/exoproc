@@ -1,7 +1,8 @@
 {
-  "name": "bun-xffi",
+  "name": "@woldann/bun-xffi",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Win32-optimized Cross-Process FFI foundation for Bun.",
@@ -62,7 +63,7 @@
     "@types/bun": "latest"
   },
   "dependencies": {
-    "exoproc-utils": "workspace:*",
-    "@exoproc/win32-abi": "workspace:*"
+    "@woldann/exoproc-utils": "workspace:*",
+    "@woldann/win32-abi": "workspace:*"
   }
 }

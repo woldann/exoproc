@@ -14,4 +14,4 @@ export {
   collectClassFilesSync,
   type JavaCompileOptions,
   type JavaCompileResult,
-} from 'exoproc-jjit';
+} from '@woldann/exoproc-jjit';

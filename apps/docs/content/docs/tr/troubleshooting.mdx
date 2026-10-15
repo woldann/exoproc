@@ -87,7 +87,7 @@ GitHub Actions'ın sanallaştırılmış Wine runner'larında (gerçek donanımd
 
 ### Cross-package `src/` importları eski `dist/` derlemesine düşebilir
 
-Her paketin `package.json` `"main"`'i `./dist/index.js`'e işaret eder, `./src/index.ts`'e değil. `tests/` içindeki dosyalar tsconfig `paths` üzerinden canlı `src/`'i görür, ama bir paketin kendi kaynak kodu başka bir paketi import ederken (`packages/nthread/src/*.ts`'ten `bun-xffi` import etmek gibi) `node_modules` symlink'i üzerinden **derlenmiş** `dist/`'e düşer. **`packages/*/src/` içinde başka bir paketin import ettiği bir dosyayı değiştirdikten sonra, o paketi tüketen bir Wine testine güvenmeden önce `bun run build` çalıştırın** — temiz typecheck/lint bunu garanti etmez, çünkü ikisi de her zaman canlı `src/`'i görür.
+Her paketin `package.json` `"main"`'i `./dist/index.js`'e işaret eder, `./src/index.ts`'e değil. `tests/` içindeki dosyalar tsconfig `paths` üzerinden canlı `src/`'i görür, ama bir paketin kendi kaynak kodu başka bir paketi import ederken (`packages/nthread/src/*.ts`'ten `@woldann/bun-xffi` import etmek gibi) `node_modules` symlink'i üzerinden **derlenmiş** `dist/`'e düşer. **`packages/*/src/` içinde başka bir paketin import ettiği bir dosyayı değiştirdikten sonra, o paketi tüketen bir Wine testine güvenmeden önce `bun run build` çalıştırın** — temiz typecheck/lint bunu garanti etmez, çünkü ikisi de her zaman canlı `src/`'i görür.
 
 ### Başka bir paketten gelen sınıfa karşı `instanceof` Wine altında güvenilmez
 

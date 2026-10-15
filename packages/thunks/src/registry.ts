@@ -5,7 +5,7 @@ import {
   type CMachineCode,
   type CTypeOrString,
   type ICallableMemoryAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import type { InstalledThunk } from './types.js';
 
 type MachineCodeSignature = [CTypeOrString, CTypeOrString[]];

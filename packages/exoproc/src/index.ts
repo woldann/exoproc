@@ -19,7 +19,7 @@ import {
   type AgentDumpOptions,
   type AgentDumpResult,
   type AgentClientOptions,
-} from 'njava-agent';
+} from '@woldann/njava-agent';
 
 export {
   AgentClient,
@@ -61,7 +61,7 @@ export function getActiveJava(options?: { host?: string; port?: number }): any {
   const port = options?.port ?? resolveAgentPort();
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createAgentContext } = require('bun-njava');
+    const { createAgentContext } = require('@woldann/bun-njava');
     if (typeof createAgentContext === 'function') {
       const ctx = createAgentContext({ host, port, sync: true });
       if (!options) _cachedJavaContext = ctx;

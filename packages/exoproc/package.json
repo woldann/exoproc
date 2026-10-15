@@ -78,15 +78,15 @@
     "react": "^19.2.8",
     "terminal-image": "^5.0.1",
     "zod": "^3.24.1",
-    "bun-winapi": "workspace:*",
-    "bun-xffi": "workspace:*",
-    "bun-njava": "workspace:*",
-    "exoproc-accessors": "workspace:*",
-    "exoproc-mappings": "workspace:*",
-    "exoproc-minecraft": "workspace:*",
-    "exoproc-utils": "workspace:*",
-    "njava-agent": "workspace:*",
-    "exoproc-asm": "workspace:*"
+    "@woldann/bun-winapi": "workspace:*",
+    "@woldann/bun-xffi": "workspace:*",
+    "@woldann/bun-njava": "workspace:*",
+    "@woldann/exoproc-accessors": "workspace:*",
+    "@woldann/exoproc-mappings": "workspace:*",
+    "@woldann/exoproc-minecraft": "workspace:*",
+    "@woldann/exoproc-utils": "workspace:*",
+    "@woldann/njava-agent": "workspace:*",
+    "@woldann/exoproc-asm": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.3.0"

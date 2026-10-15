@@ -1,5 +1,8 @@
-import type { ISyncCallableMemoryAccessor, HostAccessor } from 'bun-xffi';
-import type { ReflectionBridge, ReflectedClass } from 'bun-njava';
+import type {
+  ISyncCallableMemoryAccessor,
+  HostAccessor,
+} from '@woldann/bun-xffi';
+import type { ReflectionBridge, ReflectedClass } from '@woldann/bun-njava';
 import type { MinecraftMappings, MatchOptions } from '../mappings/types.js';
 import { MinecraftMatcher } from '../mappings/matcher.js';
 import { MinecraftPlayer } from './player.js';
@@ -29,7 +32,7 @@ export class MinecraftClient {
     accessor: ISyncCallableMemoryAccessor,
     options: MinecraftClientOptions = {},
   ): Promise<MinecraftClient> {
-    const { getNJava } = await import('bun-njava');
+    const { getNJava } = await import('@woldann/bun-njava');
     const njava = getNJava(accessor);
     const bridge = await njava.getReflection();
 

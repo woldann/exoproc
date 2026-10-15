@@ -13,7 +13,7 @@ function getXffi() {
         'Native GDI window capture requires Windows or Wine environment',
       );
     }
-    _xffi = require('bun-xffi');
+    _xffi = require('@woldann/bun-xffi');
   }
   return _xffi;
 }
@@ -25,7 +25,7 @@ function getWinApi() {
         'Native Windows API requires Windows or Wine environment',
       );
     }
-    _winapi = require('bun-winapi');
+    _winapi = require('@woldann/bun-winapi');
   }
   return _winapi;
 }
@@ -37,7 +37,7 @@ function getAccessors() {
         'Native process accessors require Windows or Wine environment',
       );
     }
-    _accessors = require('exoproc-accessors');
+    _accessors = require('@woldann/exoproc-accessors');
   }
   return _accessors;
 }

@@ -3,14 +3,14 @@ title: "XFFI kullanım rehberi"
 description: "bun-xffi, exoproc-utils dışındaki Exoproc paketlerinin tip, bellek ve çağrı temelidir. Adındaki **x**, cross-process çalışmayı; **ffi**, C ABI ile..."
 ---
 
-`bun-xffi`, `exoproc-utils` dışındaki Exoproc paketlerinin tip, bellek ve çağrı temelidir. Adındaki **x**, cross-process çalışmayı; **ffi**, C ABI ile tür/çağrı katmanını ifade eder. Aynı struct tanımı hem yerel bellekte hem de bir accessor üzerinden uzak bellekte kullanılabilir.
+`@woldann/bun-xffi`, `@woldann/exoproc-utils` dışındaki Exoproc paketlerinin tip, bellek ve çağrı temelidir. Adındaki **x**, cross-process çalışmayı; **ffi**, C ABI ile tür/çağrı katmanını ifade eder. Aynı struct tanımı hem yerel bellekte hem de bir accessor üzerinden uzak bellekte kullanılabilir.
 
-Bu, yalnızca uzaktaki bir adrese `read()`/`write()` göndermek değildir: `CFunction`, pointer, struct yerleşimi ve `IMemoryAccessor` yüzü, üst paketlerin yerel/uzak veya NThread üzerinden yürütülen işlemleri aynı modelle kurmasını sağlar. `bun-winapi`, `bun-nthread`, `exoproc-accessors` ve hook paketleri bu zemini kullanır.
+Bu, yalnızca uzaktaki bir adrese `read()`/`write()` göndermek değildir: `CFunction`, pointer, struct yerleşimi ve `IMemoryAccessor` yüzü, üst paketlerin yerel/uzak veya NThread üzerinden yürütülen işlemleri aynı modelle kurmasını sağlar. `@woldann/bun-winapi`, `@woldann/bun-nthread`, `@woldann/exoproc-accessors` ve hook paketleri bu zemini kullanır.
 
 ## Struct tanımlama
 
 ```ts
-import { struct } from 'bun-xffi';
+import { struct } from '@woldann/bun-xffi';
 
 const Vector3 = struct({ x: 'f32', y: 'f32', z: 'f32' });
 const vector = Vector3.allocSync();
@@ -38,7 +38,7 @@ Yerel ve uzak nesne arasındaki fark erişim zamanlamasıdır: uzak accessor iş
 `cjitopen`, TinyCC ile çalışma zamanında C kaynak kodunu makine koduna dönüştürür. `cimport`, sistem DLL'lerindeki export'ları doğrudan C ABI tanımıyla çağrılabilir hale getirir. Her iki durumda da kaynak kodu değil, son çağrı imzası güvenlik sınırıdır: yanlış tür veya pointer hedef süreci çökertir.
 
 ```ts
-import { cjitopen, CType } from 'bun-xffi';
+import { cjitopen, CType } from '@woldann/bun-xffi';
 
 const lib = cjitopen({
   multiply: {

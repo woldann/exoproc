@@ -1,4 +1,4 @@
-import { cdefines, type CDefineValueType } from 'bun-xffi/cdefine';
+import { cdefines, type CDefineValueType } from '@woldann/bun-xffi/cdefine';
 
 export const cs_mode = cdefines(
   {

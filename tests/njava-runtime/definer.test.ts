@@ -9,7 +9,7 @@ import {
   type IClassDefinerStrategy,
   type ClassDefineContext,
 } from '../../packages/njava-runtime/src/index.js';
-import { JavaClassBuilder } from 'exoproc-jjit';
+import { JavaClassBuilder } from '@woldann/exoproc-jjit';
 
 describe('njava-runtime: Modular Class Definer', () => {
   it('registers all standard strategies in registry', () => {

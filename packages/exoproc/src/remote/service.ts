@@ -48,7 +48,7 @@ export class ExoprocService {
     }
 
     if (active?.type === 'accessor') {
-      const { HostAccessor } = await import('bun-xffi');
+      const { HostAccessor } = await import('@woldann/bun-xffi');
       const { existsSync } = await import('node:fs');
       if (existsSync(active.sessionPath)) {
         try {
@@ -120,7 +120,7 @@ export class ExoprocService {
     error?: string;
   }> {
     try {
-      const { createAccessor } = await import('exoproc-accessors');
+      const { createAccessor } = await import('@woldann/exoproc-accessors');
       const { getSessionPath, setActiveTarget } = await import('../session.js');
 
       let targetPid = pid;
@@ -266,7 +266,7 @@ export class ExoprocService {
         getSlotForPort,
       } = await import('../session.js');
       const { existsSync, unlinkSync, readFileSync } = await import('node:fs');
-      const { withFileLock } = await import('bun-xffi');
+      const { withFileLock } = await import('@woldann/bun-xffi');
 
       // 1. Identify the target accessor session
       const active = getActiveTarget();
@@ -318,14 +318,15 @@ export class ExoprocService {
       await withFileLock(
         sessionPath + '.lock',
         async () => {
-          const { createAccessorFromFile } = await import('exoproc-accessors');
+          const { createAccessorFromFile } =
+            await import('@woldann/exoproc-accessors');
           const accessor = await createAccessorFromFile(sessionPath!, {
             consume: false,
           } as any);
 
           try {
             // Get Java context from accessor
-            const njava = await import('bun-njava');
+            const njava = await import('@woldann/bun-njava');
             const java =
               typeof (accessor as any).getJavaSync === 'function'
                 ? (accessor as any).getJavaSync()
@@ -358,7 +359,7 @@ export class ExoprocService {
               injectAgentInMemory,
               getAgentBytecode,
               extractClassNameFromClassBytes,
-            } = await import('njava-agent');
+            } = await import('@woldann/njava-agent');
 
             let bytecode: Uint8Array | undefined;
             let mappings: string | undefined;
@@ -756,7 +757,7 @@ export class ExoprocService {
         getAgentJarSync,
         generateObfuscationMappings,
         formatMappingsHumanReadable,
-      } = await import('njava-agent');
+      } = await import('@woldann/njava-agent');
       const javaVersion =
         options.javaVersion !== undefined ? Number(options.javaVersion) : 8;
       const obfuscate = options.obfuscate ?? true;

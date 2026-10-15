@@ -7,8 +7,12 @@ import {
   mkdirSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { getCacheDir } from 'exoproc-utils';
-import { HostAccessor, withFileLock, withFileLockSync } from 'bun-xffi';
+import { getCacheDir } from '@woldann/exoproc-utils';
+import {
+  HostAccessor,
+  withFileLock,
+  withFileLockSync,
+} from '@woldann/bun-xffi';
 
 // ── Agent Slots (Max 3 slots, sequential ports) ──────────────────────
 export const AGENT_SLOTS = [43378, 43379, 43380] as const;
@@ -340,7 +344,8 @@ export async function withActiveAccessor<T>(
       const sessionBackup = readFileSync(sessionPath, 'utf8');
 
       // Load accessor: acquires lock without consuming session file, rehydrates instance
-      const { createAccessorFromFile } = await import('exoproc-accessors');
+      const { createAccessorFromFile } =
+        await import('@woldann/exoproc-accessors');
       const accessor = await createAccessorFromFile(sessionPath, {
         consume: false,
       } as any);

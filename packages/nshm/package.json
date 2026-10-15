@@ -1,7 +1,8 @@
 {
-  "name": "bun-nshm",
+  "name": "@woldann/bun-nshm",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Cross-process shared memory for Bun via a dummy-process handle relay — the caller never OpenProcess's the target directly.",
@@ -48,8 +49,8 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-xffi": "workspace:*",
-    "exoproc-dummy": "workspace:*",
-    "exoproc-utils": "workspace:*"
+    "@woldann/bun-xffi": "workspace:*",
+    "@woldann/exoproc-dummy": "workspace:*",
+    "@woldann/exoproc-utils": "workspace:*"
   }
 }

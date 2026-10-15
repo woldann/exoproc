@@ -1,5 +1,5 @@
-import { ToolhelpSnapshot, Window } from 'bun-winapi';
-import { ToolhelpSnapshotFlag } from 'bun-xffi';
+import { ToolhelpSnapshot, Window } from '@woldann/bun-winapi';
+import { ToolhelpSnapshotFlag } from '@woldann/bun-xffi';
 
 const snap = new ToolhelpSnapshot(ToolhelpSnapshotFlag.SNAPPROCESS);
 console.log('--- ALL PROCESSES ---');

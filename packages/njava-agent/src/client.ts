@@ -4,7 +4,7 @@ import { getAgentBytecodeSync, getAgentJarSync } from './agent-builder.js';
 import {
   generateObfuscationMappings,
   formatMappingsHumanReadable,
-} from 'exoproc-jjit';
+} from '@woldann/exoproc-jjit';
 
 export interface AgentStatus {
   alive: boolean;
@@ -180,7 +180,7 @@ export class AgentClient {
   public async getJavaContext(
     options: { sync?: boolean; mapper?: any; pool?: any } = {},
   ): Promise<any> {
-    const njavaPkg = 'bun-njava';
+    const njavaPkg = '@woldann/bun-njava';
     const { createAgentContext } = (await import(njavaPkg)) as any;
     return createAgentContext({
       host: this.host,

@@ -1,9 +1,9 @@
-import { load } from 'bun-xffi';
+import { load } from '@woldann/bun-xffi';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { CapstoneDef } from 'bun-capstone-abi/def';
+import { CapstoneDef } from '@woldann/bun-capstone-abi/def';
 import { EMBEDDED_CAPSTONE_DLL_BASE64 } from './embedded-capstone.js';
 
 export { CapstoneDef };

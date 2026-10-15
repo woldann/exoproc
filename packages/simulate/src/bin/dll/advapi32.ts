@@ -1,4 +1,4 @@
-import { Advapi32Dll } from '@exoproc/win32-abi';
+import { Advapi32Dll } from '@woldann/win32-abi';
 import type { Win32GuestDllSource } from './types.js';
 
 export const Advapi32GuestDll = {

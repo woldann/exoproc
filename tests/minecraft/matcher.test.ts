@@ -3,7 +3,7 @@ import {
   MinecraftMatcher,
   MethodCascadeEngine,
   type MinecraftMappings,
-} from 'exoproc-minecraft';
+} from '@woldann/exoproc-minecraft';
 
 describe('exoproc-minecraft > MinecraftMatcher', () => {
   test('resolves standard deobfuscated Minecraft classes dynamically', async () => {
@@ -361,8 +361,8 @@ describe('exoproc-minecraft > MinecraftMatcher', () => {
   });
 
   test('reconstructs MinecraftMappings directly from MappingPool without reflection scans', async () => {
-    const { createPool } = await import('exoproc-mappings');
-    const { MinecraftClient } = await import('exoproc-minecraft');
+    const { createPool } = await import('@woldann/exoproc-mappings');
+    const { MinecraftClient } = await import('@woldann/exoproc-minecraft');
 
     const pool = createPool();
     pool.registerMatch({

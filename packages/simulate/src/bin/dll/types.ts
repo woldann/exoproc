@@ -1,4 +1,4 @@
-import type { Win32Dll } from '@exoproc/win32-abi';
+import type { Win32Dll } from '@woldann/win32-abi';
 import type {
   Win32DllMainCompiler,
   Win32ExportBindingRegistry,

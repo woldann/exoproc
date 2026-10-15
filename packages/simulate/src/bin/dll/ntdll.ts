@@ -1,4 +1,4 @@
-import { NtdllDll } from '@exoproc/win32-abi';
+import { NtdllDll } from '@woldann/win32-abi';
 import type { Win32GuestDllSource } from './types.js';
 
 export const NtdllGuestDll = {

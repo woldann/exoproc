@@ -12,5 +12,5 @@ export * from './context.js';
 export * from './builtins/index.js';
 export * from './runner/index.js';
 export * from './definer/index.js';
-export * from 'exoproc-mappings';
-export * from 'exoproc-nashorn';
+export * from '@woldann/exoproc-mappings';
+export * from '@woldann/exoproc-nashorn';

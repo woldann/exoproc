@@ -1,11 +1,11 @@
-import { CapstoneDll } from '@exoproc/win32-abi';
-// Imported from the side-effect-free `bun-capstone-abi` entry point (not the
-// package root, and not `bun-capstone-abi`'s struct layouts): the package
+import { CapstoneDll } from '@woldann/win32-abi';
+// Imported from the side-effect-free `@woldann/bun-capstone-abi` entry point (not the
+// package root, and not `@woldann/bun-capstone-abi`'s struct layouts): the package
 // root pulls in `def/index.js`'s real `load()` call against `capstone.dll`,
 // and the struct layouts (`cs_insn`, `cs_detail`) are built with bun-xffi's
 // `ffi.struct`, which itself imports real `bun:ffi` (`ptr`) -- neither can
 // run under plain Node, which this simulator also has to support. Only the
-// pure numeric constants (backed by `bun-xffi/cdefine`, which has zero
+// pure numeric constants (backed by `@woldann/bun-xffi/cdefine`, which has zero
 // imports) are safe to pull in here.
 import {
   cs_arch,
@@ -13,7 +13,7 @@ import {
   x86_op_type,
   x86_reg,
   x86_insn,
-} from 'bun-capstone-abi';
+} from '@woldann/bun-capstone-abi';
 import type {
   Win64Machine,
   Win64Process,
@@ -36,7 +36,7 @@ const CS_ERR_HANDLE = BigInt(cs_err.HANDLE);
 /**
  * `cs_reg_name(id)`/`cs_insn_name(id)` just lowercase the enum key real
  * Capstone was generated from (`x86_reg.RAX` -> `'rax'`,
- * `x86_insn.MOV` -> `'mov'`, ...) -- `bun-capstone-abi`'s `x86_reg`/
+ * `x86_insn.MOV` -> `'mov'`, ...) -- `@woldann/bun-capstone-abi`'s `x86_reg`/
  * `x86_insn` are `cdefines()` objects whose keys already match those names
  * exactly, so this reverses them into id -> name lookup tables covering the
  * *entire* real enum, not just the instructions this simulator's decoder
@@ -60,7 +60,7 @@ const X86_INSN_NAMES = buildReverseNameTable(x86_insn);
 // computed by running packages/capstone/src/struct/index.ts's ffi.struct()
 // definitions through bun-xffi's struct compiler under Bun+Wine (see git
 // history for the throwaway script) -- can't be sourced from there directly
-// at runtime (see the `bun-capstone-abi` import comment above), so these
+// at runtime (see the `@woldann/bun-capstone-abi` import comment above), so these
 // offsets/sizes are kept in sync with that file by hand.
 const CS_INSN_ID_OFFSET = 0;
 const CS_INSN_ADDRESS_OFFSET = 8;
@@ -214,7 +214,7 @@ function writeX86Operand(
  * `process.allocate`) from the simulator's own structured decode info.
  * `groups`/`groups_count` are left empty: real Capstone's `cs_group_type`
  * ids (CS_GRP_JUMP, CS_GRP_CALL, ...) aren't exposed anywhere in
- * `bun-capstone`'s types, and `Instruction.isCall`/`isJump`/`isRet` (the
+ * `@woldann/bun-capstone`'s types, and `Instruction.isCall`/`isJump`/`isRet` (the
  * only consumers of groups in this codebase) are computed from the mnemonic
  * string instead, not from `cs_detail.groups`.
  */

@@ -440,7 +440,7 @@ export async function injectAgentInMemory(
   // 6. Connect agent context
   let agentContext: any = null;
   try {
-    const njavaPkg = 'bun-njava';
+    const njavaPkg = '@woldann/bun-njava';
     const mod: any = await import(njavaPkg);
     if (typeof mod?.createAgentContext === 'function') {
       agentContext = mod.createAgentContext({ port, sync: java.sync ?? true });
@@ -867,7 +867,7 @@ export async function injectAgentViaClassLoader(
   // 8. Create Agent Context if bun-njava is available
   let agentContext: any = null;
   try {
-    const njavaPkg = 'bun-njava';
+    const njavaPkg = '@woldann/bun-njava';
     const mod: any = await import(njavaPkg);
     if (typeof mod?.createAgentContext === 'function') {
       agentContext = mod.createAgentContext({ port, sync: java.sync ?? true });

@@ -66,13 +66,13 @@ mc.toggleFullscreen();
 
 ## Integration with Mapping Pools
 
-For extensive automation environments, manually registering thousands of classes is impractical. Exoproc integrates with **`exoproc-mappings`** (and `njava-mappings`) database loaders.
+For extensive automation environments, manually registering thousands of classes is impractical. Exoproc integrates with **`@woldann/exoproc-mappings`** (and `njava-mappings`) database loaders.
 
 Supported mapping standards include **Mojang Official**, **Fabric Yarn**, **MCP (Mod Coder Pack)**, and **Intermediary**:
 
 ```typescript
-import { JavaMappingRegistry } from 'bun-njava';
-import { loadMojangMappings } from 'exoproc-mappings';
+import { JavaMappingRegistry } from '@woldann/bun-njava';
+import { loadMojangMappings } from '@woldann/exoproc-mappings';
 
 // 1. Load official Mojang mappings table
 const mappings = await loadMojangMappings('1.20.4');

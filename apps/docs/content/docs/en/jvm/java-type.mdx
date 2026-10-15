@@ -109,7 +109,7 @@ console.log(StringClass.class.getName());// "java.lang.String"
 For low-level JNI interoperability, unwrap proxies to their raw 64-bit pointers (`jobject` or `jclass`):
 
 ```typescript
-import { unwrapJava } from 'bun-njava';
+import { unwrapJava } from '@woldann/bun-njava';
 
 const rawPtr: bigint = Java.unwrap(myInstance);
 // or

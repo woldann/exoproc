@@ -1,4 +1,4 @@
-import { type MappingPool, isPrimitiveType } from 'exoproc-mappings';
+import { type MappingPool, isPrimitiveType } from '@woldann/exoproc-mappings';
 
 const JAVA_LANG_CLASSES = new Set<string>([
   'Object',

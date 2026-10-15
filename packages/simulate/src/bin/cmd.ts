@@ -1,4 +1,4 @@
-import { Win32Api } from '@exoproc/win32-abi';
+import { Win32Api } from '@woldann/win32-abi';
 import type { Win32CompiledProgram } from '../runtime/programs.js';
 import { STD_INPUT_HANDLE, STD_OUTPUT_HANDLE } from '../runtime/types.js';
 import { qword, Win32ProgramBuilder, type X64Register64 } from './compiler.js';

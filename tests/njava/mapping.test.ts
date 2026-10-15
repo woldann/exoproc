@@ -1,7 +1,7 @@
 import { describe, test, expect, afterEach } from 'bun:test';
-import { type DummyProcess } from 'exoproc-dummy';
-import { type HostAccessor, createAccessor } from 'exoproc-accessors';
-import { getJava, getJavaSync } from 'bun-njava';
+import { type DummyProcess } from '@woldann/exoproc-dummy';
+import { type HostAccessor, createAccessor } from '@woldann/exoproc-accessors';
+import { getJava, getJavaSync } from '@woldann/bun-njava';
 import { spawnJavaDummyProcess } from './java-dummy-process.js';
 
 describe('njava > Deobfuscation & Mapping Subsystem', () => {
@@ -134,7 +134,7 @@ describe('njava > Deobfuscation & Mapping Subsystem', () => {
   }, 120000);
 
   test('JavaMappingRegistry loads Tiny mappings directly via loadTiny and load', () => {
-    const { JavaMappingRegistry } = require('bun-njava');
+    const { JavaMappingRegistry } = require('@woldann/bun-njava');
     const mapper = new JavaMappingRegistry();
 
     const tinyData = [
@@ -161,8 +161,8 @@ describe('njava > Deobfuscation & Mapping Subsystem', () => {
   });
 
   test('JavaMappingRegistry loads dynamic agent mappings with loadAgentMappings and resolves Exoproc obfuscated members', async () => {
-    const { JavaMappingRegistry } = require('bun-njava');
-    const { loadAgentMappings } = await import('njava-agent');
+    const { JavaMappingRegistry } = require('@woldann/bun-njava');
+    const { loadAgentMappings } = await import('@woldann/njava-agent');
     const { getTestJavaPath } = await import('./java-test-helpers.js');
 
     const mapper = new JavaMappingRegistry();

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createAccessor } from 'exoproc-accessors';
-import { getNJava, JavaMappingRegistry } from 'bun-njava';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getNJava, JavaMappingRegistry } from '@woldann/bun-njava';
 import {
   MinecraftMatcher,
   MINECRAFT_CANONICAL_SCHEMA,
-} from 'exoproc-minecraft';
+} from '@woldann/exoproc-minecraft';
 import { ensureMinecraftRunning } from '../exoproc/minecraft-launcher.js';
 import { getTestJavaPath } from '../njava/java-test-helpers.js';
 

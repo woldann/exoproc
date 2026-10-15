@@ -1,11 +1,11 @@
-import { User32Impl } from 'bun-xffi';
+import { User32Impl } from '@woldann/bun-xffi';
 type HWND = bigint;
 import { FFIType } from 'bun:ffi';
-import { type Rect, type GUIThreadInfo } from 'bun-xffi';
+import { type Rect, type GUIThreadInfo } from '@woldann/bun-xffi';
 import { Handle } from './handle.js';
 import { decodeString } from './decoding.js';
 import { encodeStringW } from './encoding.js';
-import { cjitopen } from 'bun-xffi';
+import { cjitopen } from '@woldann/bun-xffi';
 import { currentProcess } from './process.js';
 
 // EnumWindowsProc callback — compiled via TCC (bun:ffi cc)

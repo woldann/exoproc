@@ -4,7 +4,7 @@ import {
   cs_err,
   cs_opt_type,
   cs_opt_value,
-} from 'bun-capstone-abi';
+} from '@woldann/bun-capstone-abi';
 import type {
   UINT32,
   INT32,
@@ -12,7 +12,7 @@ import type {
   csh,
   LPVOID,
   Detail,
-} from 'bun-capstone-abi';
+} from '@woldann/bun-capstone-abi';
 import { Instruction, type RawInstruction } from './instruction.js';
 import { CapstoneImpl } from './def/index.js';
 import * as bunffi from 'bun:ffi';

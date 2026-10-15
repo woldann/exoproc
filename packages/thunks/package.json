@@ -1,7 +1,8 @@
 {
-  "name": "bun-thunks",
+  "name": "@woldann/bun-thunks",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Hand-assembled x64 Win64-calling-convention machine code thunks for Bun — call arbitrary function pointers with dynamic argument lists without a remote trampoline.",
@@ -52,7 +53,7 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-xffi": "workspace:*",
-    "exoproc-asm": "workspace:*"
+    "@woldann/bun-xffi": "workspace:*",
+    "@woldann/exoproc-asm": "workspace:*"
   }
 }

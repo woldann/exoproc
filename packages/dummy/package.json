@@ -1,7 +1,8 @@
 {
-  "name": "exoproc-dummy",
+  "name": "@woldann/exoproc-dummy",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "A single shared, long-lived dummy Windows process (default: ping.exe) other exoproc packages and tests spawn once and reuse as a lightweight cross-process target.",
@@ -47,6 +48,6 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-xffi": "workspace:*"
+    "@woldann/bun-xffi": "workspace:*"
   }
 }

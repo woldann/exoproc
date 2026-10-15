@@ -31,8 +31,8 @@ if (process.platform !== 'win32') {
         return true;
       }
       if (
-        pkgJson.dependencies?.['bun-winapi'] ||
-        pkgJson.dependencies?.['bun-xffi']
+        pkgJson.dependencies?.['@woldann/bun-winapi'] ||
+        pkgJson.dependencies?.['@woldann/bun-xffi']
       ) {
         return true;
       }

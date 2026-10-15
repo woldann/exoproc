@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import {
   extractClassNameFromClassBytes,
   getAgentBytecodeSync,
-} from 'njava-agent';
+} from '@woldann/njava-agent';
 import { ExoprocClient } from 'exoproc';
 import { writeFileSync, unlinkSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';

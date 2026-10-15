@@ -1,1 +1,1 @@
-export { writeUtf8CString, writeJvalueObjectArray } from 'bun-njava';
+export { writeUtf8CString, writeJvalueObjectArray } from '@woldann/bun-njava';

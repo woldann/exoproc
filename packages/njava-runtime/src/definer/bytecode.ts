@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { compileJavaSync, resolveDefaultJavaPath } from 'exoproc-jjit';
+import { compileJavaSync, resolveDefaultJavaPath } from '@woldann/exoproc-jjit';
 import type { ClassDefineOptions } from './types.js';
 
 export function resolveDefaultClasspath(
@@ -24,7 +24,7 @@ export function resolveDefaultClasspath(
     const jarPath = join(
       curr,
       'java',
-      'njava-agent',
+      '@woldann/njava-agent',
       'target',
       'njava-agent.jar',
     );
@@ -32,7 +32,13 @@ export function resolveDefaultClasspath(
       result.push(jarPath);
       break;
     }
-    const classesPath = join(curr, 'java', 'njava-agent', 'target', 'classes');
+    const classesPath = join(
+      curr,
+      'java',
+      '@woldann/njava-agent',
+      'target',
+      'classes',
+    );
     if (existsSync(classesPath)) {
       result.push(classesPath);
       break;

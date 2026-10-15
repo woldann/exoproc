@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'bun:test';
-import { createAccessor } from 'exoproc-accessors';
-import { getNJava, getJavaSync } from 'bun-njava';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getNJava, getJavaSync } from '@woldann/bun-njava';
 import {
   MinecraftMatcher,
   isObfuscatedClassName,
   isObfuscatedMethodName,
   isObfuscatedFieldName,
   isPrimitiveType,
-} from 'exoproc-minecraft';
+} from '@woldann/exoproc-minecraft';
 import { ensureMinecraftRunning } from './minecraft-launcher.js';
 
 describe('exoproc > Autonomous Dynamic Matcher Knowledge Base & detect() Engine', () => {

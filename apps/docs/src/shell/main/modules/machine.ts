@@ -2,7 +2,7 @@ import {
   Win64Machine,
   type Win64Process,
   type Win64Thread,
-} from '@exoproc/simulate';
+} from '@woldann/simulate';
 import { MachineChannel } from '../../common/channels';
 import { ipc } from '../ipc';
 import { registerNodeSyscalls } from './node-syscalls';

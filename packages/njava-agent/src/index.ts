@@ -7,4 +7,4 @@ export * from './client.js';
 export {
   generateObfuscationMappings,
   formatMappingsHumanReadable,
-} from 'exoproc-jjit';
+} from '@woldann/exoproc-jjit';

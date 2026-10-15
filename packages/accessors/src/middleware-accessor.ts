@@ -49,7 +49,7 @@ import {
   type IHostAccessor,
   type IInittableAccessor,
   type IMiddlewareAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 
 export { HostAccessor, type HostAccessorSession };
 

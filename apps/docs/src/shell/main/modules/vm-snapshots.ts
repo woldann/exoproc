@@ -1,4 +1,4 @@
-import { Win64Machine } from '@exoproc/simulate';
+import { Win64Machine } from '@woldann/simulate';
 import { SnapshotChannel, type SnapshotMetaDto } from '../../common/channels';
 import { ipc } from '../ipc';
 import { SnapshotStore } from '../snapshots/snapshot-store';

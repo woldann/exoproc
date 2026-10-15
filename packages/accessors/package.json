@@ -1,7 +1,8 @@
 {
-  "name": "exoproc-accessors",
+  "name": "@woldann/exoproc-accessors",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Advanced host and middleware accessors for bun-xffi — orchestrating HostAccessor family (redirector/bootstrap) plus concrete indirect-call, memset/memcmp, file-transfer, process-cache, machineCode-pool, and scanner middleware.",
@@ -52,11 +53,11 @@
     "@types/bun": "latest"
   },
   "dependencies": {
-    "bun-xffi": "workspace:*",
-    "bun-winapi": "workspace:*",
-    "bun-nthread": "workspace:*",
-    "bun-nshm": "workspace:*",
-    "bun-njava": "workspace:*",
-    "exoproc-utils": "workspace:*"
+    "@woldann/bun-xffi": "workspace:*",
+    "@woldann/bun-winapi": "workspace:*",
+    "@woldann/bun-nthread": "workspace:*",
+    "@woldann/bun-nshm": "workspace:*",
+    "@woldann/bun-njava": "workspace:*",
+    "@woldann/exoproc-utils": "workspace:*"
   }
 }

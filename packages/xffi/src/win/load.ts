@@ -51,7 +51,7 @@ export function load<F extends Record<string, CImportSymbol>>(options: {
  * Resolves a named export's address in a **different** process, given the
  * exporting DLL's local file path and the remote base address that same DLL
  * is loaded at over there (e.g. from `Module.getModules(pid)` in
- * `bun-winapi`) — there's no cross-process `GetProcAddress`, so this
+ * `@woldann/bun-winapi`) — there's no cross-process `GetProcAddress`, so this
  * approximates one: loads the exact same DLL file **locally** with
  * `DONT_RESOLVE_DLL_REFERENCES` (mapped but never initialized — `DllMain`
  * never runs) purely to read its export table via a real, local

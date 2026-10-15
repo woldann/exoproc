@@ -1,20 +1,20 @@
-import { CType } from 'bun-xffi/types';
-import type { CImportSymbol } from 'bun-xffi';
+import { CType } from '@woldann/bun-xffi/types';
+import type { CImportSymbol } from '@woldann/bun-xffi';
 
 /**
  * Pure ABI shape for capstone.dll -- no native loader side effects, so this
- * module is safe for `bun-capstone`'s own native `def/index.ts` loader to
+ * module is safe for `@woldann/bun-capstone`'s own native `def/index.ts` loader to
  * import as a value (not just `import type`).
  *
- * Deliberately exported via the `bun-capstone-abi/def` subpath, NOT
+ * Deliberately exported via the `@woldann/bun-capstone-abi/def` subpath, NOT
  * re-exported from the package root (`index.ts`): `CType` still needs
- * `bun:ffi`'s `FFIType` at module-evaluation time (via `bun-xffi/types`),
+ * `bun:ffi`'s `FFIType` at module-evaluation time (via `@woldann/bun-xffi/types`),
  * and while that resolves fine under Node (the simulator's `bun:ffi` shim
- * provides `FFIType`), it broke `@exoproc/simulate`'s *browser* bundle
+ * provides `FFIType`), it broke `@woldann/simulate`'s *browser* bundle
  * (Turbopack, in `apps/docs`) with `ReferenceError: Cannot access 'FFIType'
  * before initialization` the one time this was folded into the root
  * barrel -- something about the browser shim's own `FFIType` proxy and
- * this module's evaluation order under bundling. `@exoproc/simulate`'s own
+ * this module's evaluation order under bundling. `@woldann/simulate`'s own
  * `bin/dll/capstone.ts` only ever needs the plain enum tables (`cs_arch`,
  * `x86_reg`, ...), never `CapstoneDef`, so keeping this off the root
  * export avoids dragging it into a consumer that never asked for it.

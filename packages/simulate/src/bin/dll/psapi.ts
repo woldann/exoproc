@@ -1,4 +1,4 @@
-import { PsapiDll } from '@exoproc/win32-abi';
+import { PsapiDll } from '@woldann/win32-abi';
 import type { Win32GuestDllSource } from './types.js';
 
 export const PsapiGuestDll = {

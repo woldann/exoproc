@@ -6,9 +6,9 @@ import {
   type IInittableAccessor,
   type CFunction,
   type CCallResult,
-} from 'bun-xffi';
-import { Thread } from 'bun-winapi';
-import { NThread, type NThreadOptions } from 'bun-nthread';
+} from '@woldann/bun-xffi';
+import { Thread } from '@woldann/bun-winapi';
+import { NThread, type NThreadOptions } from '@woldann/bun-nthread';
 import {
   HostAccessor,
   type HostAccessorSession,

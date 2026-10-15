@@ -6,4 +6,4 @@ export {
   buildManifestContent,
   type JarEntry,
   type JarManifestOptions,
-} from 'exoproc-jjit';
+} from '@woldann/exoproc-jjit';

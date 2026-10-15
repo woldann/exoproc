@@ -1,4 +1,4 @@
-import type { DummyFunction, IMemoryAccessor } from 'bun-xffi';
+import type { DummyFunction, IMemoryAccessor } from '@woldann/bun-xffi';
 import type { JniNativeFunctionName } from './njava-accessor.js';
 import {
   parseAccessibleObjectString,

@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { parseAccessibleObjectString } from 'bun-njava/reflection-parser';
+import { parseAccessibleObjectString } from '@woldann/bun-njava/reflection-parser';
 
 describe('njava > parseAccessibleObjectString', () => {
   describe('methods', () => {

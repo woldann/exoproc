@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { ToolhelpSnapshot, Process, Thread } from 'bun-winapi';
-import { ToolhelpSnapshotFlag } from 'bun-xffi';
+import { ToolhelpSnapshot, Process, Thread } from '@woldann/bun-winapi';
+import { ToolhelpSnapshotFlag } from '@woldann/bun-xffi';
 
 /**
  * Finds the running Minecraft (javaw.exe) process PID.

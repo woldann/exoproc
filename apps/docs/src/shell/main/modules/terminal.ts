@@ -2,7 +2,7 @@ import {
   ConsoleScreenPresenter,
   Win32CommandPrompt,
   type HostConsoleScreen,
-} from '@exoproc/simulate';
+} from '@woldann/simulate';
 import {
   TerminalChannel,
   type TerminalCreateOptions,

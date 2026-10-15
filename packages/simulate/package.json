@@ -1,5 +1,5 @@
 {
-  "name": "@exoproc/simulate",
+  "name": "@woldann/simulate",
   "version": "0.4.0",
   "description": "Virtual Windows OS simulation engine and browser mock FFI layer for Exoproc.",
   "type": "module",
@@ -51,9 +51,9 @@
   "author": "Serkan",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "@exoproc/win32-abi": "workspace:*",
-    "bun-capstone-abi": "workspace:*",
-    "exoproc-asm": "workspace:*",
+    "@woldann/win32-abi": "workspace:*",
+    "@woldann/bun-capstone-abi": "workspace:*",
+    "@woldann/exoproc-asm": "workspace:*",
     "expect": "^30.4.1"
   },
   "devDependencies": {
@@ -62,6 +62,7 @@
     "typescript": "^6.0.3"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   }
 }

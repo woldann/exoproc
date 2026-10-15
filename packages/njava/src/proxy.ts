@@ -1341,7 +1341,7 @@ export class JavaContext {
    * returning an in-process Agent JavaContext.
    */
   public async transitionToAgent(options?: any): Promise<JavaContext> {
-    const { injectAgent } = await import('njava-agent');
+    const { injectAgent } = await import('@woldann/njava-agent');
     const result = await injectAgent(this, options);
     if (!result.agentContext) {
       const { createAgentContext } = await import('./agent-bridge.js');
@@ -1406,7 +1406,7 @@ export class JavaContext {
    * Synchronous twin of transitionToAgent.
    */
   public transitionToAgentSync(options?: any): JavaContext {
-    const pkg = 'njava-agent';
+    const pkg = '@woldann/njava-agent';
     const { injectAgentSync } = require(pkg);
     const result = injectAgentSync(this, options);
     if (!result.agentContext) {

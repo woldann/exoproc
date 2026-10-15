@@ -8,7 +8,7 @@ let _njava: any = null;
 function getWinApi() {
   if (!_winapi) {
     assertNativeCapability('Windows API');
-    _winapi = require('bun-winapi');
+    _winapi = require('@woldann/bun-winapi');
   }
   return _winapi;
 }
@@ -16,7 +16,7 @@ function getWinApi() {
 function getXffi() {
   if (!_xffi) {
     assertNativeCapability('Native XFFI');
-    _xffi = require('bun-xffi');
+    _xffi = require('@woldann/bun-xffi');
   }
   return _xffi;
 }
@@ -24,7 +24,7 @@ function getXffi() {
 function getAccessors() {
   if (!_accessors) {
     assertNativeCapability('Process memory accessors');
-    _accessors = require('exoproc-accessors');
+    _accessors = require('@woldann/exoproc-accessors');
   }
   return _accessors;
 }
@@ -32,7 +32,7 @@ function getAccessors() {
 function getNJava() {
   if (!_njava) {
     assertNativeCapability('Native JNI reflection (NJava)');
-    _njava = require('bun-njava');
+    _njava = require('@woldann/bun-njava');
   }
   return _njava;
 }
@@ -44,7 +44,7 @@ import {
   type MinecraftWorld,
   type MinecraftTimer,
   type MinecraftSettings,
-} from 'exoproc-minecraft';
+} from '@woldann/exoproc-minecraft';
 
 export interface GameContext {
   client?: MinecraftClient;
@@ -651,7 +651,7 @@ export class ExoprocClient {
       injectAgentInMemory,
       getAgentBytecode,
       extractClassNameFromClassBytes,
-    } = await import('njava-agent');
+    } = await import('@woldann/njava-agent');
 
     let bytecode = options.bytecode;
     let className = options.className;

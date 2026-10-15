@@ -3,7 +3,7 @@ title: "JVM Mimarisi ve Genel Bakış"
 description: "Exoproc'un JVM tersine mühendislik ve çalışma zamanı reflection katmanı: JNI köprüsü, Agent RPC, JavaContext ve stealth enstrümantasyon."
 ---
 
-Exoproc, çalışan bir Windows sürecindeki Java Sanal Makinesi'ni (JVM) doğrudan TypeScript veya JavaScript ortamından incelemek, yönetmek ve tersine mühendislik uygulamak için kapsamlı bir katman sunar (`bun-njava`, `njava-agent`, `njava-runtime`).
+Exoproc, çalışan bir Windows sürecindeki Java Sanal Makinesi'ni (JVM) doğrudan TypeScript veya JavaScript ortamından incelemek, yönetmek ve tersine mühendislik uygulamak için kapsamlı bir katman sunar (`@woldann/bun-njava`, `@woldann/njava-agent`, `njava-runtime`).
 
 Bu sistem sayesinde herhangi bir DLL enjekte etmeden veya Java ajan dosyası (`.jar`) diske yazmadan hedef JVM'deki sınıflara, nesnelere ve metodlara doğrudan erişebilirsiniz.
 
@@ -48,7 +48,7 @@ Exoproc, hedefin güvenlik kısıtlamalarına ve performans gereksinimlerine gö
 
 ### 2. AgentReflectionBridge (In-Process Agent)
 
-Hedef süreçte yüksek frekanslı metod çağrıları yapmak (örneğin Minecraft içinde her oyun tick'inde yüzlerce nesneyi okumak) gerektiğinde JNI IPC maliyetini sıfırlamak için `njava-agent` devreye girer.
+Hedef süreçte yüksek frekanslı metod çağrıları yapmak (örneğin Minecraft içinde her oyun tick'inde yüzlerce nesneyi okumak) gerektiğinde JNI IPC maliyetini sıfırlamak için `@woldann/njava-agent` devreye girer.
 
 - Bellek içi bytecode enjeksiyonu (`ClassLoader.defineClass`) ile hedefe yüklenir.
 - Geliştirici ortamıyla localhost üzerinden haberleşir.
@@ -59,9 +59,9 @@ Hedef süreçte yüksek frekanslı metod çağrıları yapmak (örneğin Minecra
 Hedef sürece bağlanmak ve bir `JavaContext` elde etmek için temel akış:
 
 ```typescript
-import { Process } from 'bun-winapi';
-import { RemoteCallableMemoryAccessor } from 'bun-xffi';
-import { attachJvm, createJavaContext } from 'bun-njava';
+import { Process } from '@woldann/bun-winapi';
+import { RemoteCallableMemoryAccessor } from '@woldann/bun-xffi';
+import { attachJvm, createJavaContext } from '@woldann/bun-njava';
 
 // 1. Hedef sürece bağlan
 const process = Process.findByName('javaw.exe');

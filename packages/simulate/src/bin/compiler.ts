@@ -2,13 +2,13 @@ import {
   getWin32DllFileName,
   Win32Api,
   type Win32FunctionReference,
-} from '@exoproc/win32-abi';
+} from '@woldann/win32-abi';
 import {
   X64Assembler as SharedX64Assembler,
   type X64ExternalRelocation,
   type X64Label,
   type X64Register64,
-} from 'exoproc-asm';
+} from '@woldann/exoproc-asm';
 import type {
   Win32CompiledProgram,
   Win32ProgramCodeExport,
@@ -18,7 +18,7 @@ import type {
   Win32ProgramRelocationTarget,
 } from '../runtime/programs.js';
 
-export { byte, dword, qword, word } from 'exoproc-asm';
+export { byte, dword, qword, word } from '@woldann/exoproc-asm';
 export type {
   X64ByteMemoryOperand,
   X64ExternalRelocation,
@@ -33,12 +33,12 @@ export type {
   X64Scale,
   X64WordMemoryOperand,
   X64XmmRegister,
-} from 'exoproc-asm';
+} from '@woldann/exoproc-asm';
 
 /**
  * Win32-aware compatibility wrapper around the shared x64 assembler.
  *
- * Generic instruction encoding, labels, and fixups live in `exoproc-asm`.
+ * Generic instruction encoding, labels, and fixups live in `@woldann/exoproc-asm`.
  * This wrapper only translates generic external relocation records into the
  * program format consumed by the simulator runtime.
  */

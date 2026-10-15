@@ -14,7 +14,7 @@ import {
   stackAlign16,
   type IHostAccessor,
   makeStub,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import {
   getRandomSpinStub,
   getRandomPushretStub,
@@ -24,7 +24,7 @@ import {
   whenStubsReady,
   type ThreadStubs,
 } from './stubs.js';
-import * as Native from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
 import {
   NoSleepAddressError,
   NoPushretAddressError,

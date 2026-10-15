@@ -1,7 +1,8 @@
 {
-  "name": "bun-capstone-abi",
+  "name": "@woldann/bun-capstone-abi",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Side-effect-free Capstone/x86 ABI constant tables (cs_arch, cs_err, x86_reg, x86_insn, ...) shared between bun-capstone's native binding and @exoproc/simulate's guest capstone.dll -- no bun:ffi/native loader dependency.",
@@ -45,6 +46,6 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-xffi": "workspace:*"
+    "@woldann/bun-xffi": "workspace:*"
   }
 }

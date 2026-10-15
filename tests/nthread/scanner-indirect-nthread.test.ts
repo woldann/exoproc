@@ -1,7 +1,7 @@
 import { expect, test, describe } from 'bun:test';
-import { resolveAddress } from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+import { resolveAddress } from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Moved from tests/xffi/scanner.test.ts ("should support remote process JIT
 // pattern scan using IndirectCallableAccessor template") -- the indirect chain's

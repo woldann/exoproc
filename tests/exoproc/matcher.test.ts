@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test';
-import { createAccessor } from 'exoproc-accessors';
-import { getNJava, getJavaSync } from 'bun-njava';
-import { MinecraftMatcher } from 'exoproc-minecraft';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getNJava, getJavaSync } from '@woldann/bun-njava';
+import { MinecraftMatcher } from '@woldann/exoproc-minecraft';
 import { ensureMinecraftRunning, ensureInWorld } from './minecraft-launcher.js';
 
 describe('exoproc > Phased Dynamic Matcher & Autonomous GUI World Navigation', () => {

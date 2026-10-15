@@ -1,15 +1,15 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
 import {
   RemoteCallableMemoryAccessor,
   Kernel32Impl,
   CrtImpl,
   cmachinecode,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import {
   RedirectorHostAccessor,
   IndirectNThreadHostAccessor,
-} from 'exoproc-accessors';
+} from '@woldann/exoproc-accessors';
 
 // Compiled once at module load; reused across tests.
 const sum8f = cmachinecode({
@@ -24,8 +24,8 @@ import {
   getRandomJumpStub,
   getRandomRetStub,
   getRandomAddRsp28RetStub,
-} from 'bun-nthread';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/bun-nthread';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 describe('NThread Integration with Indirect Accessor', () => {
   test('inject and perform indirect operations', async () => {

@@ -1,13 +1,13 @@
-import * as Native from 'bun-winapi';
-import { type HookTarget, type HookDetour } from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
+import { type HookTarget, type HookDetour } from '@woldann/bun-winapi';
 import {
   NativePointer,
   MemoryProtection,
   resolveAddress,
   type IMemoryAccessor,
   type CMachineCode,
-} from 'bun-xffi';
-import { CapstoneX86, type Instruction } from 'bun-capstone';
+} from '@woldann/bun-xffi';
+import { CapstoneX86, type Instruction } from '@woldann/bun-capstone';
 import { buildTrampoline, JMP_PATCH_SIZE } from './trampoline.js';
 import { HookNotEnabledError } from './errors.js';
 

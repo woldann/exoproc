@@ -30,7 +30,7 @@ compileJava()     IDE Autocomplete
 You can initialize a `JavaStubProject` in a temporary directory or in your project folder:
 
 ```typescript
-import { JavaStubProject } from 'bun-njava';
+import { JavaStubProject } from '@woldann/bun-njava';
 
 const project = new JavaStubProject({
   javaVersion: 8,
@@ -82,7 +82,7 @@ if (result.success) {
 Once `stubs.jar` is generated, pass it as a classpath entry to `compileJava()`. Your custom injected classes can now inherit or reference game types without requiring the real Minecraft client:
 
 ```typescript
-import { compileJava } from 'bun-njava';
+import { compileJava } from '@woldann/bun-njava';
 
 const myInjectedSource = `
 package org.exoproc.injected;

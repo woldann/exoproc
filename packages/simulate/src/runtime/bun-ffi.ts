@@ -111,7 +111,7 @@ const normalizeLibraryName = (name: string) => {
 /**
  * Real `bun:ffi` auto-dereferences a `cstring`-typed return value into a JS
  * string (or `null` for a null pointer) rather than handing back the raw
- * pointer -- callers like `bun-capstone`'s `Capstone.regName()` rely on
+ * pointer -- callers like `@woldann/bun-capstone`'s `Capstone.regName()` rely on
  * that (`CapstoneImpl.cs_reg_name(...)?.toString()`, expecting an actual
  * string already). Mirror that here by reading the null-terminated string
  * out of the *guest* process's memory at the returned address.

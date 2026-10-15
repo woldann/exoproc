@@ -9,7 +9,7 @@ import {
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, relative } from 'node:path';
-import { parseJavaVersion, type MappingPool } from 'exoproc-mappings';
+import { parseJavaVersion, type MappingPool } from '@woldann/exoproc-mappings';
 import { parseJavaSource } from './parser.js';
 import type { ObfuscationOptions } from './remapper.js';
 import { obfuscateBytecode, obfuscateBytecodeSync } from './remapper.js';

@@ -1,5 +1,5 @@
 import { expect, test, describe } from 'bun:test';
-import { MinecraftTimer, MinecraftEntity } from 'exoproc-minecraft';
+import { MinecraftTimer, MinecraftEntity } from '@woldann/exoproc-minecraft';
 
 describe('exoproc-minecraft > Client Wrappers', () => {
   const mockMappings: any = {

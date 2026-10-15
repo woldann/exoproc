@@ -1,4 +1,4 @@
-import type { MappingPool } from 'exoproc-mappings';
+import type { MappingPool } from '@woldann/exoproc-mappings';
 import {
   type ModifierInput,
   normalizeModifiers,

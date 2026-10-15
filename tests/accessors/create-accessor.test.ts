@@ -6,17 +6,17 @@ import {
   RemoteMemoryAccessor,
   isInittableAccessor,
   type HostAccessor,
-} from 'bun-xffi';
-import { Thread } from 'bun-winapi';
+} from '@woldann/bun-xffi';
+import { Thread } from '@woldann/bun-winapi';
 import {
   IndirectNThreadHostAccessor,
   createAccessor,
   createAccessorWithoutInit,
   createAccessorOptions,
-} from 'exoproc-accessors';
-import { findNJava } from 'bun-njava';
-import type { NThreadOptions } from 'bun-nthread';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/exoproc-accessors';
+import { findNJava } from '@woldann/bun-njava';
+import type { NThreadOptions } from '@woldann/bun-nthread';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 describe('createAccessorWithoutInit', () => {
   test('returns synchronously (not a Promise), without initializing', () => {

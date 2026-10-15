@@ -1,4 +1,4 @@
-import { CType, type CTypeOrString } from 'bun-xffi';
+import { CType, type CTypeOrString } from '@woldann/bun-xffi';
 
 export interface JniSignature {
   readonly returns: CTypeOrString;

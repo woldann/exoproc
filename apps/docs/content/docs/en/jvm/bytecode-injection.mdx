@@ -34,7 +34,7 @@ Exoproc models ClassLoaders as first-class JavaScript objects and provides four 
 | **`auto`** | Automatic fallback resolver | High | Default mode; picks the best available mechanism. |
 | **`unsafe`** | `sun.misc.Unsafe.defineClass` | Maximum | Completely stealthy; bypasses ClassLoader lookup locks. |
 | **`classLoader`** | `ClassLoader.defineClass` | Medium | Standard JVM reflection; attaches to `LaunchClassLoader` or `AppClassLoader`. |
-| **`agent`** | In-process `njava-agent` | High Throughput | High-speed batch injection when the agent is active. |
+| **`agent`** | In-process `@woldann/njava-agent` | High Throughput | High-speed batch injection when the agent is active. |
 
 ---
 
@@ -86,7 +86,7 @@ const ScreenClass = Java.type('org.exoproc.injected.CustomGuiScreen');
 
 ### 3. High-Speed `AgentClassLoader`
 
-When connected via `njava-agent`, bytecode injection operates over high-speed RPC:
+When connected via `@woldann/njava-agent`, bytecode injection operates over high-speed RPC:
 
 ```typescript
 import { ClassLoader } from 'njava-runtime';
@@ -130,7 +130,7 @@ console.log(GreetingClass.message()); // "Hello from Injected JVM Memory!"
 If your injected classes depend on multiple assets, resources, or nested classes, you can package them into an in-memory JAR file on the fly:
 
 ```typescript
-import { buildJarBuffer } from 'exoproc-jjit';
+import { buildJarBuffer } from '@woldann/exoproc-jjit';
 
 const jarBuffer = await buildJarBuffer([
   { path: 'META-INF/MANIFEST.MF', content: 'Manifest-Version: 1.0\n' },

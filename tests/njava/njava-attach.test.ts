@@ -1,7 +1,12 @@
 import { expect, test, describe, afterEach } from 'bun:test';
-import { type DummyProcess } from 'exoproc-dummy';
-import { type HostAccessor, createAccessor } from 'exoproc-accessors';
-import { getNJava, findNJava, getJavaClass, getReflection } from 'bun-njava';
+import { type DummyProcess } from '@woldann/exoproc-dummy';
+import { type HostAccessor, createAccessor } from '@woldann/exoproc-accessors';
+import {
+  getNJava,
+  findNJava,
+  getJavaClass,
+  getReflection,
+} from '@woldann/bun-njava';
 import { spawnJavaDummyProcess } from './java-dummy-process.js';
 
 describe('njava > NJavaAccessor', () => {

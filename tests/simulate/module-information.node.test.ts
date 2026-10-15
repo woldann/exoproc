@@ -132,7 +132,7 @@ describe('simulated PSAPI module metadata', () => {
         0n,
       );
 
-      // `bun-xffi` currently declares these handles as `ptr`, whose wrapper
+      // `@woldann/bun-xffi` currently declares these handles as `ptr`, whose wrapper
       // converts bigint handles to a JS number before entering bun:ffi.
       const pointerHandle = Number(processHandle);
       assert.equal(BigInt(pointerHandle), 0x10000000000000000n);

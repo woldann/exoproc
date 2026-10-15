@@ -28,7 +28,7 @@ Rather than requiring a background daemon on all operating systems, `exoproc` ad
 
 ### 1. On Windows (Native Target)
 On native Windows x64 systems, `exoproc` does not run an extraneous daemon. Instead, it runs **directly in-process** as a native tool:
-- Binds directly to `bun-winapi`, `bun-xffi`, and `bun-njava`.
+- Binds directly to `@woldann/bun-winapi`, `@woldann/bun-xffi`, and `@woldann/bun-njava`.
 - Calls Win32 process and memory APIs directly.
 - Executes automation scripts in the local Bun process with zero IPC overhead.
 

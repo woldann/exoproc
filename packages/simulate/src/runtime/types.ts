@@ -60,7 +60,7 @@ export interface MemoryMapping {
  * Capstone's `cs_x86_op`/`x86_op_type` shape closely enough that
  * `packages/simulate/src/bin/dll/capstone.ts`'s guest `cs_disasm` handler
  * can map it onto the real `cs_x86_op` wire struct field-for-field. `reg`/
- * `mem.base`/`mem.index` are `x86_reg` ids (from `bun-capstone-abi`).
+ * `mem.base`/`mem.index` are `x86_reg` ids (from `@woldann/bun-capstone-abi`).
  */
 export type X64OperandKind = 'reg' | 'imm' | 'mem';
 

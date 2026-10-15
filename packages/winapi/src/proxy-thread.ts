@@ -1,4 +1,4 @@
-import { AbstractCallableMemoryAccessor } from 'bun-xffi';
+import { AbstractCallableMemoryAccessor } from '@woldann/bun-xffi';
 
 export class AsyncLock {
   private promise = Promise.resolve();

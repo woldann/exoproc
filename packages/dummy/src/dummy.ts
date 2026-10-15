@@ -9,7 +9,7 @@ import {
   ShowWindowCommand,
   StartupInfoA,
   ProcessInformation,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 
 export interface DummyProcessOptions {
   /** Executable to spawn (default `ping.exe`, an idle, long-lived process). */

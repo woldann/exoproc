@@ -28,7 +28,7 @@ Tüm işletim sistemlerinde gereksiz bir arka plan servisi zorunlu kılmak yerin
 
 ### 1. Windows Üzerinde (Doğal Hedef)
 Doğal Windows x64 sistemlerinde `exoproc`, harici bir arka plan servisi (daemon) çalıştırmaz. Bunun yerine **doğrudan süreç içinde** yerel bir CLI aracı olarak çalışır:
-- `bun-winapi`, `bun-xffi` ve `bun-njava` paketlerine doğrudan bağlanır.
+- `@woldann/bun-winapi`, `@woldann/bun-xffi` ve `@woldann/bun-njava` paketlerine doğrudan bağlanır.
 - Win32 süreç ve bellek API'lerini aracı olmadan çağırır.
 - Otomasyon betiklerini sıfır IPC gecikmesiyle yerel Bun süreci içinde çalıştırır.
 

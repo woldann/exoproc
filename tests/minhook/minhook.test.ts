@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { cmachinecode, createCFunction } from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { MinHook } from 'bun-minhook';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+import { cmachinecode, createCFunction } from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { MinHook } from '@woldann/bun-minhook';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Native.Thread.create() (raw CreateThread) on the current process has a
 // CI-environment-specific bug: the entry point's argument arrives corrupted

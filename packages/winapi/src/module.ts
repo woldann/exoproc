@@ -6,8 +6,12 @@ import {
   ScanResult,
   ScanEntry,
   resolveAddress,
-} from 'bun-xffi';
-import { Kernel32Impl, PsapiImpl, ToolhelpSnapshotFlag } from 'bun-xffi';
+} from '@woldann/bun-xffi';
+import {
+  Kernel32Impl,
+  PsapiImpl,
+  ToolhelpSnapshotFlag,
+} from '@woldann/bun-xffi';
 type HANDLE = bigint;
 type HMODULE = bigint;
 import { Handle } from './handle.js';

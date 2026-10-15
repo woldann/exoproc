@@ -4,7 +4,7 @@ import {
   type IMemoryAccessor,
   type CMachineCode,
   type CFunction,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 
 // ── Hook handle ───────────────────────────────────────────────────────────────
 

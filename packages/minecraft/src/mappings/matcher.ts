@@ -3,7 +3,7 @@ import type {
   ReflectedClass,
   ReflectedMethod,
   ReflectedField,
-} from 'bun-njava';
+} from '@woldann/bun-njava';
 import {
   MINECRAFT_CANONICAL_SCHEMA,
   isPrimitiveType,

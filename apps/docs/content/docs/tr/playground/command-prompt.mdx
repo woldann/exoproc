@@ -12,7 +12,7 @@ Bunu canlı denemek için [Exoproc IDE](/tr/ide/explorer)'nin alt panelindeki **
 Backend doğrudan da kullanılabilir:
 
 ```ts
-import { getGlobalWin64Machine, Win32CommandPrompt } from '@exoproc/simulate';
+import { getGlobalWin64Machine, Win32CommandPrompt } from '@woldann/simulate';
 
 const machine = getGlobalWin64Machine();
 const cmd = new Win32CommandPrompt(machine);
@@ -219,7 +219,7 @@ src/bin/
 └── index.ts     # bin public export'ları
 ```
 
-DLL dosyalarının ABI tanımları `@exoproc/win32-abi` içinde kalır; fakat simülatörde hangi binary binding'in üretileceği `src/bin/dll/` altındadır. Bu nedenle `kernel32.ts` gibi şimdilik yalnız ABI kaynağını varsayılan syscall thunk'larına bağlayan dosyalar çok kısadır. `msvcrt.ts`, `fopen`, `fread`, `fwrite` ve `printf` için gerçek x64 guest wrapper derler; `fclose` export'unu `kernel32!CloseHandle` adresine forward eder. `fread`/`fwrite`, unsigned `mul` ile byte sayısını hesaplayıp `ReadFile`/`WriteFile` sonucunu tamamlanmış element sayısına çevirir. `printf` format string'ini guest instruction'larıyla tarar, `%s`, `%d` ve `%%` dönüşümlerini yapar, `GetStdHandle(STD_OUTPUT_HANDLE)` ile process stdout'unu alır ve sonucu IAT üzerinden `WriteFile` çağırarak yazar. DLL davranışı runtime katalog kodunun içine gömülmez.
+DLL dosyalarının ABI tanımları `@woldann/win32-abi` içinde kalır; fakat simülatörde hangi binary binding'in üretileceği `src/bin/dll/` altındadır. Bu nedenle `kernel32.ts` gibi şimdilik yalnız ABI kaynağını varsayılan syscall thunk'larına bağlayan dosyalar çok kısadır. `msvcrt.ts`, `fopen`, `fread`, `fwrite` ve `printf` için gerçek x64 guest wrapper derler; `fclose` export'unu `kernel32!CloseHandle` adresine forward eder. `fread`/`fwrite`, unsigned `mul` ile byte sayısını hesaplayıp `ReadFile`/`WriteFile` sonucunu tamamlanmış element sayısına çevirir. `printf` format string'ini guest instruction'larıyla tarar, `%s`, `%d` ve `%%` dönüşümlerini yapar, `GetStdHandle(STD_OUTPUT_HANDLE)` ile process stdout'unu alır ve sonucu IAT üzerinden `WriteFile` çağırarak yazar. DLL davranışı runtime katalog kodunun içine gömülmez.
 
 `runtime/programs.ts` yalnız `Win32CompiledProgram` kabul eder; runtime sırasında çağrılan bir `compile(context)` veya `completed(context)` callback modeli yoktur. `system32.ts` de komut davranışı içermez; her modülün önceden ürettiği `.text`, `.data` ve relocation kayıtlarını uygun sanal path'e kurar.
 

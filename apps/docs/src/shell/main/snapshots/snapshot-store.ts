@@ -1,4 +1,4 @@
-import type { Win64MachineSnapshot } from '@exoproc/simulate';
+import type { Win64MachineSnapshot } from '@woldann/simulate';
 import type { SnapshotMetaDto } from '../../common/channels';
 
 /**

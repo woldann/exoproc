@@ -3,7 +3,7 @@
  * event.ts`, restated rather than imported.
  *
  * This is not duplication for its own sake: `src/base/**`, `src/platform/
- * **` and `src/workbench/**` may not import `@exoproc/simulate` at all
+ * **` and `src/workbench/**` may not import `@woldann/simulate` at all
  * (see the `no-restricted-imports` boundary in `eslint.config.mjs`), and
  * that boundary is what guarantees the renderer cannot reach the
  * simulation engine even by accident. `Emitter`/`Event`/`Disposable` are

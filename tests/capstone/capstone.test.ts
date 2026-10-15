@@ -5,7 +5,7 @@ import {
   x86_reg,
   x86_insn,
   x86_op_type,
-} from 'bun-capstone';
+} from '@woldann/bun-capstone';
 
 describe('Capstone native binding', () => {
   test('cs_version() reports a sane libcapstone version', () => {

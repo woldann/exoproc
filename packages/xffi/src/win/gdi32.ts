@@ -1,5 +1,5 @@
 import { cimport } from '../cimport.js';
-import { Gdi32Definitions } from '@exoproc/win32-abi';
+import { Gdi32Definitions } from '@woldann/win32-abi';
 
 /**
  * Native Gdi32 Bindings

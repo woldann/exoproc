@@ -1,5 +1,5 @@
 import { MemoryAccessFault, Win64AddressSpace } from './address-space.js';
-import { x86_reg } from 'bun-capstone-abi';
+import { x86_reg } from '@woldann/bun-capstone-abi';
 import type {
   CpuStepResult,
   DecodedInstruction,

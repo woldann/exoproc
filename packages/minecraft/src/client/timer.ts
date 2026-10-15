@@ -1,4 +1,4 @@
-import type { ReflectedClass } from 'bun-njava';
+import type { ReflectedClass } from '@woldann/bun-njava';
 import type { MinecraftMappings } from '../mappings/types.js';
 
 /**

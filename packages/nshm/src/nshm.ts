@@ -12,12 +12,12 @@ import {
   type ICallableMemoryAccessor,
   type ISyncCallableMemoryAccessor,
   type IHostAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import {
   type DummyProcess,
   getGlobalDummyProcess as getSharedDummyProcess,
   closeGlobalDummyProcess as closeSharedDummyProcess,
-} from 'exoproc-dummy';
+} from '@woldann/exoproc-dummy';
 import {
   CreateFileMappingFailedError,
   OpenDummyProcessFailedError,
@@ -38,7 +38,7 @@ const CURRENT_PROCESS_PSEUDO_HANDLE = INVALID_HANDLE_VALUE;
 
 export interface NShmOptions {
   /**
-   * Executable the shared dummy process (see `exoproc-dummy`) is spawned
+   * Executable the shared dummy process (see `@woldann/exoproc-dummy`) is spawned
    * from, the first time any `NShm` needs one. Default: `ping.exe` (an idle,
    * long-lived process). Ignored once a shared dummy process already exists
    * -- it's reused across every `NShm`/target regardless of which one asked
@@ -75,7 +75,7 @@ interface NShmRegion {
 }
 
 /**
- * Adapts `NShmOptions`'s `dummyExecutable`/`dummyArgs` onto `exoproc-dummy`'s
+ * Adapts `NShmOptions`'s `dummyExecutable`/`dummyArgs` onto `@woldann/exoproc-dummy`'s
  * shared singleton -- every `NShm`/target relays through the *same* dummy
  * process regardless of which one asked for it first (options are only
  * honored the first time, exactly like the singleton they now wrap).
@@ -143,11 +143,11 @@ function openDummyHandleInTargetSync(
 }
 
 /**
- * Terminates and releases the shared dummy process (see `exoproc-dummy`),
+ * Terminates and releases the shared dummy process (see `@woldann/exoproc-dummy`),
  * so the next region allocated through any `NShm` spawns a fresh one.
  * Existing regions remain valid (their own local mapping handle/view are
  * independent of the dummy once mapped). Re-exported here for existing
- * callers/tests -- forwards straight to `exoproc-dummy`'s own teardown.
+ * callers/tests -- forwards straight to `@woldann/exoproc-dummy`'s own teardown.
  */
 export const closeGlobalDummyProcess = closeSharedDummyProcess;
 

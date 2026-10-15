@@ -9,7 +9,7 @@ import { PsapiGuestDll } from './psapi.js';
 import type { Win32GuestDllSource } from './types.js';
 import { User32GuestDll } from './user32.js';
 import { Ws2_32GuestDll } from './ws2_32.js';
-import { getWin32DllFileName } from '@exoproc/win32-abi';
+import { getWin32DllFileName } from '@woldann/win32-abi';
 import {
   Win32ExportBindingRegistry,
   Win32ExportCatalog,

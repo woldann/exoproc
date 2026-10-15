@@ -1,13 +1,13 @@
 import { expect, test, describe } from 'bun:test';
-import * as Native from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
 import {
   Kernel32Impl,
   MemoryProtection,
   MemoryState,
   resolveAddress,
-} from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Pre-wired form of the manual chain in nthread.test.ts: a full indirect host
 // (IndirectCallRedirector + memset/memcmp/file-transfer/marshalling) sitting on

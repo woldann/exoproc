@@ -2,7 +2,7 @@ import type {
   ReflectionBridge,
   ReflectedClass,
   ReflectedField,
-} from 'bun-njava';
+} from '@woldann/bun-njava';
 import type { MatchOptions } from './types.js';
 
 export class MinecraftAnchorResolver {

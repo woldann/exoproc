@@ -1,4 +1,4 @@
-import { compileJsHostProgram, type Win64Machine } from '@exoproc/simulate';
+import { compileJsHostProgram, type Win64Machine } from '@woldann/simulate';
 import { registerAppHandlers } from '../lifecycle';
 import { registerDebugHandlers } from './debug';
 import { registerFsHandlers } from './fs';

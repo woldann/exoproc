@@ -14,8 +14,8 @@ import {
   selectTarget,
   withActiveAccessor,
 } from '../../packages/exoproc/src/session.js';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
-import { createAccessor } from 'exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
+import { createAccessor } from '@woldann/exoproc-accessors';
 
 describe('Exoproc Target Management and 3 Agent Slots', () => {
   afterAll(() => {

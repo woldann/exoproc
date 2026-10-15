@@ -8,7 +8,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "@woldann/exoproc": "workspace:*",
-    "exoproc-dummy": "workspace:*",
     "hono": "^4.12.28",
     "lucide-react": "^1.23.0",
     "radix-ui": "^1.6.2",
@@ -16,7 +15,8 @@
     "react-dom": "^18.3.1",
     "supports-color": "^10.2.2",
     "tailwind-merge": "^3.6.0",
-    "terminal-link": "^5.0.0"
+    "terminal-link": "^5.0.0",
+    "@woldann/exoproc-dummy": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.0.0",

@@ -3,9 +3,9 @@ import {
   isModuleLoadedInProcess,
   verifyCoreModules,
   Kernel32Impl,
-} from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Moved from tests/xffi/module-helpers.test.ts -- GetModuleHandleExA(FROM_ADDRESS)
 // with a deliberately bogus address crashed ("Unhandled page fault... starting

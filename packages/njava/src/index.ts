@@ -9,4 +9,4 @@ export * from './reflection-bridge.js';
 export * from './proxy.js';
 export * from './mapping.js';
 export * from './agent-bridge.js';
-export * from 'njava-agent';
+export * from '@woldann/njava-agent';

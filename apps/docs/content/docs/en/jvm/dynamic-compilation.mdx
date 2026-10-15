@@ -34,7 +34,7 @@ Map<string, Uint8Array>
 ## Quick Example: `compileJava()`
 
 ```typescript
-import { compileJava, getTestJavaPath } from 'bun-njava';
+import { compileJava, getTestJavaPath } from '@woldann/bun-njava';
 
 const javaSource = `
 package org.exoproc.injected;
@@ -73,7 +73,7 @@ if (result.success) {
 For CLI utilities, build steps, or initialization routines where asynchronous promises are inconvenient, `compileJavaSync` runs synchronously:
 
 ```typescript
-import { compileJavaSync } from 'bun-njava';
+import { compileJavaSync } from '@woldann/bun-njava';
 
 const result = compileJavaSync({
   source: `
@@ -93,7 +93,7 @@ const bytecode = result.classes.get('org.exoproc.util.MathUtil')!;
 Before compilation, you can extract the package and class definitions from source code:
 
 ```typescript
-import { extractClassInfo } from 'bun-njava';
+import { extractClassInfo } from '@woldann/bun-njava';
 
 const info = extractClassInfo(`
   package com.example.hook;
@@ -114,7 +114,7 @@ console.log(info.fqcn);        // "com.example.hook.PlayerInterceptor"
 When compiling code targeting obfuscated applications (such as vanilla Minecraft), your source code can be written with deobfuscated clean names and remapped to the target runtime's obfuscated names using the embedded Tiny-Remapper:
 
 ```typescript
-import { remapJava } from 'exoproc-jjit';
+import { remapJava } from '@woldann/exoproc-jjit';
 
 const remapped = await remapJava({
   bytecode,

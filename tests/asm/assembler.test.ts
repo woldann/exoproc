@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { X64Assembler, qword } from 'exoproc-asm';
+import { X64Assembler, qword } from '@woldann/exoproc-asm';
 
 function bytes(assembler: X64Assembler): number[] {
   return [...assembler.finish()];

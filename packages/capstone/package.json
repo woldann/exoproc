@@ -1,7 +1,8 @@
 {
-  "name": "bun-capstone",
+  "name": "@woldann/bun-capstone",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "TypeScript/FFI bindings for the Capstone disassembly engine with full OOP support",
@@ -53,7 +54,7 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-capstone-abi": "workspace:*",
-    "bun-xffi": "workspace:*"
+    "@woldann/bun-capstone-abi": "workspace:*",
+    "@woldann/bun-xffi": "workspace:*"
   }
 }

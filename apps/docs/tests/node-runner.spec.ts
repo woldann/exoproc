@@ -1,4 +1,4 @@
-import { WIN32_WORKSPACE_PATH } from '@exoproc/simulate';
+import { WIN32_WORKSPACE_PATH } from '@woldann/simulate';
 import { toWindowsPath } from '../src/shell/main/fs/workspace-paths';
 import { getMachine } from '../src/shell/main/modules/machine';
 import {

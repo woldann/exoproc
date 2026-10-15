@@ -1,5 +1,5 @@
-import { Thread } from 'bun-winapi';
-import { attachNJava } from 'bun-njava';
+import { Thread } from '@woldann/bun-winapi';
+import { attachNJava } from '@woldann/bun-njava';
 import { HostAccessor } from './middleware-accessor.js';
 import { createAccessor, type AccessorOptions } from './accessors.js';
 

@@ -50,6 +50,6 @@ Bu örnekte `alloc`, `write`, `read` ve `call` aynı accessor zincirinden geçer
 
 ## İlk kavramlar
 
-`bun-xffi`, bellek ve C ABI temelini sağlar. `bun-winapi`, Win32 nesnelerini TypeScript sınıflarıyla sarar. `bun-nthread`, yeni bir uzak thread oluşturmadan çağrı yürütür. Üstteki hook paketleri bu katmanları kullanır.
+`@woldann/bun-xffi`, bellek ve C ABI temelini sağlar. `@woldann/bun-winapi`, Win32 nesnelerini TypeScript sınıflarıyla sarar. `@woldann/bun-nthread`, yeni bir uzak thread oluşturmadan çağrı yürütür. Üstteki hook paketleri bu katmanları kullanır.
 
 Uzaktaki süreçle çalışmak, normal uygulama kodundan daha kırılgandır: yanlış adres, yanlış tür, uyumsuz çağrı imzası veya yanlış anda askıya alınmış bir thread hedef sürecin çökmesine neden olabilir. Thread seçimi ve çağrı sınırları için [NThread](/docs/nthread/overview), hata inceleme sırası için [sorun giderme](/docs/troubleshooting) bölümüne bakın.

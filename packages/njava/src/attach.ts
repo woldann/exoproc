@@ -2,7 +2,7 @@ import {
   HostAccessor,
   isMiddlewareAccessor,
   type ISyncCallableMemoryAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import { NJavaAccessor } from './njava-accessor.js';
 import { NJavaError } from './errors.js';
 import type { ReflectionBridge, ReflectedClass } from './reflection-bridge.js';

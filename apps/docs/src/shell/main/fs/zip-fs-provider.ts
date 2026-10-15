@@ -14,7 +14,7 @@ import {
   type FileSystemProvider,
   type FileWatchOptions,
   type FileWriteOptions,
-} from '@exoproc/simulate/files';
+} from '@woldann/simulate/files';
 
 /**
  * Read-only `FileSystemProvider` view of a `.zip` archive's bytes, with no

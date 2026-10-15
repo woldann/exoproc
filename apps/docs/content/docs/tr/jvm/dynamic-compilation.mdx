@@ -34,7 +34,7 @@ Map<string, Uint8Array>
 ## Hızlı Başlangıç: `compileJava()`
 
 ```typescript
-import { compileJava } from 'bun-njava';
+import { compileJava } from '@woldann/bun-njava';
 
 const javaSource = `
 package org.exoproc.injected;
@@ -73,7 +73,7 @@ if (result.success) {
 CLI araçları, derleme adımları veya asenkron `await` yapısının uygun olmadığı başlangıç rutinleri için `compileJavaSync` senkron olarak çalışır:
 
 ```typescript
-import { compileJavaSync } from 'bun-njava';
+import { compileJavaSync } from '@woldann/bun-njava';
 
 const result = compileJavaSync({
   source: `
@@ -93,7 +93,7 @@ const bytecode = result.classes.get('org.exoproc.util.MathUtil')!;
 Derleme işleminden önce kaynak koddan paket ve sınıf üstverilerini ayıklayabilirsiniz:
 
 ```typescript
-import { extractClassInfo } from 'bun-njava';
+import { extractClassInfo } from '@woldann/bun-njava';
 
 const info = extractClassInfo(`
   package com.example.hook;
@@ -114,7 +114,7 @@ console.log(info.fqcn);        // "com.example.hook.PlayerInterceptor"
 Hedef uygulamanın (örneğin vanilla Minecraft) karartılmış (obfuscated) koduna yönelik derleme yaparken, kaynak kodunuzu anlaşılır isimlerle yazıp gömülü Tiny-Remapper ile hedef isim uzayına dönüştürebilirsiniz:
 
 ```typescript
-import { remapJava } from 'exoproc-jjit';
+import { remapJava } from '@woldann/exoproc-jjit';
 
 const remapped = await remapJava({
   bytecode,

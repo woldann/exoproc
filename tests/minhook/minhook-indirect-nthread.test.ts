@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import * as Native from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
 import {
   cmachinecode,
   createCFunction,
   Kernel32Impl,
   RemoteCallableMemoryAccessor,
-} from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { MinHook } from 'bun-minhook';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { MinHook } from '@woldann/bun-minhook';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Real end-to-end proof that MinHook works over an IndirectNThreadHostAccessor:
 // hook a function injected into *another* process, then actually *invoke* it on

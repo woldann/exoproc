@@ -24,7 +24,7 @@ import { type Pattern } from './win/scanner.js';
  * lives here too (below); the rest of its family that's specific to the
  * default indirect-call chain (`RedirectorHostAccessor`,
  * `BootstrapHostAccessor`, `RaceHostAccessor`, etc.) lives in
- * `exoproc-accessors` instead, extending `HostAccessor` across the package
+ * `@woldann/exoproc-accessors` instead, extending `HostAccessor` across the package
  * boundary. This interface still exists as the structural contract `root`
  * is typed against everywhere in this file, independent of which concrete
  * subclass is actually passed in.
@@ -48,9 +48,9 @@ export interface IHostAccessor extends ISyncCallableMemoryAccessor {
  * `backend`-chain pid lookup, etc.). `instanceof` compares against a
  * *specific loaded copy* of the `MiddlewareAccessor` class -- when a chain
  * crosses a package boundary (e.g. `nthread`'s `NThread` and `accessors`'s
- * `MemsetWriteAccessor` each resolve their own `bun-xffi` via their own
+ * `MemsetWriteAccessor` each resolve their own `@woldann/bun-xffi` via their own
  * `node_modules` symlink), Bun-under-Wine has been observed to load two
- * separate copies of `bun-xffi` even though both symlinks resolve to the
+ * separate copies of `@woldann/bun-xffi` even though both symlinks resolve to the
  * same canonical directory -- so an instance built from one copy silently
  * fails `instanceof` against the other copy's class, despite being
  * structurally identical. Checking for the shape instead of the class
@@ -1322,7 +1322,7 @@ export class HostAccessor extends InittableMiddlewareAccessor {
     if (!restorer) {
       throw new Error(
         `No restorer registered for accessorType: "${session.accessorType}". ` +
-          `Ensure 'exoproc-accessors' is imported or register a custom restorer via HostAccessor.registerRestorer().`,
+          `Ensure '@woldann/exoproc-accessors' is imported or register a custom restorer via HostAccessor.registerRestorer().`,
       );
     }
 

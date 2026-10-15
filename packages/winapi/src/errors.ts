@@ -1,5 +1,5 @@
-import { ExoprocError } from 'exoproc-utils';
-import type { NativePointer } from 'bun-xffi';
+import { ExoprocError } from '@woldann/exoproc-utils';
+import type { NativePointer } from '@woldann/bun-xffi';
 
 // ── Base ──────────────────────────────────────────────────────────────────────
 

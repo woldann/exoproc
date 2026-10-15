@@ -7,12 +7,12 @@ import {
   createPool,
   type MappingPool,
   type MappingDatabase,
-} from 'exoproc-mappings';
+} from '@woldann/exoproc-mappings';
 import {
   createJavaCode,
   type JavaCode,
   type ScriptFunction,
-} from 'exoproc-nashorn';
+} from '@woldann/exoproc-nashorn';
 import type {
   IJavaBridge,
   IRuntimeExecutionContext,
@@ -43,7 +43,7 @@ import {
   type ClassDefineOptions,
   type ClassLoaderOptions,
 } from './definer/index.js';
-import { JavaClassBuilder } from 'exoproc-jjit';
+import { JavaClassBuilder } from '@woldann/exoproc-jjit';
 
 export interface JavaRuntimeContextOptions {
   pool?: MappingPool;

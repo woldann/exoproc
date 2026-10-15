@@ -1,7 +1,8 @@
 {
-  "name": "exoproc-utils",
+  "name": "@woldann/exoproc-utils",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Simple file-based logger for the Exoproc ecosystem",

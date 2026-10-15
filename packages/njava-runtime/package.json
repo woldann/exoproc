@@ -1,7 +1,8 @@
 {
-  "name": "exoproc-runtime",
+  "name": "@woldann/exoproc-runtime",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "Modular, identity-preserving hybrid/virtual/native Java runtime environment and class pool for the Exoproc / NJava ecosystem.",
@@ -43,10 +44,10 @@
     "test": "bun test"
   },
   "dependencies": {
-    "exoproc-jjit": "workspace:*",
-    "exoproc-mappings": "workspace:*",
-    "exoproc-nashorn": "workspace:*",
-    "exoproc-utils": "workspace:*"
+    "@woldann/exoproc-jjit": "workspace:*",
+    "@woldann/exoproc-mappings": "workspace:*",
+    "@woldann/exoproc-nashorn": "workspace:*",
+    "@woldann/exoproc-utils": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

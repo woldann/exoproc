@@ -3,7 +3,7 @@ title: "JVM Architecture & Overview"
 description: "Exoproc's JVM reverse engineering and runtime reflection layer: JNI bridge, Agent RPC, JavaContext, and stealth instrumentation."
 ---
 
-Exoproc provides a comprehensive runtime instrumentation and reflection suite (`bun-njava`, `njava-agent`, `njava-runtime`) for inspecting, managing, and reverse-engineering Java Virtual Machines (JVMs) inside live Windows processes directly from TypeScript and JavaScript.
+Exoproc provides a comprehensive runtime instrumentation and reflection suite (`@woldann/bun-njava`, `@woldann/njava-agent`, `njava-runtime`) for inspecting, managing, and reverse-engineering Java Virtual Machines (JVMs) inside live Windows processes directly from TypeScript and JavaScript.
 
 Using this layer, you can interact with classes, objects, fields, and methods without injecting external DLLs or writing `.jar` agent files to disk.
 
@@ -48,7 +48,7 @@ Exoproc offers two distinct bridge architectures tailored to target security con
 
 ### 2. AgentReflectionBridge (In-Process Agent)
 
-When high-throughput method calls are required (e.g. reading hundreds of entities every Minecraft game tick), `njava-agent` eliminates JNI IPC overhead.
+When high-throughput method calls are required (e.g. reading hundreds of entities every Minecraft game tick), `@woldann/njava-agent` eliminates JNI IPC overhead.
 
 - Dynamically injected into JVM memory via in-memory `ClassLoader.defineClass`.
 - Communicates with the runner over localhost HTTP RPC.
@@ -59,9 +59,9 @@ When high-throughput method calls are required (e.g. reading hundreds of entitie
 The standard workflow to attach to a target JVM and acquire a `JavaContext`:
 
 ```typescript
-import { Process } from 'bun-winapi';
-import { RemoteCallableMemoryAccessor } from 'bun-xffi';
-import { attachJvm, createJavaContext } from 'bun-njava';
+import { Process } from '@woldann/bun-winapi';
+import { RemoteCallableMemoryAccessor } from '@woldann/bun-xffi';
+import { attachJvm, createJavaContext } from '@woldann/bun-njava';
 
 // 1. Attach to target process
 const process = Process.findByName('javaw.exe');

@@ -1,4 +1,4 @@
-import { User32Dll } from '@exoproc/win32-abi';
+import { User32Dll } from '@woldann/win32-abi';
 import type { Win32GuestDllSource } from './types.js';
 
 export const User32GuestDll = {

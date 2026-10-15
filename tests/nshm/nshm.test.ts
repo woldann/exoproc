@@ -1,7 +1,10 @@
 import { expect, test, describe } from 'bun:test';
-import { Kernel32Impl } from 'bun-xffi';
-import { createAccessor, createAccessorWithoutInit } from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+import { Kernel32Impl } from '@woldann/bun-xffi';
+import {
+  createAccessor,
+  createAccessorWithoutInit,
+} from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Proves the full handle-relay flow: this (Bun) process never OpenProcess's
 // the target directly -- only the dummy process it spawns itself. NShm.alloc()

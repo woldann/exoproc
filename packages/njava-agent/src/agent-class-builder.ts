@@ -1,4 +1,4 @@
-import { JavaClassBuilder } from 'exoproc-jjit';
+import { JavaClassBuilder } from '@woldann/exoproc-jjit';
 
 /**
  * Generates a unique build identifier for a specific agent compilation.

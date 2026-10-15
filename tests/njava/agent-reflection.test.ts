@@ -4,7 +4,7 @@ import {
   createAgentContext,
   AgentReflectionBridge,
 } from '../../packages/njava/src/agent-bridge.js';
-import { getAgentJarSync } from 'njava-agent';
+import { getAgentJarSync } from '@woldann/njava-agent';
 import { getTestJavaPath } from './java-test-helpers.js';
 
 const TEST_PORT = 43391;

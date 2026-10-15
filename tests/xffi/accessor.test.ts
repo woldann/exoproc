@@ -19,7 +19,7 @@ import {
   type AddressLike,
   type ISyncMemoryAccessor,
 } from '../../packages/xffi/src/index';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 describe('xffi > MemoryAccessor and Custom Accessors', () => {
   test('should support allocating and freeing memory using localMemoryAccessor', () => {
     const addr = localMemoryAccessor.allocSync(16);

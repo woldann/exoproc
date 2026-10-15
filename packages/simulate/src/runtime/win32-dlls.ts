@@ -3,7 +3,7 @@ import {
   type Win32Dll,
   type Win32FunctionDefinition,
   type Win32FunctionReference,
-} from '@exoproc/win32-abi';
+} from '@woldann/win32-abi';
 import type { Win32ProgramRelocation } from './programs.js';
 
 export const WIN32_DLL_IMAGE_BASE = 0x00007fe000000000n;

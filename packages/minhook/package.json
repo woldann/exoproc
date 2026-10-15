@@ -1,7 +1,8 @@
 {
-  "name": "bun-minhook",
+  "name": "@woldann/bun-minhook",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com"
   },
   "version": "0.4.0",
   "description": "MinHook-style trampoline/detour function hooking for Bun. Unlike nhook (no allocation, 2-byte inline patch), this builds a real relocated trampoline and installs a 5-byte JMP detour, with the detour itself supplied as caller-provided machineCode for cross-process use.",
@@ -49,9 +50,9 @@
     "url": "https://github.com/woldann/exoproc/issues"
   },
   "dependencies": {
-    "bun-winapi": "workspace:*",
-    "bun-xffi": "workspace:*",
-    "exoproc-utils": "workspace:*",
-    "bun-capstone": "workspace:*"
+    "@woldann/bun-winapi": "workspace:*",
+    "@woldann/bun-xffi": "workspace:*",
+    "@woldann/exoproc-utils": "workspace:*",
+    "@woldann/bun-capstone": "workspace:*"
   }
 }

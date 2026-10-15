@@ -18,4 +18,4 @@ export {
   type JavaRemapOptions,
   type JavaRemapResult,
   type ObfuscationOptions,
-} from 'exoproc-jjit/remapper';
+} from '@woldann/exoproc-jjit/remapper';

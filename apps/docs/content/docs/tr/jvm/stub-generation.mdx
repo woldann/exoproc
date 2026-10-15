@@ -30,7 +30,7 @@ compileJava() İçin    Eksiksiz TypeScript
 İster geçici bir dizinde ister projenizin altında doğrudan bir `JavaStubProject` başlatabilirsiniz:
 
 ```typescript
-import { JavaStubProject } from 'bun-njava';
+import { JavaStubProject } from '@woldann/bun-njava';
 
 const project = new JavaStubProject({
   javaVersion: 8,
@@ -82,7 +82,7 @@ if (result.success) {
 `stubs.jar` üretildikten sonra, `compileJava()` çağrısına bir `classpath` girdisi olarak iletilebilir. Artık özel Java sınıflarınız gerçek Minecraft istemcisine ihtiyaç duymadan oyun tiplerinden miras alabilir veya bu tipleri referans gösterebilir:
 
 ```typescript
-import { compileJava } from 'bun-njava';
+import { compileJava } from '@woldann/bun-njava';
 
 const myInjectedSource = `
 package org.exoproc.injected;

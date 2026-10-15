@@ -10,8 +10,8 @@ import {
   type CFunction,
   type DummyFunction,
   type CTypeOrString,
-} from 'bun-xffi';
-import { Module } from 'bun-winapi';
+} from '@woldann/bun-xffi';
+import { Module } from '@woldann/bun-winapi';
 import {
   JNI_INVOKE_INTERFACE_FIELDS,
   JNI_NATIVE_INTERFACE_FIELDS,
@@ -170,7 +170,7 @@ export type JniPlainFunctionName = keyof typeof JNI_PLAIN_SIGNATURES;
  * arg at all, e.g. `JNI_GetCreatedJavaVMs`) -- into both forms
  * ({@link buildFunctionPair}): a real `CFunction` and a bound
  * `DummyFunction`. `plain` entries are resolved fresh per attached process
- * via `resolveRemoteExportAddress` (`bun-xffi`), since `jvm.dll`'s base
+ * via `resolveRemoteExportAddress` (`@woldann/bun-xffi`), since `jvm.dll`'s base
  * address differs by process (ASLR) even though the DLL file itself is
  * identical.
  *

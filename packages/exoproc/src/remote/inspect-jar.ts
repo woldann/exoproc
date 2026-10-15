@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join, dirname, basename, delimiter } from 'node:path';
 import { spawn } from 'node:child_process';
 import { findRepoRoot, evalRemote } from './client.js';
-import { getAgentJarSync } from 'njava-agent';
+import { getAgentJarSync } from '@woldann/njava-agent';
 import { renderToString } from 'ink';
 import React from 'react';
 import { InspectorCard, FilterClassesCard, EvalCard } from '../ui/views.js';

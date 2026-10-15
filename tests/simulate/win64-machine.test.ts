@@ -9,7 +9,7 @@ import {
   Win32Dlls,
   Win32Api,
   Ws2_32Dll,
-} from '@exoproc/win32-abi';
+} from '@woldann/win32-abi';
 import {
   bindWin64Process,
   byte,

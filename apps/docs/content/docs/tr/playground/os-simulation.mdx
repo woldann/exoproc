@@ -3,7 +3,7 @@ title: Browser'da çalışan Win64 makine
 description: "@exoproc/simulate paketinin çalıştırdığı Win64 user-mode makinesinin tasarımı ve sınırları"
 ---
 
-`@exoproc/simulate`, tam bir Windows kurulumu boot etmeye çalışmaz. Makine doğrudan bir Win64 user-mode process context'iyle başlar. x86-64 koruma modelinde bu, Ring 3 yani CPL 3 seviyesidir. CPU instruction yürütür; yalnız `syscall` instruction'ına ulaştığında kontrol JavaScript tarafındaki kernel'e geçer.
+`@woldann/simulate`, tam bir Windows kurulumu boot etmeye çalışmaz. Makine doğrudan bir Win64 user-mode process context'iyle başlar. x86-64 koruma modelinde bu, Ring 3 yani CPL 3 seviyesidir. CPU instruction yürütür; yalnız `syscall` instruction'ına ulaştığında kontrol JavaScript tarafındaki kernel'e geçer.
 
 Bu sınır bilinçlidir. Exoproc'un incelemek istediği alan process, thread, sanal bellek, Windows x64 çağrı düzeni ve native API davranışıdır. BIOS, bootloader, aygıt sürücüsü ve gerçek Ring 0 emülasyonu bu davranışları öğretmek için zorunlu değildir.
 
@@ -82,7 +82,7 @@ package TypeScript
 `getGlobalWin64Machine()` aynı JavaScript realm'i içinde tek bir makine döndürür. Her çağrıldığında makineyi yeniden boot etmez; aynı process tablosu içinde yeni bir process oluşturur.
 
 ```ts
-import { getGlobalWin64Machine } from '@exoproc/simulate';
+import { getGlobalWin64Machine } from '@woldann/simulate';
 
 const machine = getGlobalWin64Machine();
 const first = machine.createRandomDebugProcess();
@@ -92,7 +92,7 @@ first.machine === second.machine; // true
 first.pid !== second.pid; // true
 ```
 
-Exoproc IDE bu makineyi bir Web Worker içinde çalıştırır: `bun:ffi` modülünün aktif process context'i worker'a özgüdür ve CPU run loop'u sayfanın ana thread'ini bloklamaz. Renderer tarafı `@exoproc/simulate`'i hiç import etmez, yalnızca `window.exoproc` üzerinden tipli bir mesajlaşma katmanıyla konuşur.
+Exoproc IDE bu makineyi bir Web Worker içinde çalıştırır: `bun:ffi` modülünün aktif process context'i worker'a özgüdür ve CPU run loop'u sayfanın ana thread'ini bloklamaz. Renderer tarafı `@woldann/simulate`'i hiç import etmez, yalnızca `window.exoproc` üzerinden tipli bir mesajlaşma katmanıyla konuşur.
 
 ## `bun:ffi` browser katmanı
 
@@ -108,7 +108,7 @@ Next.js yapılandırması `bun:ffi` import'unu `packages/simulate/src/runtime/bu
 
 ## Ortak Win32 tanımları
 
-`bun-xffi` içindeki DLL imzaları `@exoproc/win32-abi` paketine taşınmıştır. Tanımların biçimi native binding tarafındakiyle aynıdır; farklı bir manifest dili veya signature parser kullanılmaz:
+`@woldann/bun-xffi` içindeki DLL imzaları `@woldann/win32-abi` paketine taşınmıştır. Tanımların biçimi native binding tarafındakiyle aynıdır; farklı bir manifest dili veya signature parser kullanılmaz:
 
 ```ts
 export const Kernel32Definitions = {
@@ -136,13 +136,13 @@ Tüm DLL'lerin ortak suffix'i ayrı bir sabittir:
 export const Win32DllSuffix = '.dll';
 ```
 
-`bun-xffi`, aynı nesneyi doğrudan `cimport(Kernel32Dll.definitions, ...)` çağrısına verir; `library` ve `knownToLinker` descriptor'dan, `suffix` ise global `Win32DllSuffix` sabitinden gelir. Simülatör `Object.entries(Kernel32Dll.definitions)` üzerinden export adını, argüman sayısını ve dönüş tipini okuyup DLL thunk tablosunu üretir. Tam dosya adı `getWin32DllFileName(Kernel32Dll)` ile `kernel32.dll` olarak oluşturulur. `imageBase` ve simülasyona özgü syscall numarası ortak nesneye eklenmez; `@exoproc/simulate` içindeki adaptörün sorumluluğunda kalır.
+`@woldann/bun-xffi`, aynı nesneyi doğrudan `cimport(Kernel32Dll.definitions, ...)` çağrısına verir; `library` ve `knownToLinker` descriptor'dan, `suffix` ise global `Win32DllSuffix` sabitinden gelir. Simülatör `Object.entries(Kernel32Dll.definitions)` üzerinden export adını, argüman sayısını ve dönüş tipini okuyup DLL thunk tablosunu üretir. Tam dosya adı `getWin32DllFileName(Kernel32Dll)` ile `kernel32.dll` olarak oluşturulur. `imageBase` ve simülasyona özgü syscall numarası ortak nesneye eklenmez; `@woldann/simulate` içindeki adaptörün sorumluluğunda kalır.
 
-`CType`, native ortamda değerleri hardcode etmez; doğrudan `bun:ffi` içindeki `FFIType` enum'unu kullanır. Browser build'inde Next.js'in `bun:ffi` alias'ı `@exoproc/simulate` içindeki bağımsız sayısal tabloya yönlenir. Bu tablo `win32-abi` import etmez ve bir `Proxy` trap'i ile tanımadığı `FFIType` alanlarında hemen hata verir. Böylece yeni kullanılan bir Bun FFI tipi sessizce `undefined` olup ABI imzasını bozmaz.
+`CType`, native ortamda değerleri hardcode etmez; doğrudan `bun:ffi` içindeki `FFIType` enum'unu kullanır. Browser build'inde Next.js'in `bun:ffi` alias'ı `@woldann/simulate` içindeki bağımsız sayısal tabloya yönlenir. Bu tablo `win32-abi` import etmez ve bir `Proxy` trap'i ile tanımadığı `FFIType` alanlarında hemen hata verir. Böylece yeni kullanılan bir Bun FFI tipi sessizce `undefined` olup ABI imzasını bozmaz.
 
 ## Otomatik syscall kataloğu
 
-`DefaultWin32ExportCatalog`, `src/bin/dll/index.ts` içindeki `DefaultWin32GuestDlls` manifest'ini binary kaynağı olarak kabul eder. Her manifest girdisi ABI imzasını `@exoproc/win32-abi` içindeki descriptor'dan alır; simülasyona ait binding'i ise `src/bin/dll/<ad>.ts` dosyası belirler. Yeni bir fonksiyon tanımı eklendiğinde simülatörde ayrıca export adı, ordinal ya da syscall numarası yazılmaz.
+`DefaultWin32ExportCatalog`, `src/bin/dll/index.ts` içindeki `DefaultWin32GuestDlls` manifest'ini binary kaynağı olarak kabul eder. Her manifest girdisi ABI imzasını `@woldann/win32-abi` içindeki descriptor'dan alır; simülasyona ait binding'i ise `src/bin/dll/<ad>.ts` dosyası belirler. Yeni bir fonksiyon tanımı eklendiğinde simülatörde ayrıca export adı, ordinal ya da syscall numarası yazılmaz.
 
 Jeneratör her DLL için otomatik olarak:
 

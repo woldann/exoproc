@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import * as WinAPI from 'bun-winapi';
+import * as WinAPI from '@woldann/bun-winapi';
 import {
   resolveAddress,
   Pattern,
@@ -8,8 +8,8 @@ import {
   alignUp,
   alignDown,
   stackAlign16,
-} from 'bun-xffi';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/bun-xffi';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 const Native = {
   ...WinAPI,

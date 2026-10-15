@@ -12,7 +12,7 @@ import {
   obfuscateBytecode,
   toAlphaIdentifier,
 } from '../../packages/njava/src/remapper.js';
-import { parseClassBytecode } from 'exoproc-jjit';
+import { parseClassBytecode } from '@woldann/exoproc-jjit';
 import { JavaStubProject } from '../../packages/njava/src/stubs/project.js';
 import { compileJavaSync } from '../../packages/njava/src/compiler.js';
 import { JavaMappingRegistry } from '../../packages/njava/src/mapping.js';

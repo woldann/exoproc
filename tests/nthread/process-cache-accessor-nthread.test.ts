@@ -3,8 +3,8 @@ import {
   ProcessCacheAccessor,
   HostAccessor,
   createAccessor,
-} from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Moved from tests/xffi/process-cache-accessor.test.ts -- ProcessCacheAccessor.
 // getCoreModules() -> verifyCoreModules() -> isModuleLoadedInProcess() calls

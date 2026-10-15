@@ -1,4 +1,4 @@
-import type { Detail } from 'bun-capstone-abi';
+import type { Detail } from '@woldann/bun-capstone-abi';
 
 export interface RawInstruction {
   id: number;

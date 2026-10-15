@@ -6,7 +6,7 @@ import {
   getAgentJarSync,
   getAgentJar,
   loadAgentMappings,
-} from 'njava-agent';
+} from '@woldann/njava-agent';
 import { createPool } from '../../packages/njava-mappings/src/index.js';
 import { existsSync } from 'node:fs';
 import { getTestJavaPath } from './java-test-helpers.js';

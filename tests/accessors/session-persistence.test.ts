@@ -6,14 +6,14 @@ import {
   HostAccessor,
   AccessorSealedError,
   type HostAccessorSession,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 import {
   createAccessorWithoutInit,
   createAccessor,
   createAccessorFromFile,
   IndirectNThreadHostAccessor,
-} from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+} from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 describe('HostAccessor Pipeline Blueprint and Hibernation', () => {
   const tempFiles: string[] = [];

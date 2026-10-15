@@ -2,7 +2,7 @@
  * @exoproc/njava-runtime - Core types for hybrid, virtual, and native Java runtime modeling.
  */
 
-import type { MappingPool } from 'exoproc-mappings';
+import type { MappingPool } from '@woldann/exoproc-mappings';
 
 export type ClassMode = 'virtual' | 'hybrid' | 'native';
 

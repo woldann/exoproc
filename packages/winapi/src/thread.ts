@@ -1,12 +1,12 @@
 import { log } from './logger.js';
-import { NativePointer, resolveAddress } from 'bun-xffi';
+import { NativePointer, resolveAddress } from '@woldann/bun-xffi';
 import {
   Kernel32Impl,
   ThreadAccess,
   ContextFlags,
   ThreadCreationFlags,
   type SecurityAttributes,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 type HANDLE = bigint;
 type SIZE_T = bigint;
 type LPVOID = bigint;
@@ -23,7 +23,7 @@ import {
   TerminateThreadError,
 } from './errors.js';
 import { ToolhelpSnapshot, ThreadEntry } from './snapshot.js';
-import { ToolhelpSnapshotFlag } from 'bun-xffi';
+import { ToolhelpSnapshotFlag } from '@woldann/bun-xffi';
 import { ptr } from 'bun:ffi';
 
 function getThreadLog() {

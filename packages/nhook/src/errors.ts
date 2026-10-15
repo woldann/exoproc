@@ -1,4 +1,4 @@
-import { ExoprocError } from 'exoproc-utils';
+import { ExoprocError } from '@woldann/exoproc-utils';
 
 // ── Base ──────────────────────────────────────────────────────────────────────
 

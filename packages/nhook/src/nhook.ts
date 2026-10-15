@@ -1,5 +1,5 @@
-import * as Native from 'bun-winapi';
-import { type HookPoolResult, type HookTarget } from 'bun-winapi';
+import * as Native from '@woldann/bun-winapi';
+import { type HookPoolResult, type HookTarget } from '@woldann/bun-winapi';
 import {
   NativePointer,
   MemoryProtection,
@@ -7,7 +7,7 @@ import {
   createCFunction,
   resolveAddress,
   type IMemoryAccessor,
-} from 'bun-xffi';
+} from '@woldann/bun-xffi';
 
 /** A native call argument: either already a bigint, or a number to be coerced. */
 type Arg = number | bigint;
@@ -19,9 +19,9 @@ import {
   type X86Detail,
   type X86Operand,
   X86_REG_TO_CONTEXT_NAME,
-} from 'bun-capstone';
-import { getRandomSpinStub } from 'bun-nthread';
-import { IndirectNThreadHostAccessor } from 'exoproc-accessors';
+} from '@woldann/bun-capstone';
+import { getRandomSpinStub } from '@woldann/bun-nthread';
+import { IndirectNThreadHostAccessor } from '@woldann/exoproc-accessors';
 import { log } from './logger.js';
 import { ProcessExitedError } from './errors.js';
 

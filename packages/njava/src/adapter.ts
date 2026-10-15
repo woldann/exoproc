@@ -5,7 +5,7 @@
  * In Agent mode, registers callbacks and synthesizes adapter bodies invoking Exoproc.dispatchCallback.
  */
 
-import { JavaClassBuilder } from 'exoproc-jjit';
+import { JavaClassBuilder } from '@woldann/exoproc-jjit';
 
 export type CallbackFunction = (...args: any[]) => any;
 

@@ -1,5 +1,5 @@
-import type { ReflectionBridge } from 'bun-njava';
-import type { MinecraftMappings } from 'exoproc-minecraft';
+import type { ReflectionBridge } from '@woldann/bun-njava';
+import type { MinecraftMappings } from '@woldann/exoproc-minecraft';
 
 export type MinecraftGuiType =
   | 'MainMenu'

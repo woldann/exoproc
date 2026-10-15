@@ -1,7 +1,7 @@
 import { expect, test, describe } from 'bun:test';
-import { MemoryProtection } from 'bun-xffi';
-import { createAccessor } from 'exoproc-accessors';
-import { getGlobalDummyProcess } from 'exoproc-dummy';
+import { MemoryProtection } from '@woldann/bun-xffi';
+import { createAccessor } from '@woldann/exoproc-accessors';
+import { getGlobalDummyProcess } from '@woldann/exoproc-dummy';
 
 // Moved from tests/xffi/call-redirector.test.ts -- CallRedirectorAccessor/
 // IndirectCallRedirectorAccessor redirect protect() through `this.root.call

@@ -1,7 +1,7 @@
 import { expect, test, describe, afterEach } from 'bun:test';
-import { type DummyProcess } from 'exoproc-dummy';
-import { type HostAccessor, createAccessor } from 'exoproc-accessors';
-import { getJava, getJavaSync } from 'bun-njava';
+import { type DummyProcess } from '@woldann/exoproc-dummy';
+import { type HostAccessor, createAccessor } from '@woldann/exoproc-accessors';
+import { getJava, getJavaSync } from '@woldann/bun-njava';
 import { spawnJavaDummyProcess } from './java-dummy-process.js';
 
 describe('njava > Java Dynamic Proxy & Nashorn Bridge', () => {
