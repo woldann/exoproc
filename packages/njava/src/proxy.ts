@@ -1100,15 +1100,21 @@ export interface IAsyncJavaContext {
 export class JavaContext {
   public readonly mapper: JavaMappingRegistry;
   public detector?: JavaDetector;
+  public pool?: any;
 
   constructor(
     public readonly bridge: ReflectionBridge,
     public readonly sync: boolean = true,
     mapper?: JavaMappingRegistry,
     detector?: JavaDetector,
+    pool?: any,
   ) {
     this.mapper = mapper ?? new JavaMappingRegistry();
     this.detector = detector;
+    this.pool = pool;
+    if (pool) {
+      this.mapper.usePool(pool);
+    }
   }
 
   /**
@@ -1166,7 +1172,12 @@ export class JavaContext {
    */
   public asSync(): SyncJavaContext {
     if (this.sync && this instanceof SyncJavaContext) return this;
-    return new SyncJavaContext(this.bridge, this.mapper, this.detector);
+    return new SyncJavaContext(
+      this.bridge,
+      this.mapper,
+      this.detector,
+      this.pool,
+    );
   }
 
   /**
@@ -1174,7 +1185,12 @@ export class JavaContext {
    */
   public asAsync(): AsyncJavaContext {
     if (!this.sync && this instanceof AsyncJavaContext) return this;
-    return new AsyncJavaContext(this.bridge, this.mapper, this.detector);
+    return new AsyncJavaContext(
+      this.bridge,
+      this.mapper,
+      this.detector,
+      this.pool,
+    );
   }
 
   /**
@@ -1255,7 +1271,11 @@ export class JavaContext {
       throw new Error(`Invalid class type argument: ${classNameOrClass}`);
     }
 
-    const obfName = this.mapper.resolveObfClass(name);
+    let obfName = this.mapper.resolveObfClass(name);
+    if ((!obfName || obfName === name) && this.pool?.resolveClass) {
+      const fromPool = this.pool.resolveClass(name);
+      if (fromPool) obfName = fromPool;
+    }
 
     if (this.sync && this.bridge.getClassSync) {
       const cls = this.bridge.getClassSync(obfName);
@@ -1307,6 +1327,48 @@ export class JavaContext {
       this.mapper.load((result as any).mappings);
     }
     return result.agentContext;
+  }
+
+  /**
+   * Executes a callback with the given executor handle (e.g. Minecraft instance).
+   * All method calls within `fn` will be dispatched through the executor's task runner (e.g. main render thread).
+   */
+  public runOn<T>(executor: any, fn: () => T): T {
+    if (
+      !this.bridge ||
+      typeof (this.bridge as any).setExecutor !== 'function'
+    ) {
+      return fn();
+    }
+    const handle = BigInt(
+      executor?.$ptr || executor?.$address || executor?.address || executor,
+    );
+    const prev = (this.bridge as any).getExecutor();
+    (this.bridge as any).setExecutor(handle);
+    try {
+      return fn();
+    } finally {
+      (this.bridge as any).setExecutor(prev);
+    }
+  }
+
+  public async runOnAsync<T>(executor: any, fn: () => Promise<T>): Promise<T> {
+    if (
+      !this.bridge ||
+      typeof (this.bridge as any).setExecutor !== 'function'
+    ) {
+      return await fn();
+    }
+    const handle = BigInt(
+      executor?.$ptr || executor?.$address || executor?.address || executor,
+    );
+    const prev = (this.bridge as any).getExecutor();
+    (this.bridge as any).setExecutor(handle);
+    try {
+      return await fn();
+    } finally {
+      (this.bridge as any).setExecutor(prev);
+    }
   }
 
   /**
@@ -1824,8 +1886,9 @@ export class SyncJavaContext extends JavaContext implements ISyncJavaContext {
     bridge: ReflectionBridge,
     mapper?: JavaMappingRegistry,
     detector?: JavaDetector,
+    pool?: any,
   ) {
-    super(bridge, true, mapper, detector);
+    super(bridge, true, mapper, detector, pool);
   }
 }
 
@@ -1839,8 +1902,9 @@ export class AsyncJavaContext extends JavaContext implements IAsyncJavaContext {
     bridge: ReflectionBridge,
     mapper?: JavaMappingRegistry,
     detector?: JavaDetector,
+    pool?: any,
   ) {
-    super(bridge, false, mapper, detector);
+    super(bridge, false, mapper, detector, pool);
   }
 }
 
@@ -1856,8 +1920,20 @@ export function createJavaContext(
     pool?: any;
   },
 ): JavaContext {
-  if (options?.sync === false) {
-    return new AsyncJavaContext(bridge, options.mapper, options.detector);
+  let mapper = options?.mapper;
+  if (!mapper) {
+    mapper = new JavaMappingRegistry();
   }
-  return new SyncJavaContext(bridge, options?.mapper, options?.detector);
+  if (options?.pool) {
+    mapper.usePool(options.pool);
+  }
+  if (options?.sync === false) {
+    return new AsyncJavaContext(
+      bridge,
+      mapper,
+      options?.detector,
+      options?.pool,
+    );
+  }
+  return new SyncJavaContext(bridge, mapper, options?.detector, options?.pool);
 }

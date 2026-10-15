@@ -646,7 +646,7 @@ export class JavaMappingRegistry {
     }
 
     if (
-      this.autoCompileStubs ||
+      this.autoCompileStubs &&
       this.isClassComplete(shortName, { strict: true })
     ) {
       this.compileStubsSync();
@@ -697,14 +697,19 @@ export class JavaMappingRegistry {
           item.realClassName ?? item.obfName ?? item.obfClassName ?? item.obf;
         const deobfName =
           item.canonicalClassName ??
+          item.schema?.canonicalClassName ??
+          item.canonical ??
+          item.schema?.canonical ??
           item.canonicalKey ??
+          item.canonicalName ??
           item.simpleName ??
           item.originalName ??
           item.deobfName ??
           item.deobf;
         if (!realClassName || !deobfName) continue;
 
-        const fMap: Record<string, string> = {};
+        this.mapClass(realClassName, deobfName);
+
         if (item.fields) {
           const fieldEntries: Array<[string, any]> =
             item.fields instanceof Map
@@ -712,7 +717,7 @@ export class JavaMappingRegistry {
               : Object.entries(item.fields);
           for (const [k, v] of fieldEntries) {
             if (typeof v === 'string') {
-              fMap[v] = k;
+              this.mapField(realClassName, v, k);
             } else if (v && typeof v === 'object') {
               const orig =
                 (v as any).originalName ??
@@ -724,13 +729,12 @@ export class JavaMappingRegistry {
                 (v as any).obf ??
                 (v as any).realFieldName;
               if (orig && real) {
-                fMap[real] = orig;
+                this.mapField(realClassName, real, orig);
               }
             }
           }
         }
 
-        const mMap: Record<string, string> = {};
         if (item.methods) {
           const methodEntries: Array<[string, any]> =
             item.methods instanceof Map
@@ -738,7 +742,7 @@ export class JavaMappingRegistry {
               : Object.entries(item.methods);
           for (const [k, v] of methodEntries) {
             if (typeof v === 'string') {
-              mMap[v] = k;
+              this.mapMethod(realClassName, v, k);
             } else if (v && typeof v === 'object') {
               const orig =
                 (v as any).originalName ??
@@ -750,16 +754,11 @@ export class JavaMappingRegistry {
                 (v as any).obf ??
                 (v as any).realMethodName;
               if (orig && real) {
-                mMap[real] = orig;
+                this.mapMethod(realClassName, real, orig);
               }
             }
           }
         }
-
-        this.mapClass(realClassName, deobfName, {
-          fields: fMap,
-          methods: mMap,
-        });
       }
 
       if (this.database) {
@@ -781,6 +780,11 @@ export class JavaMappingRegistry {
    */
   public usePool(pool: any): this {
     if (!pool) return this;
+    if (pool.canonicalToObf instanceof Map) {
+      for (const [canon, obf] of pool.canonicalToObf.entries()) {
+        this.mapClass(obf, canon);
+      }
+    }
     if (typeof pool.getAllDetected === 'function') {
       return this.syncPool(pool.getAllDetected());
     }

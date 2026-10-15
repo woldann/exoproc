@@ -64,7 +64,7 @@ export function loadNavigationDatabase(): GuiNavigationDatabase {
 const OBFUSCATION_FALLBACKS: Record<string, string> = {
   axz: 'GuiScreenOptionsSounds',
   axn: 'GuiOptions',
-  aye: 'GuiOptions',
+  aye: 'GuiControls',
   axp: 'GuiIngameMenu',
   ayb: 'GuiVideoSettings',
   axe: 'GuiGameOver',
@@ -673,13 +673,37 @@ export class GuiNavigationGraph {
           await client.evalRemote(`
             (function() {
               var mc = (typeof mc !== 'undefined' && mc) ||
-                       (typeof Java !== 'undefined' && Java.type ? (Java.type('net.minecraft.client.Minecraft')?.theMinecraft || Java.type('ave')?.S) : null);
+                       (typeof Java !== 'undefined' && Java.type ? (
+                         (function() {
+                           try { return Java.type('net.minecraft.client.Minecraft').theMinecraft; } catch (e) {}
+                           try { return Java.type('net.minecraft.client.Minecraft').getMinecraft(); } catch (e) {}
+                           try { return Java.type('ave').S; } catch (e) {}
+                           try { return Java.type('ave').A(); } catch (e) {}
+                           return null;
+                         })()
+                       ) : null);
               if (!mc) return;
-              var MenuCls = (typeof Java !== 'undefined' && Java.type) ? (Java.type('net.minecraft.client.gui.GuiIngameMenu') || Java.type('aye')) : null;
+              var MenuCls = null;
+              if (typeof Java !== 'undefined' && Java.type) {
+                try { MenuCls = Java.type('net.minecraft.client.gui.GuiIngameMenu'); } catch (e) {}
+                if (!MenuCls) {
+                  try { MenuCls = Java.type('axp'); } catch (e) {}
+                }
+              }
               if (MenuCls) {
                 var screen = new MenuCls();
-                if (typeof mc.displayGuiScreen === 'function') mc.displayGuiScreen(screen);
-                else if (typeof mc.a === 'function') mc.a(screen);
+                var doOpen = function() {
+                  if (typeof mc.displayGuiScreen === 'function') {
+                    try { mc.displayGuiScreen(screen); } catch (e) { if (typeof mc.a === 'function') mc.a(screen); }
+                  } else if (typeof mc.a === 'function') {
+                    mc.a(screen);
+                  }
+                };
+                if (typeof Java !== 'undefined' && typeof Java.runOn === 'function') {
+                  try { Java.runOn(mc, doOpen); } catch (e) { doOpen(); }
+                } else {
+                  doOpen();
+                }
               }
             })()
           `);

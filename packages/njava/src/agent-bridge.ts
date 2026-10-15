@@ -707,6 +707,7 @@ export class AgentReflectionBridge {
 
   public async getObjectClass(objPtr: bigint): Promise<bigint> {
     const data = await this.postAsync('/reflection/object/class', {
+      handle: Number(objPtr),
       targetHandle: Number(objPtr),
     });
 
@@ -723,6 +724,7 @@ export class AgentReflectionBridge {
 
   public getObjectClassSync(objPtr: bigint): bigint {
     const data = this.postSync('/reflection/object/class', {
+      handle: Number(objPtr),
       targetHandle: Number(objPtr),
     });
 
@@ -761,6 +763,7 @@ export class AgentReflectionBridge {
 
   public async getAoString(objPtr: bigint): Promise<string> {
     const data = await this.postAsync('/reflection/object/string', {
+      handle: Number(objPtr),
       targetHandle: Number(objPtr),
     });
 
@@ -772,6 +775,7 @@ export class AgentReflectionBridge {
 
   public getAoStringSync(objPtr: bigint): string {
     const data = this.postSync('/reflection/object/string', {
+      handle: Number(objPtr),
       targetHandle: Number(objPtr),
     });
 

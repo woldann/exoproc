@@ -722,12 +722,13 @@ export function getAgentMappingPool(): any {
         }
         const root = findRepoRoot();
         const candidates = [
+          resolve(root, 'packages/minecraft/src/mappings/mappings-1.8.9.json'),
+          resolve(root, 'packages/minecraft/dist/mappings/mappings-1.8.9.json'),
           resolve(process.cwd(), 'mappings.json'),
           resolve(process.cwd(), 'live-crawled-mappings.json'),
           resolve(dirname(process.cwd()), 'mappings.json'),
           resolve(root, 'packages/exoproc/live-crawled-mappings.json'),
           resolve(root, 'packages/exoproc/mappings.json'),
-          resolve(root, 'packages/minecraft/src/mappings/mappings-1.8.9.json'),
         ];
         for (const p of candidates) {
           if (existsSync(p)) {
@@ -829,7 +830,7 @@ export async function isMinecraftTarget(
   if (status.windowTitle?.toLowerCase().includes('minecraft')) return true;
   if (status.targetJar?.toLowerCase().includes('minecraft')) return true;
   if (status.classpath?.toLowerCase().includes('minecraft')) return true;
-  if (status.mode === 'agent') {
+  if (status.mode === 'agent' || status.buildId || status.port) {
     try {
       const java = getAgentJavaContext(host, port);
       const obf =
@@ -966,6 +967,8 @@ export async function executeScriptWithAgent(
       to: context.to?.bind(context),
       extend: context.extend?.bind(context),
       super: context.super?.bind(context),
+      runOn: context.runOn?.bind(context),
+      runOnAsync: context.runOnAsync?.bind(context),
     });
 
     const javaProxy = new Proxy(

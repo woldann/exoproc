@@ -1,32 +1,53 @@
 /**
- * Inspect the currently active GUI screen
- * Outputs button information for the active screen
+ * Inspect the currently active GUI screen and player state
  */
 
-interface ButtonInfo {
-  id: number;
-  text: string;
-  x: number;
-  y: number;
-  enabled: boolean;
-}
-
-interface ScreenInfo {
-  name: string;
-  obfuscatedClass: string;
-  canonicalClass: string;
-  buttons: ButtonInfo[];
-}
-
 try {
-  // Get Minecraft instance
-  const mcClass = Java.type('net.minecraft.client.Minecraft');
-  const mc = mcClass.getMinecraft
-    ? mcClass.getMinecraft()
-    : mcClass.getInstance();
-  const currentScreen = mc.currentScreen;
+  // 1. Resolve Minecraft instance
+  let mc: any = null;
+  if (typeof (globalThis as any).mc !== 'undefined' && (globalThis as any).mc) {
+    mc = (globalThis as any).mc;
+  }
+  if (!mc && typeof Java !== 'undefined' && Java.type) {
+    try {
+      const mcCls = Java.type('net.minecraft.client.Minecraft');
+      mc =
+        mcCls.theMinecraft ||
+        (typeof mcCls.getMinecraft === 'function'
+          ? mcCls.getMinecraft()
+          : null);
+    } catch (e) {}
+    if (!mc) {
+      try {
+        const ave = Java.type('ave');
+        mc = ave.S || (typeof ave.A === 'function' ? ave.A() : null);
+      } catch (e) {}
+    }
+  }
 
-  if (!currentScreen) {
+  // 2. Resolve Player state
+  const player = mc ? mc.thePlayer || mc.h : null;
+  if (
+    player &&
+    (player.$ptr || player.$address || typeof player.getClass === 'function')
+  ) {
+    const px = player.posX !== undefined ? Number(player.posX) : 0;
+    const py = player.posY !== undefined ? Number(player.posY) : 0;
+    const pz = player.posZ !== undefined ? Number(player.posZ) : 0;
+    print(`RESULT:PLAYER|true|${px}|${py}|${pz}`);
+  } else {
+    print('RESULT:PLAYER|false|0|0|0');
+  }
+
+  // 3. Resolve Current Screen
+  const currentScreen = mc ? mc.currentScreen || mc.m : null;
+  if (
+    !currentScreen ||
+    (!currentScreen.$ptr &&
+      !currentScreen.$address &&
+      typeof currentScreen.getClass !== 'function')
+  ) {
+    print('RESULT:NO_SCREEN');
     print(
       'RESULT:INSPECT_GUI|' +
         JSON.stringify({
@@ -34,133 +55,149 @@ try {
           obfuscatedClass: '',
           canonicalClass: 'null',
           buttons: [],
-        } as ScreenInfo),
+        }),
     );
   } else {
-    const screenClass = currentScreen.getClass();
-    const screenName = screenClass.getSimpleName();
-    const canonicalName = screenClass.getCanonicalName();
+    let realClass = '';
+    const scrPtr = currentScreen.$ptr || currentScreen.$address;
+    if (
+      typeof Java !== 'undefined' &&
+      Java.bridge?.getObjectClassNameSync &&
+      scrPtr
+    ) {
+      try {
+        realClass = Java.bridge.getObjectClassNameSync(BigInt(scrPtr));
+      } catch (e) {}
+    }
+    if (!realClass) {
+      realClass =
+        (typeof currentScreen.getClass === 'function'
+          ? currentScreen.getClass().getName()
+          : '') ||
+        currentScreen.$className ||
+        'GuiScreen';
+    }
+    const deobfClass =
+      typeof Java !== 'undefined' && Java.mapper
+        ? Java.mapper.resolveDeobfClass(realClass)
+        : realClass;
+    const simpleName = deobfClass.includes('.')
+      ? deobfClass.split('.').pop()!
+      : deobfClass;
+    const canonicalClass = deobfClass.includes('.')
+      ? deobfClass
+      : `net.minecraft.client.gui.${deobfClass}`;
+    const superclass = 'GuiScreen';
 
-    // Get button list
-    const buttons: ButtonInfo[] = [];
-    const buttonList = currentScreen.buttonList || [];
+    print(
+      `RESULT:SCREEN|${simpleName}|${canonicalClass}|${realClass}|${superclass}`,
+    );
 
-    if (buttonList.length > 0) {
-      for (let i = 0; i < buttonList.length; i++) {
-        const button = buttonList[i];
-        const btnClass = button.getClass();
+    // Buttons
+    const buttonList = currentScreen.buttonList || currentScreen.n || [];
+    const count = buttonList
+      ? typeof buttonList.size === 'function'
+        ? buttonList.size()
+        : buttonList.length || 0
+      : 0;
+    const buttons: Array<{
+      id: number;
+      text: string;
+      enabled: boolean;
+      visible: boolean;
+      x: number;
+      y: number;
+      realClass?: string;
+    }> = [];
 
-        // Get button ID
-        let id = 0;
+    print(`RESULT:BUTTONS_COUNT|${count}`);
+
+    for (let i = 0; i < count; i++) {
+      const b =
+        typeof buttonList.get === 'function'
+          ? buttonList.get(i)
+          : buttonList[i];
+      if (!b) continue;
+
+      const bid =
+        typeof b.id === 'number' ? b.id : typeof b.k === 'number' ? b.k : i;
+      let btext =
+        typeof b.displayString === 'string'
+          ? b.displayString
+          : typeof b.j === 'string'
+            ? b.j
+            : '';
+      const ben =
+        typeof b.enabled === 'boolean'
+          ? b.enabled
+          : typeof b.l === 'boolean'
+            ? b.l
+            : true;
+      const bvis =
+        typeof b.visible === 'boolean'
+          ? b.visible
+          : typeof b.m === 'boolean'
+            ? b.m
+            : true;
+      const bx =
+        typeof b.xPosition === 'number'
+          ? b.xPosition
+          : typeof b.h === 'number'
+            ? b.h
+            : 0;
+      const by =
+        typeof b.yPosition === 'number'
+          ? b.yPosition
+          : typeof b.i === 'number'
+            ? b.i
+            : 0;
+      let bcls = '';
+      const bPtr = b.$ptr || b.$address;
+      if (
+        typeof Java !== 'undefined' &&
+        Java.bridge?.getObjectClassNameSync &&
+        bPtr
+      ) {
         try {
-          const idField = btnClass.getDeclaredField('id');
-          idField.setAccessible(true);
-          id = idField.get(button);
-        } catch (e) {
-          try {
-            const idField = btnClass.getDeclaredField('field_146827_b');
-            idField.setAccessible(true);
-            id = idField.get(button);
-          } catch (e2) {
-            // Try finding first int field
-            const fields = btnClass.getDeclaredFields();
-            for (let j = 0; j < fields.length; j++) {
-              if (fields[j].getType().getName() === 'int') {
-                fields[j].setAccessible(true);
-                const val = fields[j].get(button);
-                if (typeof val === 'number' && val < 100) {
-                  id = val;
-                  break;
-                }
-              }
-            }
-          }
-        }
-
-        // Get display text
-        let text = '';
-        try {
-          const displayField = btnClass.getDeclaredField('displayString');
-          displayField.setAccessible(true);
-          text = String(displayField.get(button) || '');
-        } catch (e) {
-          try {
-            const displayField = btnClass.getDeclaredField('field_146826_j');
-            displayField.setAccessible(true);
-            text = String(displayField.get(button) || '');
-          } catch (e2) {
-            // Find first String field
-            const fields = btnClass.getDeclaredFields();
-            for (let j = 0; j < fields.length; j++) {
-              if (fields[j].getType().getName() === 'java.lang.String') {
-                fields[j].setAccessible(true);
-                text = String(fields[j].get(button) || '');
-                if (text.trim().length > 0) break;
-              }
-            }
-          }
-        }
-
-        // Get position (x, y)
-        let x = 0,
-          y = 0;
-        try {
-          const xField = btnClass.getDeclaredField('xPosition');
-          xField.setAccessible(true);
-          x = xField.get(button);
-        } catch (e) {
-          try {
-            const xField = btnClass.getDeclaredField('field_146829_i');
-            xField.setAccessible(true);
-            x = xField.get(button);
-          } catch (e2) {}
-        }
-
-        try {
-          const yField = btnClass.getDeclaredField('yPosition');
-          yField.setAccessible(true);
-          y = yField.get(button);
-        } catch (e) {
-          try {
-            const yField = btnClass.getDeclaredField('field_146830_h');
-            yField.setAccessible(true);
-            y = yField.get(button);
-          } catch (e2) {}
-        }
-
-        // Get enabled state
-        let enabled = true;
-        try {
-          const enabledField = btnClass.getDeclaredField('enabled');
-          enabledField.setAccessible(true);
-          enabled = enabledField.get(button);
-        } catch (e) {
-          try {
-            const enabledField = btnClass.getDeclaredField('field_146828_g');
-            enabledField.setAccessible(true);
-            enabled = enabledField.get(button);
-          } catch (e2) {}
-        }
-
-        buttons.push({
-          id,
-          text: text.trim(),
-          x,
-          y,
-          enabled,
-        });
+          bcls = Java.bridge.getObjectClassNameSync(BigInt(bPtr));
+        } catch (e) {}
       }
+      if (!bcls) {
+        bcls =
+          b.$className ||
+          (typeof b.getClass === 'function' ? b.getClass().getName() : '') ||
+          '';
+      }
+
+      if (!btext && bcls) {
+        if (bcls.includes('Language') || bcls === 'avz') btext = 'Language...';
+        else if (bcls.includes('Lock') || bcls === 'awc') btext = 'Lock';
+      }
+
+      buttons.push({
+        id: bid,
+        text: btext.trim(),
+        enabled: ben,
+        visible: bvis,
+        x: bx,
+        y: by,
+        realClass: bcls,
+      });
+
+      print(
+        `RESULT:BTN|${bid}|${btext.trim()}|${ben}|${bvis}|${bx}|${by}|${bcls}`,
+      );
     }
 
-    const result: ScreenInfo = {
-      name: screenName,
-      obfuscatedClass:
-        screenClass.getName().split('.').pop() || screenClass.getName(),
-      canonicalClass: canonicalName,
-      buttons,
-    };
-
-    print('RESULT:INSPECT_GUI|' + JSON.stringify(result));
+    print(
+      'RESULT:INSPECT_GUI|' +
+        JSON.stringify({
+          name: simpleName,
+          obfuscatedClass: realClass,
+          canonicalClass,
+          buttons,
+        }),
+    );
   }
 } catch (error) {
   print('RESULT:INSPECT_GUI|ERROR:' + String(error));
