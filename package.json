@@ -36,32 +36,8 @@
   },
   "packageManager": "bun@1.4.3",
   "bin": {
+    "exoproc": "./packages/exoproc/src/cli.ts",
     "bun-wine": "./bun-wine"
-  },
-  "dependencies": {
-    "@exoproc/simulate": "workspace:*",
-    "@exoproc/win32-abi": "workspace:*",
-    "bun-capstone": "workspace:*",
-    "bun-capstone-abi": "workspace:*",
-    "bun-minhook": "workspace:*",
-    "bun-nhook": "workspace:*",
-    "bun-njava": "workspace:*",
-    "bun-nshm": "workspace:*",
-    "bun-nthread": "workspace:*",
-    "bun-thunks": "workspace:*",
-    "bun-winapi": "workspace:*",
-    "bun-xffi": "workspace:*",
-    "@woldann/exoproc": "workspace:*",
-    "exoproc-accessors": "workspace:*",
-    "exoproc-asm": "workspace:*",
-    "exoproc-dummy": "workspace:*",
-    "exoproc-jjit": "workspace:*",
-    "exoproc-mappings": "workspace:*",
-    "exoproc-minecraft": "workspace:*",
-    "exoproc-nashorn": "workspace:*",
-    "exoproc-runtime": "workspace:*",
-    "exoproc-utils": "workspace:*",
-    "njava-agent": "workspace:*"
   },
   "scripts": {
     "server:dev": "bun run scripts/dev-server.ts",

@@ -90,3 +90,4 @@ packages/minecraft/src/mappings/mappings-1.8.9.json
 # Daemon standalone binaries/bundles and tool scratch output
 packages/exoproc-daemon/standalone/
 packages/exoproc-tool/tmp/
+scratch/
