@@ -67,7 +67,7 @@ const config = {
   turbopack: {
     root: path.resolve(__dirname, '../..'),
     resolveAlias: {
-      'bun:ffi': '@exoproc/simulate/bun-ffi',
+      'bun:ffi': '@woldann/simulate/bun-ffi',
     },
   },
   webpack(webpackConfig) {

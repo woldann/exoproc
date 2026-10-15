@@ -1067,7 +1067,7 @@ export class NodeHostBridge {
     const workspaceAliases = await this.getWorkspacePackageAliases();
     const simulateEntry = workspaceAliases['@woldann/simulate'];
     if (!simulateEntry) {
-      throw new Error('Workspace package @exoproc/simulate was not found');
+      throw new Error('Workspace package @woldann/simulate was not found');
     }
     const workerDirectory = new URL('./worker/', simulateEntry);
     const workerUrl = (filename: string) =>

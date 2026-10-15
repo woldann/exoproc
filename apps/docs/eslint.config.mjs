@@ -32,7 +32,12 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ['@exoproc/simulate', '@exoproc/simulate/*'],
+              group: [
+                '@woldann/simulate',
+                '@woldann/simulate/*',
+                '@exoproc/simulate',
+                '@exoproc/simulate/*',
+              ],
               message:
                 'Only src/shell/main/** may import the simulation engine directly. Reach it through window.exoproc.* (see src/shell/preload/api.ts) instead.',
             },
