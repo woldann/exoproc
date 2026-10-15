@@ -358,6 +358,12 @@ export class ExoprocService {
   async screenshot(
     outputPath?: string,
   ): Promise<client.ScreenshotRemoteResult> {
+    const { getActiveTarget } = await import('../session.js');
+    const active = getActiveTarget();
+    if (active?.type === 'agent') {
+      return await client.screenshotRemote(outputPath);
+    }
+
     if (isDirectSupported()) {
       const endpoint = client.getDaemonEndpoint();
       if (endpoint.port) {
