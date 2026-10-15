@@ -55,6 +55,11 @@ export interface AgentBuildOptions {
    * If omitted, a unique build ID is generated.
    */
   buildId?: string;
+
+  /**
+   * Target port to bake into the agent (default: 43378).
+   */
+  port?: number;
 }
 
 export interface AgentBuildResult {
@@ -100,8 +105,9 @@ export interface AgentBytecodeResult {
  */
 export function getAgentSources(options?: {
   buildId?: string;
+  port?: number;
 }): Record<string, string> {
-  if (options?.buildId) {
+  if (options?.buildId || options?.port !== undefined) {
     return getGeneratedAgentSources(options);
   }
   return { ...EMBEDDED_AGENT_SOURCES };
@@ -133,6 +139,7 @@ export function getAgentBytecodeSync(
     javaPath?: string;
     obfuscate?: boolean;
     buildId?: string;
+    port?: number;
     cacheDir?: string;
   } = {},
 ): AgentBytecodeResult {
@@ -141,7 +148,7 @@ export function getAgentBytecodeSync(
     options.javaVersion ?? detectJavaVersionSync(javaPath) ?? 8;
   const cacheDir = options.cacheDir ?? getDefaultAgentCacheDir();
   const buildId = options.buildId ?? generateBuildId();
-  const sources = getAgentSources({ buildId });
+  const sources = getAgentSources({ buildId, port: options.port });
   const exoprocSrc = sources['org/exoproc/njava/agent/utils/Exoproc.java'];
   if (!exoprocSrc) {
     throw new Error('Exoproc.java source not found');
@@ -207,6 +214,7 @@ export async function getAgentBytecode(
     javaPath?: string;
     obfuscate?: boolean;
     buildId?: string;
+    port?: number;
     cacheDir?: string;
   } = {},
 ): Promise<AgentBytecodeResult> {
@@ -215,7 +223,7 @@ export async function getAgentBytecode(
     options.javaVersion ?? (await detectJavaVersion(javaPath)) ?? 8;
   const cacheDir = options.cacheDir ?? getDefaultAgentCacheDir();
   const buildId = options.buildId ?? generateBuildId();
-  const sources = getAgentSources({ buildId });
+  const sources = getAgentSources({ buildId, port: options.port });
   const exoprocSrc = sources['org/exoproc/njava/agent/utils/Exoproc.java'];
   if (!exoprocSrc) {
     throw new Error('Exoproc.java source not found');
@@ -281,14 +289,16 @@ export function getAgentJarSync(
   const javaVersion =
     options.javaVersion ?? detectJavaVersionSync(javaPath) ?? 8;
   const cacheDir = options.cacheDir ?? getDefaultAgentCacheDir();
+  const portSuffix =
+    options.port && options.port !== 43378 ? `-p${options.port}` : '';
   const targetJarPath =
     options.outputPath ??
     resolve(
       join(
         cacheDir,
         options.obfuscate
-          ? `njava-agent-java${javaVersion}-obf.jar`
-          : `njava-agent-java${javaVersion}.jar`,
+          ? `njava-agent-java${javaVersion}${portSuffix}-obf.jar`
+          : `njava-agent-java${javaVersion}${portSuffix}.jar`,
       ),
     );
   const targetTinyPath = targetJarPath.replace(/\.jar$/, '.tiny');
@@ -320,7 +330,7 @@ export function getAgentJarSync(
 
   // Compile on-the-fly dynamically
   const buildId = options.buildId ?? generateBuildId();
-  const sources = getAgentSources({ buildId });
+  const sources = getAgentSources({ buildId, port: options.port });
   const targetVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
   const sourceVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
 
@@ -394,14 +404,16 @@ export async function getAgentJar(
   const javaVersion =
     options.javaVersion ?? (await detectJavaVersion(javaPath)) ?? 8;
   const cacheDir = options.cacheDir ?? getDefaultAgentCacheDir();
+  const portSuffix =
+    options.port && options.port !== 43378 ? `-p${options.port}` : '';
   const targetJarPath =
     options.outputPath ??
     resolve(
       join(
         cacheDir,
         options.obfuscate
-          ? `njava-agent-java${javaVersion}-obf.jar`
-          : `njava-agent-java${javaVersion}.jar`,
+          ? `njava-agent-java${javaVersion}${portSuffix}-obf.jar`
+          : `njava-agent-java${javaVersion}${portSuffix}.jar`,
       ),
     );
   const targetTinyPath = targetJarPath.replace(/\.jar$/, '.tiny');
@@ -433,7 +445,7 @@ export async function getAgentJar(
 
   // Compile on-the-fly dynamically
   const buildId = options.buildId ?? generateBuildId();
-  const sources = getAgentSources({ buildId });
+  const sources = getAgentSources({ buildId, port: options.port });
   const targetVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
   const sourceVersion = javaVersion < 17 ? '-1.8' : `-${javaVersion}`;
 

@@ -553,6 +553,7 @@ export class ExoprocService {
       javaVersion?: number;
       javaPath?: string;
       obfuscate?: boolean;
+      port?: number;
       dumpMappings?: boolean | string;
     } = {},
   ): Promise<{
@@ -562,6 +563,7 @@ export class ExoprocService {
     size: number;
     javaVersion: number;
     obfuscated: boolean;
+    port?: number;
     className?: string;
     classesCount?: number;
     buildId?: string;
@@ -666,6 +668,7 @@ export class ExoprocService {
           javaVersion,
           javaPath: options.javaPath,
           obfuscate,
+          port: options.port,
         });
 
         writeFileSync(targetPath, res.bytecode);
@@ -693,6 +696,7 @@ export class ExoprocService {
           size: res.bytecode.length,
           javaVersion: res.javaVersion,
           obfuscated: obfuscate,
+          port: options.port ?? 43378,
           className: res.className,
           buildId: res.buildId,
           mappingsPath,
@@ -703,6 +707,7 @@ export class ExoprocService {
           javaPath: options.javaPath,
           outputPath: targetPath,
           obfuscate,
+          port: options.port,
           force: true,
         });
 
@@ -730,6 +735,7 @@ export class ExoprocService {
           javaVersion: res.javaVersion,
           classesCount: res.classesCount,
           obfuscated: obfuscate,
+          port: options.port ?? 43378,
           buildId: res.buildId,
           mappingsPath,
         };

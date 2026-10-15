@@ -12,6 +12,7 @@ export function generateBuildId(): string {
 
 export interface BuildExoprocOptions {
   buildId?: string;
+  port?: number;
 }
 
 /**
@@ -21,6 +22,7 @@ export function buildExoprocClass(
   options: BuildExoprocOptions = {},
 ): JavaClassBuilder {
   const buildId = options.buildId ?? generateBuildId();
+  const port = options.port ?? 43378;
   const cls = new JavaClassBuilder('Exoproc');
 
   cls
@@ -58,7 +60,7 @@ export function buildExoprocClass(
     .public()
     .static()
     .final()
-    .initialValue('43378')
+    .initialValue(String(port))
 
     .field('instance', 'Exoproc')
     .private()
@@ -1326,57 +1328,8 @@ if (httpServer != null) {
     .body('shutdown();')
 
     // =========================================================================
-    // Dynamic In-Process Attach & CLI Main
+    // Standalone CLI Main Runner
     // =========================================================================
-
-    .method('attach', 'boolean')
-    .public()
-    .static()
-    .params([
-      { name: 'pid', type: 'String' },
-      { name: 'port', type: 'int' },
-    ])
-    .body(
-      `try {
-    File jarFile = null;
-    try {
-        jarFile = new File(Exoproc.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-    } catch (Exception ignored) {}
-
-    if (jarFile == null || !jarFile.isFile()) {
-        System.err.println("❌ Could not locate agent jar to attach.");
-        return false;
-    }
-
-    Class<?> vmClass = null;
-    try {
-        vmClass = Class.forName("com.sun.tools.attach.VirtualMachine");
-    } catch (ClassNotFoundException e) {
-        File toolsJar = new File(System.getProperty("java.home"), "../lib/tools.jar");
-        if (!toolsJar.exists()) toolsJar = new File(System.getProperty("java.home"), "lib/tools.jar");
-        if (toolsJar.exists()) {
-            URLClassLoader loader = new URLClassLoader(new URL[]{toolsJar.toURI().toURL()}, Exoproc.class.getClassLoader());
-            vmClass = Class.forName("com.sun.tools.attach.VirtualMachine", true, loader);
-        } else {
-            throw e;
-        }
-    }
-
-    Method attachMethod = vmClass.getMethod("attach", String.class);
-    Object vm = attachMethod.invoke(null, pid);
-    Method loadAgentMethod = vmClass.getMethod("loadAgent", String.class, String.class);
-    loadAgentMethod.invoke(vm, jarFile.getAbsolutePath(), "port=" + port);
-    Method detachMethod = vmClass.getMethod("detach");
-    detachMethod.invoke(vm);
-
-    System.out.println("✅ Successfully attached agent to JVM PID " + pid + " on port " + port);
-    return true;
-} catch (Exception e) {
-    System.err.println("❌ Failed to attach agent: " + e.getMessage());
-    e.printStackTrace();
-    return false;
-}`,
-    )
 
     .method('main', 'void')
     .public()
@@ -1384,85 +1337,12 @@ if (httpServer != null) {
     .params([{ name: 'args', type: 'String[]' }])
     .body(
       `int port = DEFAULT_PORT;
-String jarArg = null;
-String libsArg = null;
-
-for (int i = 0; i < args.length; i++) {
-    String arg = args[i];
-    if ("--attach".equalsIgnoreCase(arg) && i + 1 < args.length) {
-        boolean ok = attach(args[++i].trim(), port);
-        System.exit(ok ? 0 : 1);
-    } else if (("--port".equalsIgnoreCase(arg) || "-p".equalsIgnoreCase(arg)) && i + 1 < args.length) {
-        try { port = Integer.parseInt(args[++i].trim()); } catch (Exception ignored) {}
-    } else if (("--jar".equalsIgnoreCase(arg) || "--inspect".equalsIgnoreCase(arg)) && i + 1 < args.length) {
-        jarArg = args[++i].trim();
-    } else if (("--libs".equalsIgnoreCase(arg) || "--libraries".equalsIgnoreCase(arg)) && i + 1 < args.length) {
-        libsArg = args[++i].trim();
-    }
+if (args != null && args.length > 0) {
+    try { port = Integer.parseInt(args[0].trim()); } catch (Exception ignored) {}
 }
-
-ClassLoader targetCl = null;
-
-if (jarArg != null) {
-    File jarFile = new File(jarArg);
-    if (!jarFile.exists() || !jarFile.isFile()) {
-        System.err.println("❌ Target JAR not found: " + jarArg);
-        System.exit(1);
-    }
-
-    List<URL> urlList = new ArrayList<URL>();
-
-    try {
-        urlList.add(jarFile.toURI().toURL());
-
-        File libsDir = libsArg != null ? new File(libsArg) : null;
-        if (libsDir == null) {
-            File cur = jarFile.getParentFile();
-            while (cur != null) {
-                File siblingLibs = new File(cur, "libraries");
-                if (siblingLibs.isDirectory()) { libsDir = siblingLibs; break; }
-                cur = cur.getParentFile();
-            }
-        }
-
-        if (libsDir != null && libsDir.isDirectory()) {
-            collectJarsRecursively(libsDir, urlList);
-        }
-
-        URL[] urls = urlList.toArray(new URL[0]);
-        targetCl = new URLClassLoader(urls, Exoproc.class.getClassLoader());
-        Thread.currentThread().setContextClassLoader(targetCl);
-        System.out.println("📦 Target JAR loaded: " + jarFile.getName());
-    } catch (Exception e) {
-        System.err.println("❌ Failed to inspect target JAR: " + e.getMessage());
-        System.exit(1);
-    }
-} else {
-    targetCl = Exoproc.class.getClassLoader();
-    Thread.currentThread().setContextClassLoader(targetCl);
-}
-
-init(null, targetCl, null, port);
+init(null, Exoproc.class.getClassLoader(), null, port);
+System.out.println("[Exoproc] Agent server running on port " + port);
 try { Thread.sleep(Long.MAX_VALUE); } catch (InterruptedException ignored) {}`,
-    )
-
-    .method('collectJarsRecursively', 'void')
-    .private()
-    .static()
-    .params([
-      { name: 'dir', type: 'File' },
-      { name: 'urls', type: 'List<URL>' },
-    ])
-    .body(
-      `if (dir == null || !dir.exists()) return;
-File[] files = dir.listFiles();
-if (files == null) return;
-for (File f : files) {
-    if (f.isDirectory()) collectJarsRecursively(f, urls);
-    else if (f.isFile() && f.getName().toLowerCase().endsWith(".jar")) {
-        try { urls.add(f.toURI().toURL()); } catch (Exception ignored) {}
-    }
-}`,
     )
 
     // =========================================================================

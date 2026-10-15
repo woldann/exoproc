@@ -9,7 +9,6 @@
   "main": "./dist/index.js",
   "bin": {
     "exoproc": "./dist/cli.js",
-    "exoproc-daemon": "./dist/daemon/cli.js",
     "inspect-jar": "./dist/remote/inspect-jar.js"
   },
   "exports": {
@@ -24,14 +23,6 @@
     "./remote": {
       "types": "./dist/remote/index.d.ts",
       "import": "./dist/remote/index.js"
-    },
-    "./daemon": {
-      "types": "./dist/daemon/index.d.ts",
-      "import": "./dist/daemon/index.js"
-    },
-    "./daemon/cli": {
-      "types": "./dist/daemon/cli.d.ts",
-      "import": "./dist/daemon/cli.js"
     },
     "./cli": {
       "types": "./dist/cli.d.ts",

@@ -149,7 +149,7 @@ describe('njava: Dynamic Java Agent Builder', () => {
     expect(dumpClass.success).toBe(true);
     expect(dumpClass.type).toBe('class');
     expect(existsSync(dumpClass.path)).toBe(true);
-    expect(dumpClass.size).toBeGreaterThan(20000);
+    expect(dumpClass.size).toBeGreaterThan(15000);
     expect(dumpClass.className).toBe('org.exoproc.njava.agent.utils.Exoproc');
-  });
+  }, 30000);
 });

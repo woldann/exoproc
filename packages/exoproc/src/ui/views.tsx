@@ -1054,3 +1054,83 @@ export const SelectCard: React.FC<{ data: any }> = ({ data }) => {
     </Box>
   );
 };
+
+/**
+ * 16. Agent Dump Card: Shows details of extracted/dumped agent JAR or .class.
+ */
+export const AgentDumpCard: React.FC<{ data: any }> = ({ data }) => {
+  const isErr = data?.success === false;
+  const isJar = data?.type === 'jar';
+  return (
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor={isErr ? 'red' : 'green'}
+      paddingX={1}
+      width={76}
+    >
+      <Box justifyContent="space-between" marginBottom={1}>
+        <Text bold color={isErr ? 'red' : 'green'}>
+          {isErr
+            ? '❌ Exoproc Agent Dump Failed'
+            : isJar
+              ? '📦 Exoproc Java Agent JAR Dumped'
+              : '⚡ Exoproc Java Agent .class Dumped'}
+        </Text>
+        <Text color="black" backgroundColor={isErr ? 'red' : 'green'}>
+          {' '}
+          PORT: {data.port || 43378}{' '}
+        </Text>
+      </Box>
+
+      {isErr ? (
+        <Box flexDirection="column">
+          <Text color="red">{data.error || 'Unknown error during dump'}</Text>
+        </Box>
+      ) : (
+        <Box flexDirection="column" gap={0}>
+          <Box justifyContent="space-between">
+            <Text color="gray">Output Path:</Text>
+            <Text bold color="white">
+              {data.path}
+            </Text>
+          </Box>
+          <Box justifyContent="space-between">
+            <Text color="gray">Size:</Text>
+            <Text color="cyan">
+              {data.size} bytes ({((data.size || 0) / 1024).toFixed(1)} KB)
+            </Text>
+          </Box>
+          <Box justifyContent="space-between">
+            <Text color="gray">Target Java:</Text>
+            <Text color="yellow">Java {data.javaVersion}</Text>
+          </Box>
+          {data.classesCount !== undefined ? (
+            <Box justifyContent="space-between">
+              <Text color="gray">Classes Packaged:</Text>
+              <Text color="cyan">{data.classesCount} class(es)</Text>
+            </Box>
+          ) : null}
+          {data.className ? (
+            <Box justifyContent="space-between">
+              <Text color="gray">Main Class:</Text>
+              <Text color="white">{data.className}</Text>
+            </Box>
+          ) : null}
+          {data.buildId ? (
+            <Box justifyContent="space-between">
+              <Text color="gray">Build ID:</Text>
+              <Text color="magenta">{data.buildId}</Text>
+            </Box>
+          ) : null}
+          <Box justifyContent="space-between">
+            <Text color="gray">Obfuscated:</Text>
+            <Text color={data.obfuscated ? 'green' : 'gray'}>
+              {data.obfuscated ? 'Yes (TinyRemapper)' : 'No'}
+            </Text>
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
+};

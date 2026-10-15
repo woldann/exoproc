@@ -14,6 +14,7 @@ import {
   ActionCard,
   GenericCard,
   SelectCard,
+  AgentDumpCard,
 } from './views.js';
 
 export interface RenderOptions {
@@ -122,6 +123,13 @@ export async function renderCliResult(
         } else {
           element = <ActionCard action={command} result={data} />;
         }
+        break;
+
+      case 'agent:dump':
+      case 'dump-agent':
+      case 'agent:extract':
+      case 'agent:export':
+        element = <AgentDumpCard data={data} />;
         break;
 
       default:

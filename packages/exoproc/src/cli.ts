@@ -445,16 +445,20 @@ program
 // 7. Dump / Extract Agent (JAR or .class)
 program
   .command('agent:dump [outputPath]')
+  .alias('dump-agent')
   .alias('agent:extract')
   .alias('agent:export')
   .description(
-    'Extract compiled Exoproc Java agent as a .jar or raw .class file for inspection',
+    'Extract compiled Exoproc Java agent as a .jar or raw .class file for inspection or manual deployment',
   )
+  .option('-p, --port <port>', 'Bake port into agent (default: 43378)', '43378')
+  .option('--java <version>', 'Target Java major version (default: 8)', '8')
   .option(
     '-c, --class',
     'Extract raw .class bytecode (Exoproc.class) instead of a JAR',
   )
   .option('-j, --jar', 'Extract as a .jar archive')
+  .option('--obfuscate', 'Obfuscate agent bytecode with TinyRemapper')
   .option('--json', 'Output pure JSON')
   .action((outputPath, opts) => {
     const isClass =
@@ -469,6 +473,9 @@ program
         service.dumpAgent({
           path: outputPath,
           format,
+          port: opts.port ? parseInt(opts.port, 10) : 43378,
+          javaVersion: opts.java ? parseInt(opts.java, 10) : 8,
+          obfuscate: Boolean(opts.obfuscate),
         }),
       opts,
     );
