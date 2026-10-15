@@ -147,7 +147,6 @@ export class ExoprocService {
       // Initialize stealth Java accessor (spawns dedicated worker thread in JVM and releases game threads)
       const accessor = await createAccessor(targetPid, {
         njava: 'stealth',
-        idType: 'processAllThreadIds',
       });
       accessor.setSessionMetadata('processName', processName);
       accessor.setSessionMetadata('windowTitle', windowTitle);
