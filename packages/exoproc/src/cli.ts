@@ -52,6 +52,7 @@ async function runService<T>(
     if (data && (data as any).success === false) {
       process.exit(1);
     }
+    process.exit(0);
   } catch (err: any) {
     const msg = err instanceof Error ? err.message : String(err);
     const errPayload = {

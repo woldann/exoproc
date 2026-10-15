@@ -11,6 +11,7 @@ import {
   type DummyFunction,
   type CTypeOrString,
 } from 'bun-xffi';
+import { Module } from 'bun-winapi';
 import {
   JNI_INVOKE_INTERFACE_FIELDS,
   JNI_NATIVE_INTERFACE_FIELDS,
@@ -147,7 +148,6 @@ function requireVtableAddr(
  * right after spawning the process (the common case) would otherwise race it.
  */
 function findRemoteJvmModule(pid: number): { path: string; base: bigint } {
-  const { Module } = require('bun-winapi');
   const deadline = Date.now() + 15000;
   for (;;) {
     const modules = Module.getModules(pid);

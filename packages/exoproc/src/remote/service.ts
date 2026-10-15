@@ -142,17 +142,13 @@ export class ExoprocService {
         targetPid = target.pid;
         processName = target.name;
         windowTitle = target.windowTitle || '';
-      } else {
-        const procs = await this.listProcesses().catch(() => []);
-        const target = procs.find((p) => p.pid === targetPid);
-        if (target) {
-          processName = target.name;
-          windowTitle = target.windowTitle || '';
-        }
       }
 
-      // Initialize stealth accessor
-      const accessor = await createAccessor(targetPid, { njava: 'stealth' });
+      // Initialize stealth Java accessor (spawns dedicated worker thread in JVM and releases game threads)
+      const accessor = await createAccessor(targetPid, {
+        njava: 'stealth',
+        idType: 'processAllThreadIds',
+      });
       accessor.setSessionMetadata('processName', processName);
       accessor.setSessionMetadata('windowTitle', windowTitle);
 
