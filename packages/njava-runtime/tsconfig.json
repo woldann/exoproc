@@ -9,8 +9,17 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "references": [
-    { "path": "../jjit" },
-    { "path": "../njava-mappings" },
-    { "path": "../njava-nashorn" }
+    {
+      "path": "../jjit"
+    },
+    {
+      "path": "../njava-mappings"
+    },
+    {
+      "path": "../njava-nashorn"
+    },
+    {
+      "path": "../utils"
+    }
   ]
 }

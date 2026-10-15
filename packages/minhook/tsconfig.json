@@ -7,5 +7,18 @@
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
-  "references": [{ "path": "../winapi" }, { "path": "../capstone" }]
+  "references": [
+    {
+      "path": "../winapi"
+    },
+    {
+      "path": "../capstone"
+    },
+    {
+      "path": "../xffi"
+    },
+    {
+      "path": "../utils"
+    }
+  ]
 }

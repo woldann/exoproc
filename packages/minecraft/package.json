@@ -19,7 +19,9 @@
     "bun": ">=1.3.0"
   },
   "dependencies": {
-    "exoproc-mappings": "workspace:*"
+    "exoproc-mappings": "workspace:*",
+    "bun-njava": "workspace:*",
+    "bun-xffi": "workspace:*"
   },
   "optionalDependencies": {
     "bun-njava": "workspace:*",

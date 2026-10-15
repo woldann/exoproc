@@ -8,9 +8,23 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "references": [
-    { "path": "../nthread" },
-    { "path": "../winapi" },
-    { "path": "../capstone" },
-    { "path": "../accessors" }
+    {
+      "path": "../nthread"
+    },
+    {
+      "path": "../winapi"
+    },
+    {
+      "path": "../capstone"
+    },
+    {
+      "path": "../accessors"
+    },
+    {
+      "path": "../xffi"
+    },
+    {
+      "path": "../utils"
+    }
   ]
 }

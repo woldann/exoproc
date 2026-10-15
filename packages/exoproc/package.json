@@ -85,7 +85,8 @@
     "exoproc-mappings": "workspace:*",
     "exoproc-minecraft": "workspace:*",
     "exoproc-utils": "workspace:*",
-    "njava-agent": "workspace:*"
+    "njava-agent": "workspace:*",
+    "exoproc-asm": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.3.0"

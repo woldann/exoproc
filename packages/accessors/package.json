@@ -57,7 +57,6 @@
     "bun-nthread": "workspace:*",
     "bun-nshm": "workspace:*",
     "bun-njava": "workspace:*",
-    "bun-nhook": "workspace:*",
     "exoproc-utils": "workspace:*"
   }
 }
