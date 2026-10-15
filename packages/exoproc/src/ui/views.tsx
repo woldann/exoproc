@@ -954,3 +954,103 @@ export const FilterClassesCard: React.FC<{
     </Box>
   );
 };
+
+/**
+ * 14. Select Card: Shows target selection, 3 agent slots, and saved sessions.
+ */
+export const SelectCard: React.FC<{ data: any }> = ({ data }) => {
+  const active = data?.active;
+  const sessions = data?.sessions || [];
+  const agents = data?.agents || [];
+
+  return (
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="cyan"
+      paddingX={1}
+      width={76}
+    >
+      <Box justifyContent="space-between" marginBottom={1}>
+        <Text bold color="cyan">
+          🎯 Exoproc Target Selection
+        </Text>
+        {active ? (
+          <Text color="black" backgroundColor="green">
+            {' '}
+            ACTIVE:{' '}
+            {active.type === 'agent'
+              ? `Slot ${active.slot} (:${active.port})`
+              : `PID ${active.pid}`}{' '}
+          </Text>
+        ) : (
+          <Text color="black" backgroundColor="yellow">
+            {' '}
+            NO ACTIVE TARGET{' '}
+          </Text>
+        )}
+      </Box>
+
+      {/* Agent Slots */}
+      <Box
+        flexDirection="column"
+        borderStyle="single"
+        borderColor="gray"
+        paddingX={1}
+        marginBottom={1}
+      >
+        <Text bold color="yellow">
+          ⚡ Agent Slots (Max 3, Fixed Ports):
+        </Text>
+        {agents.map((agent: any) => {
+          const isActive =
+            active?.type === 'agent' && active.slot === agent.slot;
+          return (
+            <Box key={`slot-${agent.slot}`} justifyContent="space-between">
+              <Text color={isActive ? 'green' : 'white'} bold={isActive}>
+                {isActive ? '▶ ' : '  '}Slot {agent.slot} (Port {agent.port})
+              </Text>
+              <Text color={agent.alive ? 'green' : 'gray'}>
+                {agent.alive ? '● ONLINE' : '○ OFFLINE'}
+              </Text>
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Cached Accessor Sessions */}
+      <Box
+        flexDirection="column"
+        borderStyle="single"
+        borderColor="gray"
+        paddingX={1}
+        marginBottom={1}
+      >
+        <Text bold color="cyan">
+          💾 Cached Accessor Sessions:
+        </Text>
+        {sessions.length === 0 ? (
+          <Text dimColor> No saved sessions in .cache/exoproc/sessions/</Text>
+        ) : (
+          sessions.map((sess: any) => {
+            const isActive =
+              active?.type === 'accessor' && active.pid === sess.pid;
+            return (
+              <Box key={`sess-${sess.pid}`} justifyContent="space-between">
+                <Text color={isActive ? 'green' : 'white'} bold={isActive}>
+                  {isActive ? '▶ ' : '  '}PID {sess.pid} (
+                  {sess.metadata?.processName || 'javaw.exe'})
+                </Text>
+                <Text color="gray">
+                  {sess.metadata?.windowTitle || sess.accessorType || ''}
+                </Text>
+              </Box>
+            );
+          })
+        )}
+      </Box>
+
+      <Text dimColor>To switch target: exoproc select &lt;1|2|3|pid&gt;</Text>
+    </Box>
+  );
+};

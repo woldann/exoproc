@@ -106,6 +106,16 @@ program
   });
 
 program
+  .command('select [target]')
+  .description(
+    'Select or list active Exoproc targets (cached accessor sessions or agent slots 1-3)',
+  )
+  .option('--json', 'Output pure JSON')
+  .action((target, opts) =>
+    runService('select', () => (service as any).selectTarget(target), opts),
+  );
+
+program
   .command('upgrade [classPath]')
   .description(
     'Upgrade target connection to in-process Java Agent by loading .class bytecode',
@@ -554,32 +564,18 @@ program
     await import('./mcp.js');
   });
 
-// 10. Daemon Mode
+// 10. Daemon Mode (Deprecated)
 program
   .command('daemon')
-  .description('Start background instrumentation daemon service')
-  .option('-p, --port <port>', 'Daemon port to listen on', '43370')
-  .option('-h, --host <host>', 'Daemon host to bind to', '127.0.0.1')
-  .action(async (opts) => {
-    if (isToolMode()) {
-      console.error(
-        JSON.stringify(
-          {
-            success: false,
-            mode: 'tool',
-            error:
-              'Exoproc daemon requires native Windows x64 instrumentation with Bun (bun-xffi). On Node.js or non-Windows, run Exoproc in tool mode.',
-          },
-          null,
-          2,
-        ),
-      );
-      process.exit(1);
-    }
-    const { runDaemon } = await import('./daemon/index.js');
-    const port = parseInt(opts.port, 10) || 43370;
-    const host = opts.host || '127.0.0.1';
-    await runDaemon({ port, host });
+  .description(
+    'Legacy daemon command (deprecated: Exoproc uses direct cache-backed sessions)',
+  )
+  .action(() => {
+    console.log(
+      '⚡ Exoproc background daemon has been deprecated.\n' +
+        'Exoproc now operates directly via fast-path hibernated accessor sessions and in-process agent slots (1-3).\n' +
+        'Run `exoproc attach [pid]` to attach directly, or `exoproc select` to switch targets.',
+    );
   });
 
 if (process.argv.length <= 2) {

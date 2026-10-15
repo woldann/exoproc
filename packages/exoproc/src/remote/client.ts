@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
-import { spawn } from 'node:child_process';
 import {
   getCacheDir,
   getAgentCacheDir,
@@ -173,8 +172,14 @@ export async function checkDaemonAlive(
 }
 
 export async function ensureDaemon(): Promise<{ host: string; port: number }> {
-  const { host, port, isRemote } = getDaemonEndpoint();
+  const { getActiveTarget, AGENT_SLOTS } = await import('../session.js');
+  const active = getActiveTarget();
 
+  if (active?.type === 'agent') {
+    return { host: active.host || '127.0.0.1', port: active.port };
+  }
+
+  const { host, port } = getDaemonEndpoint();
   if (port) {
     const status = await checkDaemonAlive(host, port);
     if (status && status.alive) {
@@ -182,185 +187,15 @@ export async function ensureDaemon(): Promise<{ host: string; port: number }> {
     }
   }
 
-  // If no daemon port was explicitly reachable, probe the default agent port (43378)
-  if (!port || port === 43370) {
-    const agentStatus = await checkDaemonAlive(host, DEFAULT_AGENT_PORT);
+  // Probe agent slots 1, 2, 3
+  for (const p of AGENT_SLOTS) {
+    const agentStatus = await checkDaemonAlive('127.0.0.1', p);
     if (agentStatus && agentStatus.alive) {
-      return { host, port: DEFAULT_AGENT_PORT };
+      return { host: '127.0.0.1', port: p };
     }
   }
 
-  if (isRemote) {
-    throw new Error(
-      `Remote Exoproc daemon at ${host}:${port} is not reachable.`,
-    );
-  }
-
-  const { isToolMode, hasNativeXffi } = await import('../capabilities.js');
-
-  // In Tool Mode, do not attempt to spawn native Windows background daemon
-  if (isToolMode()) {
-    throw new Error(
-      `No active Exoproc daemon or agent found at ${host}:${port || 43370}. In Tool Mode (non-Windows), please start the daemon on Windows/Wine or connect to an in-process Java Agent.`,
-    );
-  }
-
-  // On Windows with native XFFI, Exoproc acts directly as the tool without requiring a background daemon
-  if (hasNativeXffi() && !process.env.EXOPROC_FORCE_DAEMON) {
-    return { host: '127.0.0.1', port: port || 0 };
-  }
-
-  // Not running, launch local daemon in background (standby mode)
-  console.log(
-    '⚡ Exoproc daemon not active. Launching daemon in background...',
-  );
-  const root = findRepoRoot();
-  const daemonExe = existsSync(
-    join(
-      root,
-      'packages',
-      'exoproc',
-      'dist',
-      'daemon',
-      'standalone',
-      'exoproc-daemon.exe',
-    ),
-  )
-    ? join(
-        root,
-        'packages',
-        'exoproc',
-        'dist',
-        'daemon',
-        'standalone',
-        'exoproc-daemon.exe',
-      )
-    : join(
-        root,
-        'packages',
-        'exoproc-daemon',
-        'standalone',
-        'exoproc-daemon.exe',
-      );
-  const daemonJs = existsSync(
-    join(
-      root,
-      'packages',
-      'exoproc',
-      'dist',
-      'daemon',
-      'standalone',
-      'exoproc-daemon.js',
-    ),
-  )
-    ? join(
-        root,
-        'packages',
-        'exoproc',
-        'dist',
-        'daemon',
-        'standalone',
-        'exoproc-daemon.js',
-      )
-    : join(
-        root,
-        'packages',
-        'exoproc-daemon',
-        'standalone',
-        'exoproc-daemon.js',
-      );
-  const exoprocDaemonDist = join(
-    root,
-    'packages',
-    'exoproc',
-    'dist',
-    'daemon',
-    'cli.js',
-  );
-  const exoprocDaemonSrc = join(
-    root,
-    'packages',
-    'exoproc',
-    'src',
-    'daemon',
-    'cli.ts',
-  );
-  const targetScript = existsSync(daemonJs)
-    ? daemonJs
-    : existsSync(exoprocDaemonDist)
-      ? exoprocDaemonDist
-      : existsSync(exoprocDaemonSrc)
-        ? exoprocDaemonSrc
-        : null;
-
-  const winBunDir =
-    process.env.BUN_WIN_DIR ||
-    join(process.env.HOME || '', 'Downloads', 'bun-windows-x64');
-  const winBunExe = join(winBunDir, 'bun.exe');
-  const env = { ...process.env, WINEDEBUG: process.env.WINEDEBUG || '-all' };
-
-  if (process.platform === 'win32') {
-    if (existsSync(daemonExe)) {
-      const child = spawn(daemonExe, ['daemon'], {
-        detached: true,
-        stdio: 'ignore',
-      });
-      child.unref();
-    } else if (targetScript) {
-      const child = spawn('bun', ['run', targetScript, 'daemon'], {
-        detached: true,
-        stdio: 'ignore',
-      });
-      child.unref();
-    } else {
-      throw new Error(
-        'Exoproc daemon binary or script not found. Please build with `bun run daemon:build`.',
-      );
-    }
-  } else {
-    // Linux / Wine environment
-    if (existsSync(daemonExe)) {
-      const child = spawn('wine', [daemonExe, 'daemon'], {
-        detached: true,
-        stdio: 'ignore',
-        env,
-      });
-      child.unref();
-    } else if (targetScript && existsSync(winBunExe)) {
-      const child = spawn('wine', [winBunExe, targetScript, 'daemon'], {
-        detached: true,
-        stdio: 'ignore',
-        env,
-      });
-      child.unref();
-    } else if (targetScript) {
-      const child = spawn('bun', ['run', targetScript, 'daemon'], {
-        detached: true,
-        stdio: 'ignore',
-        env,
-      });
-      child.unref();
-    } else {
-      throw new Error(
-        'Exoproc daemon binary or bundle not found. Please build with `bun run daemon:build`.',
-      );
-    }
-  }
-
-  for (let i = 0; i < 40; i++) {
-    await new Promise((r) => setTimeout(r, 200));
-    const state = getDaemonState();
-    if (state && state.port) {
-      const aliveStatus = await checkDaemonAlive('127.0.0.1', state.port);
-      if (aliveStatus && aliveStatus.alive) {
-        return { host: '127.0.0.1', port: state.port };
-      }
-    }
-  }
-
-  throw new Error(
-    'Exoproc daemon started in background but failed liveness check.',
-  );
+  return { host: '127.0.0.1', port: 0 };
 }
 
 export async function attachRemote(options?: {
@@ -427,21 +262,53 @@ export async function listProcessesRemote(): Promise<CandidateProcess[]> {
 export async function evalRemote(
   code: string,
   globals?: Record<string, any>,
-  timeoutMs?: number,
+  _timeoutMs?: number,
   options?: any,
 ): Promise<{ success: boolean; result?: any; logs: string[]; error?: string }> {
-  const { host, port } = await ensureDaemon();
-  const mode = await getTargetMode(host, port);
-  if (mode === 'agent') {
-    return await executeScriptWithAgent(host, port, code, globals, options);
+  const { getActiveTarget, withActiveAccessor, checkAgentSlot } =
+    await import('../session.js');
+  const active = getActiveTarget();
+
+  if (active?.type === 'agent') {
+    return await executeScriptWithAgent(
+      active.host ?? '127.0.0.1',
+      active.port,
+      code,
+      globals,
+      options,
+    );
   }
-  const res = await fetch(`http://${host}:${port}/eval`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, globals, ...(options || {}) }),
-    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
-  });
-  return (await res.json()) as any;
+
+  if (active?.type === 'accessor') {
+    return await withActiveAccessor(async (accessor) => {
+      return await executeScriptWithAccessor(accessor, code, globals, options);
+    });
+  }
+
+  // Fallback 1: check agent slots 1, 2, 3
+  for (const slot of [1, 2, 3] as const) {
+    const info = await checkAgentSlot(slot);
+    if (info.alive) {
+      return await executeScriptWithAgent(
+        '127.0.0.1',
+        info.port,
+        code,
+        globals,
+        options,
+      );
+    }
+  }
+
+  // Fallback 2: auto-discovery of saved accessor session
+  try {
+    return await withActiveAccessor(async (accessor) => {
+      return await executeScriptWithAccessor(accessor, code, globals, options);
+    });
+  } catch (err: any) {
+    throw new Error(
+      'No active Exoproc target. Attach to a process with `exoproc attach [pid]` or select an active target with `exoproc select`.',
+    );
+  }
 }
 
 export async function runRemote(
@@ -451,7 +318,6 @@ export async function runRemote(
   timeoutMs?: number,
   options?: any,
 ): Promise<{ success: boolean; result?: any; logs: string[]; error?: string }> {
-  const { host, port } = await ensureDaemon();
   let code = scriptCode ?? '';
   if (!code && scriptPath) {
     const abs = resolve(process.cwd(), scriptPath);
@@ -460,19 +326,7 @@ export async function runRemote(
     }
     code = readFileSync(abs, 'utf8');
   }
-
-  const mode = await getTargetMode(host, port);
-  if (mode === 'agent') {
-    return await executeScriptWithAgent(host, port, code, globals, options);
-  }
-
-  const res = await fetch(`http://${host}:${port}/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scriptCode: code, globals, ...(options || {}) }),
-    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
-  });
-  return (await res.json()) as any;
+  return await evalRemote(code, globals, timeoutMs, options);
 }
 
 export interface ScreenshotRemoteResult {
@@ -489,55 +343,83 @@ export interface ScreenshotRemoteResult {
 export async function screenshotRemote(
   outputPath?: string,
 ): Promise<ScreenshotRemoteResult> {
-  const { host, port } = await ensureDaemon();
-  const res = await fetch(`http://${host}:${port}/screenshot`);
+  const { getActiveTarget, withActiveAccessor } = await import('../session.js');
+  const active = getActiveTarget();
 
-  const contentType = res.headers.get('content-type') || '';
-
-  if (contentType.includes('image/png') || res.status === 200) {
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    let localOutPath = outputPath;
-    if (!localOutPath) {
-      localOutPath = resolve(process.cwd(), `screenshot-${Date.now()}.png`);
-    } else {
-      localOutPath = resolve(process.cwd(), localOutPath);
-    }
-
-    const dir = dirname(localOutPath);
-    if (!existsSync(dir)) {
-      try {
-        mkdirSync(dir, { recursive: true });
-      } catch {}
-    }
-
-    writeFileSync(localOutPath, buffer);
-
-    const width = parseInt(res.headers.get('x-image-width') || '0', 10);
-    const height = parseInt(res.headers.get('x-image-height') || '0', 10);
-    const titleHeader = res.headers.get('x-window-title');
-    const windowTitle = titleHeader
-      ? decodeURIComponent(titleHeader)
-      : undefined;
-
-    return {
-      success: true,
-      filePath: localOutPath,
-      width: width || undefined,
-      height: height || undefined,
-      windowTitle,
-    };
+  if (active?.type === 'accessor') {
+    return await withActiveAccessor(async (accessor) => {
+      const { captureScreenshot } = await import('../screenshot/index.js');
+      const res = await captureScreenshot({ accessor, outputPath });
+      return {
+        success: res.success,
+        filePath: res.filePath,
+        path: res.filePath,
+        width: res.width,
+        height: res.height,
+        windowTitle: res.windowTitle,
+      };
+    });
   }
 
-  // Error case
+  const { host, port } = await ensureDaemon();
+  if (port) {
+    const res = await fetch(`http://${host}:${port}/screenshot`);
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('image/png') || res.status === 200) {
+      const arrayBuffer = await res.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      let localOutPath = outputPath;
+      if (!localOutPath) {
+        localOutPath = resolve(process.cwd(), `screenshot-${Date.now()}.png`);
+      } else {
+        localOutPath = resolve(process.cwd(), localOutPath);
+      }
+
+      const dir = dirname(localOutPath);
+      if (!existsSync(dir)) {
+        try {
+          mkdirSync(dir, { recursive: true });
+        } catch {}
+      }
+
+      writeFileSync(localOutPath, buffer);
+
+      const width = parseInt(res.headers.get('x-image-width') || '0', 10);
+      const height = parseInt(res.headers.get('x-image-height') || '0', 10);
+      const titleHeader = res.headers.get('x-window-title');
+      const windowTitle = titleHeader
+        ? decodeURIComponent(titleHeader)
+        : undefined;
+
+      return {
+        success: true,
+        filePath: localOutPath,
+        path: localOutPath,
+        width: width || undefined,
+        height: height || undefined,
+        windowTitle,
+      };
+    }
+  }
+
+  // Fallback to local capture
   try {
-    const errData = (await res.json()) as any;
-    return { success: false, error: errData.error || `HTTP ${res.status}` };
-  } catch {
+    const { captureScreenshot } = await import('../screenshot/index.js');
+    const res = await captureScreenshot({ outputPath });
+    return {
+      success: res.success,
+      filePath: res.filePath,
+      path: res.filePath,
+      width: res.width,
+      height: res.height,
+      windowTitle: res.windowTitle,
+    };
+  } catch (err: any) {
     return {
       success: false,
-      error: `Failed to capture screenshot (HTTP ${res.status})`,
+      error: err?.message || String(err),
     };
   }
 }
@@ -549,6 +431,26 @@ export async function fetchScreenshot(): Promise<{
   base64?: string;
   windowTitle?: string;
 }> {
+  const { getActiveTarget, withActiveAccessor } = await import('../session.js');
+  const active = getActiveTarget();
+
+  if (active?.type === 'accessor') {
+    return await withActiveAccessor(async (accessor) => {
+      const { captureScreenshot } = await import('../screenshot/index.js');
+      const res = await captureScreenshot({ accessor });
+      const buffer = res.filePath
+        ? readFileSync(res.filePath)
+        : Buffer.alloc(0);
+      return {
+        buffer,
+        width: res.width,
+        height: res.height,
+        base64: buffer.toString('base64'),
+        windowTitle: res.windowTitle,
+      };
+    });
+  }
+
   const { host, port } = await ensureDaemon();
   const res = await fetch(`http://${host}:${port}/screenshot`);
   if (!res.ok) {
@@ -567,6 +469,163 @@ export async function fetchScreenshot(): Promise<{
     base64: buffer.toString('base64'),
     windowTitle,
   };
+}
+
+export async function executeScriptWithAccessor(
+  accessor: any,
+  sourceCode: string,
+  globals?: Record<string, any>,
+  options?: any,
+): Promise<{ success: boolean; result?: any; logs: string[]; error?: string }> {
+  const logs: string[] = [];
+  const printFn = (...args: any[]) => {
+    const line = args
+      .map((a) => {
+        if (typeof a === 'object' && a !== null) {
+          try {
+            return JSON.stringify(a);
+          } catch {
+            return String(a);
+          }
+        }
+        return String(a);
+      })
+      .join(' ');
+    logs.push(line);
+  };
+
+  try {
+    let Java: any = null;
+    try {
+      const njava = await import('bun-njava');
+      Java =
+        typeof accessor.getJavaSync === 'function'
+          ? accessor.getJavaSync()
+          : (njava as any).getJavaSync?.(accessor);
+    } catch {}
+
+    const javaProxy = Java
+      ? new Proxy(
+          {},
+          {
+            get(_t, pkg) {
+              function makePkgProxy(current: string): any {
+                return new Proxy(
+                  {},
+                  {
+                    get(_t2, member) {
+                      const fullName = `${current}.${String(member)}`;
+                      try {
+                        return Java.type(fullName);
+                      } catch {
+                        return makePkgProxy(fullName);
+                      }
+                    },
+                  },
+                );
+              }
+              return makePkgProxy(String(pkg));
+            },
+          },
+        )
+      : {};
+
+    let mc: any = null;
+    let rawMc: any = null;
+    try {
+      const { MinecraftClient, MinecraftMatcher } =
+        await import('exoproc-minecraft');
+      const mcClient = await MinecraftClient.attach(accessor, options);
+      if (Java) {
+        const matcher = new MinecraftMatcher(mcClient.bridge);
+        matcher.registerTo(Java, mcClient.mappings);
+        try {
+          const MC = Java.type('net.minecraft.client.Minecraft');
+          rawMc =
+            typeof MC.getMinecraft === 'function'
+              ? MC.getMinecraft()
+              : MC.theMinecraft;
+        } catch {}
+      }
+      mc = mcClient;
+    } catch {}
+
+    const allGlobals: Record<string, any> = {
+      Java,
+      java: javaProxy,
+      print: printFn,
+      console: {
+        log: printFn,
+        error: printFn,
+        warn: printFn,
+        info: printFn,
+      },
+      mc,
+      minecraft: mc,
+      rawMc,
+      client: mc,
+      exoproc: mc,
+      ...(globals || {}),
+    };
+
+    let cleanCode = sourceCode;
+    const rawTrimmed = sourceCode.trim();
+
+    // Check if the script should auto-return its final expression
+    const lines = rawTrimmed.split('\n');
+    let lastIdx = lines.length - 1;
+    while (lastIdx >= 0) {
+      const line = lines[lastIdx];
+      if (line !== undefined && line.trim() === '') {
+        lastIdx--;
+      } else {
+        break;
+      }
+    }
+    const lastLine = lines[lastIdx]?.trim();
+    if (lastIdx >= 0 && lastLine !== undefined) {
+      const isEligible =
+        !lastLine.startsWith('return ') &&
+        !lastLine.startsWith('const ') &&
+        !lastLine.startsWith('let ') &&
+        !lastLine.startsWith('var ') &&
+        !lastLine.startsWith('function ') &&
+        !lastLine.startsWith('class ') &&
+        !lastLine.startsWith('import ') &&
+        !lastLine.startsWith('export ') &&
+        !lastLine.startsWith('if ') &&
+        !lastLine.startsWith('if(') &&
+        !lastLine.startsWith('while ') &&
+        !lastLine.startsWith('while(') &&
+        !lastLine.startsWith('for ') &&
+        !lastLine.startsWith('for(') &&
+        !lastLine.startsWith('try ') &&
+        !lastLine.startsWith('try{') &&
+        !lastLine.startsWith('catch') &&
+        !lastLine.startsWith('finally') &&
+        !lastLine.endsWith(';') &&
+        !lastLine.endsWith('{') &&
+        !lastLine.endsWith('}');
+
+      if (isEligible) {
+        lines[lastIdx] = `return (${lastLine});`;
+        cleanCode = lines.join('\n');
+      }
+    }
+
+    const AsyncFunction = Object.getPrototypeOf(
+      async function () {},
+    ).constructor;
+    const fn = new AsyncFunction(...Object.keys(allGlobals), cleanCode);
+    const result = await fn(...Object.values(allGlobals));
+    return { success: true, result, logs };
+  } catch (err: any) {
+    return {
+      success: false,
+      logs,
+      error: err?.message || String(err),
+    };
+  }
 }
 
 let agentMappingPool: any = null;

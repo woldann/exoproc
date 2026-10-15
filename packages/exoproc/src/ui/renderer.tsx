@@ -13,6 +13,7 @@ import {
   EvalCard,
   ActionCard,
   GenericCard,
+  SelectCard,
 } from './views.js';
 
 export interface RenderOptions {
@@ -113,6 +114,14 @@ export async function renderCliResult(
       case 'shutdown':
       case 'upgrade':
         element = <ActionCard action={command} result={data} />;
+        break;
+
+      case 'select':
+        if (data && (data.sessions || data.agents)) {
+          element = <SelectCard data={data} />;
+        } else {
+          element = <ActionCard action={command} result={data} />;
+        }
         break;
 
       default:

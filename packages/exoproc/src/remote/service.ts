@@ -21,103 +21,96 @@ function isDirectSupported(): boolean {
 export class ExoprocService {
   // Status and Process Management
   async getStatus(): Promise<client.StatusResponse | null> {
-    if (isDirectSupported()) {
-      const endpoint = client.getDaemonEndpoint();
-      if (endpoint.port) {
-        const alive = await client.checkDaemonAlive(
-          endpoint.host,
-          endpoint.port,
-        );
-        if (alive) return alive;
+    const { getActiveTarget, checkAgentSlot, listSavedSessions } =
+      await import('../session.js');
+    const active = getActiveTarget();
+
+    if (active?.type === 'agent') {
+      const info = await checkAgentSlot(
+        active.slot,
+        active.host ?? '127.0.0.1',
+      );
+      if (info.alive && info.status) {
+        return {
+          alive: true,
+          attached: true,
+          daemonPid: 0,
+          port: info.port,
+          agentPort: info.port,
+          buildId: info.status.buildId,
+          version: info.status.version,
+          uptime: info.status.uptime ?? 0,
+          upgraded: true,
+          targetName: info.status.targetName || 'Minecraft (Java Agent)',
+          windowTitle: info.status.windowTitle,
+        };
       }
-      const direct = await getDirectClient();
+    }
+
+    if (active?.type === 'accessor') {
+      const { HostAccessor } = await import('bun-xffi');
+      const { existsSync } = await import('node:fs');
+      if (existsSync(active.sessionPath)) {
+        try {
+          const sess = HostAccessor.loadSession(active.sessionPath);
+          return {
+            alive: true,
+            attached: true,
+            daemonPid: process.pid,
+            pid: active.pid,
+            targetName:
+              sess.metadata?.processName || active.processName || 'javaw.exe',
+            windowTitle:
+              sess.metadata?.windowTitle || active.windowTitle || null,
+            profile: sess.metadata?.profileId || 'auto',
+            port: 0,
+            uptime: Math.floor(
+              (Date.now() -
+                Date.parse(sess.savedAt || new Date().toISOString())) /
+                1000,
+            ),
+            upgraded: false,
+            nativeSupported: true,
+          };
+        } catch {}
+      }
+    }
+
+    // Auto-discover if single saved session exists
+    const sessions = listSavedSessions();
+    if (sessions.length > 0 && sessions[0]) {
+      const s = sessions[0];
       return {
         alive: true,
-        attached: Boolean(direct.pid),
+        attached: true,
         daemonPid: process.pid,
-        pid: direct.pid ?? null,
-        targetName: direct.processName ?? null,
-        windowTitle: direct.windowTitle ?? null,
-        profile: direct.activeProfile?.id ?? 'auto',
+        pid: s.pid,
+        targetName: s.metadata?.processName || 'javaw.exe',
+        windowTitle: s.metadata?.windowTitle || null,
         port: 0,
         uptime: 0,
-        upgraded: direct.isUpgraded ?? false,
-        agentPort: direct.agentPort ?? null,
+        upgraded: false,
         nativeSupported: true,
       };
     }
-    try {
-      const { host, port } = await client.ensureDaemon();
-      const status = await client.checkDaemonAlive(host, port);
-      if (
-        status &&
-        ((status as any).buildId !== undefined ||
-          (status as any).version !== undefined ||
-          (status as any).isStandalone !== undefined)
-      ) {
-        return {
-          alive: true,
-          attached: true,
-          daemonPid: 0,
-          port,
-          agentPort: port,
-          buildId: (status as any).buildId,
-          version: (status as any).version,
-          uptime: status.uptime,
-          upgraded: true,
-          targetName: 'Minecraft (In-Process Java Agent)',
-        };
-      }
-      return status;
-    } catch {
-      const endpoint = client.getDaemonEndpoint();
-      const status = await client.checkDaemonAlive(
-        endpoint.host,
-        endpoint.port,
-      );
-      if (status) return status;
-      const agentStatus = await client.checkDaemonAlive(
-        endpoint.host,
-        client.DEFAULT_AGENT_PORT,
-      );
-      if (agentStatus) {
-        return {
-          alive: true,
-          attached: true,
-          daemonPid: 0,
-          port: client.DEFAULT_AGENT_PORT,
-          agentPort: client.DEFAULT_AGENT_PORT,
-          buildId: (agentStatus as any).buildId,
-          version: (agentStatus as any).version,
-          uptime: agentStatus.uptime,
-          upgraded: true,
-          targetName: 'Minecraft (In-Process Java Agent)',
-        };
-      }
-      return null;
-    }
+
+    return null;
   }
 
   async listProcesses(): Promise<client.CandidateProcess[]> {
     if (isDirectSupported()) {
-      const endpoint = client.getDaemonEndpoint();
-      if (endpoint.port) {
-        const alive = await client.checkDaemonAlive(
-          endpoint.host,
-          endpoint.port,
-        );
-        if (alive) return await client.listProcessesRemote();
-      }
-      const direct = await getDirectClient();
-      const procs = await direct.listProcesses();
-      return procs.map((p: any) => ({
-        pid: p.pid,
-        name: p.name,
-        windowTitle: p.windowTitle,
-        isMinecraft: p.isMinecraft,
-      }));
+      try {
+        const direct = await getDirectClient();
+        const procs = await direct.listProcesses();
+        return procs.map((p: any) => ({
+          pid: p.pid,
+          name: p.name,
+          windowTitle: p.windowTitle,
+          isMinecraft: p.isMinecraft,
+        }));
+      } catch {}
     }
-    return await client.listProcessesRemote();
+    return [];
   }
 
   async attach(pid?: number): Promise<{
@@ -126,35 +119,65 @@ export class ExoprocService {
     message?: string;
     error?: string;
   }> {
-    if (isDirectSupported()) {
-      const endpoint = client.getDaemonEndpoint();
-      if (endpoint.port) {
-        const alive = await client.checkDaemonAlive(
-          endpoint.host,
-          endpoint.port,
+    try {
+      const { createAccessor } = await import('exoproc-accessors');
+      const { getSessionPath, setActiveTarget } = await import('../session.js');
+
+      let targetPid = pid;
+      let processName = 'javaw.exe';
+      let windowTitle = '';
+
+      if (!targetPid) {
+        const procs = await this.listProcesses();
+        const target = procs.find(
+          (p) => p.isMinecraft || p.name.toLowerCase().includes('java'),
         );
-        if (alive) return await client.attachRemote({ pid });
-      }
-      try {
-        const direct = await getDirectClient();
-        const procs = await direct.listProcesses();
-        const target = pid
-          ? procs.find((p: any) => p.pid === pid)
-          : procs.find((p: any) => p.isMinecraft || p.isJava);
         if (!target) {
-          return { success: false, error: 'Target process not found' };
+          return {
+            success: false,
+            error:
+              'Target Minecraft/Java process not found. Pass PID explicitly: exoproc attach <pid>',
+          };
         }
-        await direct.connect(target.pid);
-        return {
-          success: true,
-          pid: target.pid,
-          message: `Attached directly to ${target.name} (PID: ${target.pid})`,
-        };
-      } catch (err: any) {
-        return { success: false, error: err?.message || String(err) };
+        targetPid = target.pid;
+        processName = target.name;
+        windowTitle = target.windowTitle || '';
+      } else {
+        const procs = await this.listProcesses().catch(() => []);
+        const target = procs.find((p) => p.pid === targetPid);
+        if (target) {
+          processName = target.name;
+          windowTitle = target.windowTitle || '';
+        }
       }
+
+      // Initialize stealth accessor
+      const accessor = await createAccessor(targetPid, { njava: 'stealth' });
+      accessor.setSessionMetadata('processName', processName);
+      accessor.setSessionMetadata('windowTitle', windowTitle);
+
+      const sessionPath = getSessionPath(targetPid);
+      // Hibernate thread and save session to cache file under lock
+      await (accessor as any).save(sessionPath);
+
+      // Set as active target
+      setActiveTarget({
+        type: 'accessor',
+        pid: targetPid,
+        sessionPath,
+        processName,
+        windowTitle,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return {
+        success: true,
+        pid: targetPid,
+        message: `Attached directly to ${processName} (PID: ${targetPid}) and cached session to ${sessionPath}`,
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || String(err) };
     }
-    return await client.attachRemote({ pid });
   }
 
   async detach(): Promise<{
@@ -162,40 +185,54 @@ export class ExoprocService {
     message?: string;
     error?: string;
   }> {
-    if (isDirectSupported()) {
-      const endpoint = client.getDaemonEndpoint();
-      if (endpoint.port) {
-        const alive = await client.checkDaemonAlive(
-          endpoint.host,
-          endpoint.port,
-        );
-        if (alive) return await client.detachRemote();
-      }
-      const direct = await getDirectClient();
-      await direct.disconnect();
+    const { getActiveTarget, clearActiveTarget } =
+      await import('../session.js');
+    const { existsSync, unlinkSync } = await import('node:fs');
+    const active = getActiveTarget();
+
+    if (active?.type === 'accessor') {
+      try {
+        if (existsSync(active.sessionPath)) {
+          unlinkSync(active.sessionPath);
+        }
+      } catch {}
+      clearActiveTarget();
       return {
         success: true,
-        message: 'Detached directly from target process',
+        message: `Detached from PID ${active.pid} and removed cached session`,
       };
     }
-    return await client.detachRemote();
+
+    if (active?.type === 'agent') {
+      clearActiveTarget();
+      return {
+        success: true,
+        message: `Detached from Agent slot ${active.slot} (port ${active.port})`,
+      };
+    }
+
+    clearActiveTarget();
+    return {
+      success: true,
+      message: 'Detached from target process',
+    };
   }
 
   async shutdown(): Promise<{ success: boolean; message?: string }> {
-    if (isDirectSupported()) {
-      const endpoint = client.getDaemonEndpoint();
-      if (endpoint.port) {
-        const alive = await client.checkDaemonAlive(
-          endpoint.host,
-          endpoint.port,
-        );
-        if (alive) return await client.shutdownRemote();
-      }
-      const direct = await getDirectClient();
-      await direct.disconnect();
-      return { success: true, message: 'Direct session reset' };
+    return await this.detach();
+  }
+
+  async selectTarget(selector?: string | number): Promise<any> {
+    const { listAllTargets, selectTarget } = await import('../session.js');
+    if (selector === undefined || selector === null || selector === '') {
+      return await listAllTargets();
     }
-    return await client.shutdownRemote();
+    const chosen = await selectTarget(selector);
+    return {
+      success: true,
+      message: `Selected active target: ${chosen.type === 'agent' ? `Agent Slot ${chosen.slot} (Port ${chosen.port})` : `Accessor Session PID ${chosen.pid}`}`,
+      target: chosen,
+    };
   }
 
   // Agent Elevation / In-Process Upgrade
@@ -209,11 +246,48 @@ export class ExoprocService {
   }): Promise<{
     success: boolean;
     port?: number;
+    slot?: number;
     className?: string;
     upgraded?: boolean;
     error?: string;
   }> {
-    return await client.upgradeRemote(options);
+    try {
+      const { getNextAvailableAgentSlot, getSlotForPort, setActiveTarget } =
+        await import('../session.js');
+
+      let targetPort = options?.port;
+      let targetSlot: number | null = null;
+
+      if (!targetPort) {
+        const next = await getNextAvailableAgentSlot();
+        targetPort = next.port;
+        targetSlot = next.slot;
+      } else {
+        targetSlot = getSlotForPort(targetPort);
+      }
+
+      const res = await client.upgradeRemote({
+        ...options,
+        port: targetPort,
+      });
+
+      if (res.success && targetPort) {
+        setActiveTarget({
+          type: 'agent',
+          slot: (targetSlot as any) || 1,
+          port: targetPort,
+          processName: 'Minecraft (Java Agent)',
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return {
+        ...res,
+        slot: targetSlot || undefined,
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || String(err) };
+    }
   }
 
   // Raw Evaluation & Script execution

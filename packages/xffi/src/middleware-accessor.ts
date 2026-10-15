@@ -1,4 +1,13 @@
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
+import {
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  unlinkSync,
+  openSync,
+  closeSync,
+  statSync,
+} from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { type AddressLike, NativeMemory } from './pointer.js';
 import { AbstractSyncMemoryAccessor } from './accessor.js';
@@ -750,6 +759,139 @@ export interface HostAccessorSession {
 }
 
 /**
+ * Executes a function under an exclusive file lock (`${filePath}.lock`).
+ * Handles stale locks (>10s) and retries until timeout.
+ */
+export function withFileLockSync<T>(
+  filePath: string,
+  fn: () => T,
+  timeoutMs = 5000,
+): T {
+  const absTarget = resolve(filePath);
+  const dir = dirname(absTarget);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+
+  const lockPath = `${absTarget}.lock`;
+  const startTime = Date.now();
+  let fd: number | null = null;
+
+  while (fd === null) {
+    try {
+      fd = openSync(lockPath, 'wx');
+    } catch (err: any) {
+      if (err.code === 'EEXIST') {
+        try {
+          const stats = statSync(lockPath);
+          if (Date.now() - stats.mtimeMs > 10000) {
+            try {
+              unlinkSync(lockPath);
+            } catch {}
+            continue;
+          }
+        } catch {
+          continue;
+        }
+
+        if (Date.now() - startTime > timeoutMs) {
+          throw new Error(
+            `Timeout waiting for file lock on "${lockPath}" after ${timeoutMs}ms`,
+          );
+        }
+
+        const waitUntil = Date.now() + 25;
+        while (Date.now() < waitUntil) {
+          /* spin */
+        }
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  try {
+    return fn();
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd);
+      } catch {}
+    }
+    try {
+      if (existsSync(lockPath)) {
+        unlinkSync(lockPath);
+      }
+    } catch {}
+  }
+}
+
+/**
+ * Executes an async function under an exclusive file lock (`${filePath}.lock`).
+ * Handles stale locks (>10s) and retries until timeout.
+ */
+export async function withFileLock<T>(
+  filePath: string,
+  fn: () => T | Promise<T>,
+  timeoutMs = 5000,
+): Promise<T> {
+  const absTarget = resolve(filePath);
+  const dir = dirname(absTarget);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+
+  const lockPath = `${absTarget}.lock`;
+  const startTime = Date.now();
+  let fd: number | null = null;
+
+  while (fd === null) {
+    try {
+      fd = openSync(lockPath, 'wx');
+    } catch (err: any) {
+      if (err.code === 'EEXIST') {
+        try {
+          const stats = statSync(lockPath);
+          if (Date.now() - stats.mtimeMs > 10000) {
+            try {
+              unlinkSync(lockPath);
+            } catch {}
+            continue;
+          }
+        } catch {
+          continue;
+        }
+
+        if (Date.now() - startTime > timeoutMs) {
+          throw new Error(
+            `Timeout waiting for file lock on "${lockPath}" after ${timeoutMs}ms`,
+          );
+        }
+
+        await new Promise((r) => setTimeout(r, 25));
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  try {
+    return await fn();
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd);
+      } catch {}
+    }
+    try {
+      if (existsSync(lockPath)) {
+        unlinkSync(lockPath);
+      }
+    } catch {}
+  }
+}
+
+/**
  * HostAccessor is a base class that automatically initializes all nested InittableMiddlewareAccessors
  * in the backend decorator chain.
  */
@@ -1016,21 +1158,33 @@ export class HostAccessor extends InittableMiddlewareAccessor {
 
   /**
    * Hibernates the accessor stack, seals this instance so it cannot be further operated on,
-   * and saves the session to a JSON file synchronously.
+   * and saves the session to a JSON file synchronously under an exclusive file lock.
    *
-   * @param filePath Target JSON file path.
+   * @param filePath Target JSON file path (defaults to previously loaded _sessionFilePath if omitted).
    * @returns Absolute path of the written session file.
    */
-  saveToFileSync(filePath: string): string {
+  saveToFileSync(filePath?: string): string {
     this.checkSealed();
 
-    const absPath = resolve(filePath);
-    const dir = dirname(absPath);
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
+    const targetPath = filePath ?? (this as any)._sessionFilePath;
+    if (!targetPath) {
+      throw new Error(
+        'No target filePath specified for saveToFileSync() and no _sessionFilePath found',
+      );
     }
+
+    const absPath = resolve(targetPath);
     const session = this.toJSON();
-    writeFileSync(absPath, JSON.stringify(session, null, 2), 'utf8');
+
+    withFileLockSync(absPath, () => {
+      const dir = dirname(absPath);
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+      writeFileSync(absPath, JSON.stringify(session, null, 2), 'utf8');
+    });
+
+    (this as any)._sessionFilePath = absPath;
 
     // Seal this instance after saving
     this.seal();
@@ -1039,42 +1193,69 @@ export class HostAccessor extends InittableMiddlewareAccessor {
   }
 
   /**
-   * Saves the accessor session configuration to a file asynchronously.
+   * Saves the accessor session configuration to a file asynchronously under an exclusive file lock.
    *
-   * @param filePath Target JSON file path.
+   * @param filePath Target JSON file path (defaults to previously loaded _sessionFilePath if omitted).
    * @returns Absolute path of the written session file.
    */
-  async saveToFile(filePath: string): Promise<string> {
-    return this.saveToFileSync(filePath);
+  async saveToFile(filePath?: string): Promise<string> {
+    this.checkSealed();
+
+    const targetPath = filePath ?? (this as any)._sessionFilePath;
+    if (!targetPath) {
+      throw new Error(
+        'No target filePath specified for saveToFile() and no _sessionFilePath found',
+      );
+    }
+
+    const absPath = resolve(targetPath);
+    const session = this.toJSON();
+
+    await withFileLock(absPath, async () => {
+      const dir = dirname(absPath);
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+      writeFileSync(absPath, JSON.stringify(session, null, 2), 'utf8');
+    });
+
+    (this as any)._sessionFilePath = absPath;
+
+    // Seal this instance after saving
+    this.seal();
+
+    return absPath;
   }
 
   /** Alias for saveToFile */
-  async save(filePath: string): Promise<string> {
+  async save(filePath?: string): Promise<string> {
     return this.saveToFile(filePath);
   }
 
   /** Alias for saveToFileSync */
-  saveSync(filePath: string): string {
+  saveSync(filePath?: string): string {
     return this.saveToFileSync(filePath);
   }
 
   /**
-   * Reads and parses a HostAccessorSession from a JSON file.
+   * Reads and parses a HostAccessorSession from a JSON file under file lock without consuming it.
    *
    * @param filePath Target JSON file path.
    * @returns Parsed HostAccessorSession object.
    */
   static loadSession(filePath: string): HostAccessorSession {
     const absPath = resolve(filePath);
-    if (!existsSync(absPath)) {
-      throw new Error(`HostAccessor session file not found: ${absPath}`);
-    }
-    const raw = readFileSync(absPath, 'utf8');
-    const session = JSON.parse(raw) as HostAccessorSession;
-    if (!session || typeof session.processId !== 'number') {
-      throw new Error(`Invalid HostAccessor session file: ${absPath}`);
-    }
-    return session;
+    return withFileLockSync(absPath, () => {
+      if (!existsSync(absPath)) {
+        throw new Error(`HostAccessor session file not found: ${absPath}`);
+      }
+      const raw = readFileSync(absPath, 'utf8');
+      const session = JSON.parse(raw) as HostAccessorSession;
+      if (!session || typeof session.processId !== 'number') {
+        throw new Error(`Invalid HostAccessor session file: ${absPath}`);
+      }
+      return session;
+    });
   }
 
   private static restorers = new Map<
@@ -1099,13 +1280,41 @@ export class HostAccessor extends InittableMiddlewareAccessor {
   }
 
   /**
-   * Restores an active HostAccessor from a previously saved session file.
+   * Restores an active HostAccessor from a previously saved session file under an exclusive file lock.
+   * By default, consumes (deletes) the session file upon load to prevent concurrent execution conflicts.
+   *
+   * @param filePath Path to session JSON file.
+   * @param overrideOptions Options to merge or { consume?: boolean } (default: true).
    */
   static async restoreFromFile(
     filePath: string,
     overrideOptions?: any,
   ): Promise<HostAccessor> {
-    const session = HostAccessor.loadSession(filePath);
+    const absPath = resolve(filePath);
+    const shouldConsume = overrideOptions?.consume !== false;
+
+    let session: HostAccessorSession | undefined;
+
+    await withFileLock(absPath, async () => {
+      if (!existsSync(absPath)) {
+        throw new Error(`HostAccessor session file not found: ${absPath}`);
+      }
+      const raw = readFileSync(absPath, 'utf8');
+      session = JSON.parse(raw) as HostAccessorSession;
+      if (!session || typeof session.processId !== 'number') {
+        throw new Error(`Invalid HostAccessor session file: ${absPath}`);
+      }
+      if (shouldConsume) {
+        try {
+          unlinkSync(absPath);
+        } catch {}
+      }
+    });
+
+    if (!session) {
+      throw new Error(`Failed to load session from ${absPath}`);
+    }
+
     const restorer =
       HostAccessor.restorers.get(session.accessorType) ??
       HostAccessor.restorers.get('default');
@@ -1117,7 +1326,9 @@ export class HostAccessor extends InittableMiddlewareAccessor {
       );
     }
 
-    return await restorer(session, overrideOptions);
+    const accessor = await restorer(session, overrideOptions);
+    (accessor as any)._sessionFilePath = absPath;
+    return accessor;
   }
 
   /**

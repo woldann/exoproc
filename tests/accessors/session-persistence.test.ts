@@ -84,6 +84,9 @@ describe('HostAccessor Pipeline Blueprint and Hibernation', () => {
     expect(restored).toBeInstanceOf(IndirectNThreadHostAccessor);
     expect(restored.processId).toBe(proc.pid);
 
+    // Verify session file was consumed (deleted) immediately upon load
+    expect(existsSync(filePath)).toBe(false);
+
     // Verify restored accessor is functional
     const buf = Buffer.from('hibernated resume works!');
     const addr = await restored.alloc(64);
@@ -92,7 +95,15 @@ describe('HostAccessor Pipeline Blueprint and Hibernation', () => {
     expect(back.toString()).toBe(buf.toString());
     await restored.free(addr);
 
-    await restored.deinit();
+    // Verify re-saving back to original session path without arguments
+    await (restored as any).save();
+    expect(existsSync(filePath)).toBe(true);
+    expect((restored as any).isSealed).toBe(true);
+
+    // Clean up
+    try {
+      unlinkSync(filePath);
+    } catch {}
   }, 40000);
 
   test('HostAccessor.loadSession reads session file accurately', () => {
