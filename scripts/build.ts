@@ -250,52 +250,62 @@ async function buildAll() {
       f.endsWith('-worker.ts'),
     );
 
-    const isExoproc = pkg === 'exoproc';
-    const buildArgs = [
-      'build',
+    const entriesToBuild = [
       entryPath,
       ...workerEntries.map((f) => join(srcDir, f)),
       ...additionalExportEntries(pkgJson, pkgPath),
-      '--outdir',
-      join(pkgPath, 'dist'),
-      '--target',
-      isExoproc ? 'node' : 'bun',
     ];
 
-    if (isExoproc) {
-      buildArgs.push('--root', srcDir);
-      const npmDeps = Object.keys(
-        (pkgJson.dependencies as Record<string, string>) ?? {},
-      );
-      const optionals = [
-        '@woldann/bun-capstone',
-        '@woldann/bun-minhook',
-        '@woldann/bun-nhook',
-        '@woldann/bun-njava',
-        '@woldann/bun-nshm',
-        '@woldann/bun-nthread',
-        '@woldann/bun-winapi',
-        '@woldann/bun-xffi',
-        '@woldann/exoproc-accessors',
-        ...Object.keys(
-          (pkgJson.optionalDependencies as Record<string, string>) ?? {},
-        ),
+    const isExoproc = pkg === 'exoproc';
+
+    for (const entry of entriesToBuild) {
+      const buildArgs = [
+        'build',
+        entry,
+        '--root',
+        srcDir,
+        '--outdir',
+        join(pkgPath, 'dist'),
+        '--target',
+        isExoproc ? 'node' : 'bun',
       ];
-      for (const ext of [...npmDeps, ...optionals]) {
-        buildArgs.push('--external', ext);
-      }
-    } else {
-      buildArgs.push('--packages', 'external');
-      for (const ext of externals) {
-        buildArgs.push('--external', ext);
-      }
-    }
 
-    const result = spawnSync('bun', buildArgs, { stdio: 'inherit' });
+      if (isExoproc) {
+        const npmDeps = Object.keys(
+          (pkgJson.dependencies as Record<string, string>) ?? {},
+        );
+        const optionals = [
+          '@woldann/bun-capstone',
+          '@woldann/bun-minhook',
+          '@woldann/bun-nhook',
+          '@woldann/bun-njava',
+          '@woldann/bun-nshm',
+          '@woldann/bun-nthread',
+          '@woldann/bun-winapi',
+          '@woldann/bun-xffi',
+          '@woldann/exoproc-accessors',
+          ...Object.keys(
+            (pkgJson.optionalDependencies as Record<string, string>) ?? {},
+          ),
+        ];
+        for (const ext of [...npmDeps, ...optionals]) {
+          buildArgs.push('--external', ext);
+        }
+      } else {
+        buildArgs.push('--packages', 'external');
+        for (const ext of externals) {
+          buildArgs.push('--external', ext);
+        }
+      }
 
-    if (result.status !== 0) {
-      log.fail(`Failed to build ${pkgName}`);
-      process.exit(1);
+      const result = spawnSync(process.execPath, buildArgs, {
+        stdio: 'inherit',
+      });
+
+      if (result.status !== 0) {
+        log.fail(`Failed to build ${entry} in ${pkgName}`);
+        process.exit(1);
+      }
     }
 
     // Each package's `files` array ships its own LICENSE copy -- keep that

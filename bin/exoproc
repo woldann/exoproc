@@ -8,14 +8,27 @@ const distCli = join(rootDir, 'packages/exoproc/dist/cli.js');
 
 if (!existsSync(distCli) || !existsSync(join(rootDir, 'node_modules'))) {
   console.log('⚡ Initializing Exoproc (first-time setup)...');
-  spawnSync('bun', ['install', '--frozen-lockfile'], {
+  const install = spawnSync(
+    process.execPath,
+    ['install', '--frozen-lockfile'],
+    {
+      cwd: rootDir,
+      stdio: 'inherit',
+    },
+  );
+  if (install.status !== 0) {
+    process.exit(install.status ?? 1);
+  }
+  const build = spawnSync(process.execPath, ['run', 'build'], {
     cwd: rootDir,
     stdio: 'inherit',
   });
-  spawnSync('bun', ['run', 'build'], { cwd: rootDir, stdio: 'inherit' });
+  if (build.status !== 0) {
+    process.exit(build.status ?? 1);
+  }
 }
 
-const result = spawnSync('bun', [distCli, ...process.argv.slice(2)], {
+const result = spawnSync(process.execPath, [distCli, ...process.argv.slice(2)], {
   stdio: 'inherit',
   env: process.env,
 });
