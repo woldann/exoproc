@@ -1729,29 +1729,28 @@ export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor 
     if (this.isInitializing || !this.tempFilePath) {
       return super.readAfterInit(address, size, offset);
     }
-    await this.ensureOpen();
-    const targetAddr = resolveAddress(address) + offset;
+    try {
+      await this.ensureOpen();
+      const targetAddr = resolveAddress(address) + offset;
 
-    // Rewind so we overwrite from the start, dump target memory into the
-    // file, then flush so the local read below sees the fresh bytes.
-    await this.backend.call(MsvcrtImpl.rewind, this.hFile);
-    const written = await this.backend.call(
-      MsvcrtImpl.fwrite,
-      targetAddr,
-      1,
-      size,
-      this.hFile,
-    );
-    if (Number(written) !== size) {
-      throw new Error(
-        `fwrite failed to write entire memory block of size ${size} (wrote ${written})`,
+      // Rewind so we overwrite from the start, dump target memory into the
+      // file, then flush so the local read below sees the fresh bytes.
+      await this.backend.call(MsvcrtImpl.rewind, this.hFile);
+      const written = await this.backend.call(
+        MsvcrtImpl.fwrite,
+        targetAddr,
+        1,
+        size,
+        this.hFile,
       );
+      if (Number(written) === size) {
+        await this.backend.call(MsvcrtImpl.fflush, this.hFile);
+        return fs.readFileSync(this.tempFilePath!).subarray(0, size);
+      }
+    } catch {
+      // Fall through to backend read on any CRT staging or file lock failure
     }
-    await this.backend.call(MsvcrtImpl.fflush, this.hFile);
-
-    // The file may still carry trailing bytes from a larger previous
-    // transfer, so take only the `size` bytes we just wrote.
-    return fs.readFileSync(this.tempFilePath!).subarray(0, size);
+    return super.readAfterInit(address, size, offset);
   }
 
   override readAfterInitSync(
@@ -1762,25 +1761,26 @@ export class FileTransferReadAccessor extends MsvcrtDependentMiddlewareAccessor 
     if (this.isInitializingSync || !this.tempFilePath) {
       return super.readAfterInitSync(address, size, offset);
     }
-    this.ensureOpenSync();
-    const targetAddr = resolveAddress(address) + offset;
+    try {
+      this.ensureOpenSync();
+      const targetAddr = resolveAddress(address) + offset;
 
-    this.backend.callSync(MsvcrtImpl.rewind, this.hFile);
-    const written = this.backend.callSync(
-      MsvcrtImpl.fwrite,
-      targetAddr,
-      1,
-      size,
-      this.hFile,
-    );
-    if (Number(written) !== size) {
-      throw new Error(
-        `fwrite failed to write entire memory block of size ${size} (wrote ${written})`,
+      this.backend.callSync(MsvcrtImpl.rewind, this.hFile);
+      const written = this.backend.callSync(
+        MsvcrtImpl.fwrite,
+        targetAddr,
+        1,
+        size,
+        this.hFile,
       );
+      if (Number(written) === size) {
+        this.backend.callSync(MsvcrtImpl.fflush, this.hFile);
+        return fs.readFileSync(this.tempFilePath!).subarray(0, size);
+      }
+    } catch {
+      // Fall through to backend read on any CRT staging or file lock failure
     }
-    this.backend.callSync(MsvcrtImpl.fflush, this.hFile);
-
-    return fs.readFileSync(this.tempFilePath!).subarray(0, size);
+    return super.readAfterInitSync(address, size, offset);
   }
 }
 
@@ -1922,26 +1922,28 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
     const targetAddr = resolveAddress(address) + offset;
     const buffer = data instanceof Buffer ? data : Buffer.from(data);
 
-    // Put the payload in the file (local, truncating write) BEFORE opening so
-    // fopen("rb") sees a valid file, then rewind the shared FILE* so fread
-    // re-reads the freshly written bytes from offset 0.
-    fs.writeFileSync(this.tempFilePath!, buffer);
-    await this.ensureOpen();
-    await this.backend.call(MsvcrtImpl.rewind, this.hFile);
+    try {
+      // Put the payload in the file (local, truncating write) BEFORE opening so
+      // fopen("rb") sees a valid file, then rewind the shared FILE* so fread
+      // re-reads the freshly written bytes from offset 0.
+      fs.writeFileSync(this.tempFilePath!, buffer);
+      await this.ensureOpen();
+      await this.backend.call(MsvcrtImpl.rewind, this.hFile);
 
-    const readBytes = await this.backend.call(
-      MsvcrtImpl.fread,
-      targetAddr,
-      1,
-      buffer.length,
-      this.hFile,
-    );
-    if (Number(readBytes) !== buffer.length) {
-      throw new Error(
-        `fread failed to read entire file block of size ${buffer.length} (read ${readBytes})`,
+      const readBytes = await this.backend.call(
+        MsvcrtImpl.fread,
+        targetAddr,
+        1,
+        buffer.length,
+        this.hFile,
       );
+      if (Number(readBytes) === buffer.length) {
+        return buffer.length;
+      }
+    } catch {
+      // Fall through to backend write on any CRT staging or file lock failure
     }
-    return Number(readBytes);
+    return super.writeAfterInit(address, data, offset);
   }
 
   override writeAfterInitSync(
@@ -1955,23 +1957,25 @@ export class FileTransferWriteAccessor extends MsvcrtDependentMiddlewareAccessor
     const targetAddr = resolveAddress(address) + offset;
     const buffer = data instanceof Buffer ? data : Buffer.from(data);
 
-    fs.writeFileSync(this.tempFilePath!, buffer);
-    this.ensureOpenSync();
-    this.backend.callSync(MsvcrtImpl.rewind, this.hFile);
+    try {
+      fs.writeFileSync(this.tempFilePath!, buffer);
+      this.ensureOpenSync();
+      this.backend.callSync(MsvcrtImpl.rewind, this.hFile);
 
-    const readBytes = this.backend.callSync(
-      MsvcrtImpl.fread,
-      targetAddr,
-      1,
-      buffer.length,
-      this.hFile,
-    );
-    if (Number(readBytes) !== buffer.length) {
-      throw new Error(
-        `fread failed to read entire file block of size ${buffer.length} (read ${readBytes})`,
+      const readBytes = this.backend.callSync(
+        MsvcrtImpl.fread,
+        targetAddr,
+        1,
+        buffer.length,
+        this.hFile,
       );
+      if (Number(readBytes) === buffer.length) {
+        return buffer.length;
+      }
+    } catch {
+      // Fall through to backend write on any CRT staging or file lock failure
     }
-    return Number(readBytes);
+    return super.writeAfterInitSync(address, data, offset);
   }
 }
 
