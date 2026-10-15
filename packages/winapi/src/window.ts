@@ -10,28 +10,34 @@ import { currentProcess } from './process.js';
 
 // EnumWindowsProc callback — compiled via TCC (bun:ffi cc)
 // Args: rcx = hwnd, rdx = lParam (pointer to struct: { uint32 index, uint32 capacity, uint64 hwnds[] })
-const enumWindowsProcFn = cjitopen({
-  EnumWindowsProc: {
-    args: [FFIType.ptr, FFIType.ptr],
-    returns: FFIType.i32,
-    source: `
-    typedef struct {
-        unsigned int index;
-        unsigned int capacity;
-        void* hwnds[1]; // simplified for TCC
-    } EnumCtx;
+let _enumWindowsProcFn: any;
+function getEnumWindowsProcFn() {
+  if (!_enumWindowsProcFn) {
+    _enumWindowsProcFn = cjitopen({
+      EnumWindowsProc: {
+        args: [FFIType.ptr, FFIType.ptr],
+        returns: FFIType.i32,
+        source: `
+        typedef struct {
+            unsigned int index;
+            unsigned int capacity;
+            void* hwnds[1]; // simplified for TCC
+        } EnumCtx;
 
-    int EnumWindowsProc(void* hwnd, void* lParam) {
-        EnumCtx* ctx = (EnumCtx*)lParam;
-        if (ctx->index >= ctx->capacity) return 0;
-        void** hwnds = (void**)((char*)ctx + 8);
-        hwnds[ctx->index] = hwnd;
-        ctx->index++;
-        return 1;
-    }
-    `,
-  },
-}).symbols.EnumWindowsProc;
+        int EnumWindowsProc(void* hwnd, void* lParam) {
+            EnumCtx* ctx = (EnumCtx*)lParam;
+            if (ctx->index >= ctx->capacity) return 0;
+            void** hwnds = (void**)((char*)ctx + 8);
+            hwnds[ctx->index] = hwnd;
+            ctx->index++;
+            return 1;
+        }
+        `,
+      },
+    }).symbols.EnumWindowsProc;
+  }
+  return _enumWindowsProcFn;
+}
 
 /**
  * Represents a Window handle (HWND).
@@ -196,7 +202,7 @@ export class Window extends Handle {
     currentProcess.memory.writeSync(addr, initBuf);
 
     // Execute User32 Native EnumWindows
-    User32Impl.EnumWindows(enumWindowsProcFn.ptr, addr as any);
+    User32Impl.EnumWindows(getEnumWindowsProcFn().ptr, addr as any);
 
     // Read mutated C memory back
     const readBuf = currentProcess.memory.readSync(addr, memSize);

@@ -462,7 +462,21 @@ export class CurrentThread extends Thread {
     return true;
   }
 }
-export const currentThread: CurrentThread = new CurrentThread();
+let _currentThread: CurrentThread | undefined;
+export function getCurrentThread(): CurrentThread {
+  if (!_currentThread) {
+    _currentThread = new CurrentThread();
+  }
+  return _currentThread;
+}
+export const currentThread: CurrentThread = new Proxy({} as CurrentThread, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getCurrentThread(), prop, receiver);
+  },
+  set(_target, prop, value, receiver) {
+    return Reflect.set(getCurrentThread(), prop, value, receiver);
+  },
+});
 
 /**
  * Mapping of lowercase register names to ThreadContext property names.

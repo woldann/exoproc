@@ -155,4 +155,18 @@ export class CurrentProcess extends Process {
   override close() {}
 }
 
-export const currentProcess: CurrentProcess = new CurrentProcess();
+let _currentProcess: CurrentProcess | undefined;
+export function getCurrentProcess(): CurrentProcess {
+  if (!_currentProcess) {
+    _currentProcess = new CurrentProcess();
+  }
+  return _currentProcess;
+}
+export const currentProcess: CurrentProcess = new Proxy({} as CurrentProcess, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getCurrentProcess(), prop, receiver);
+  },
+  set(_target, prop, value, receiver) {
+    return Reflect.set(getCurrentProcess(), prop, value, receiver);
+  },
+});

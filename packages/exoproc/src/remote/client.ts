@@ -267,19 +267,33 @@ export async function evalRemote(
 ): Promise<{ success: boolean; result?: any; logs: string[]; error?: string }> {
   const { getActiveTarget, withActiveAccessor, checkAgentSlot } =
     await import('../session.js');
+  const { isToolMode } = await import('../capabilities.js');
   const active = getActiveTarget();
 
   if (active?.type === 'agent') {
-    return await executeScriptWithAgent(
+    const isAlive = await checkDaemonAlive(
       active.host ?? '127.0.0.1',
       active.port,
-      code,
-      globals,
-      options,
     );
+    if (isAlive) {
+      return await executeScriptWithAgent(
+        active.host ?? '127.0.0.1',
+        active.port,
+        code,
+        globals,
+        options,
+      );
+    }
   }
 
   if (active?.type === 'accessor') {
+    if (isToolMode()) {
+      throw new Error(
+        `Active target is an accessor session (PID: ${active.pid}), which requires native Windows x64 memory APIs.\n` +
+          `You are running under Linux Bun. Please run via bun-wine instead:\n` +
+          `  ./bun-wine dist-tests/exoproc-cli.js <command>`,
+      );
+    }
     return await withActiveAccessor(async (accessor) => {
       return await executeScriptWithAccessor(accessor, code, globals, options);
     });
@@ -300,6 +314,14 @@ export async function evalRemote(
   }
 
   // Fallback 2: auto-discovery of saved accessor session
+  if (isToolMode()) {
+    throw new Error(
+      `No active Java agent reachable on port 43378-43380. Direct accessor sessions require Windows x64.\n` +
+        `If targeting Minecraft running under Wine, please run via bun-wine:\n` +
+        `  ./bun-wine dist-tests/exoproc-cli.js <command>`,
+    );
+  }
+
   try {
     return await withActiveAccessor(async (accessor) => {
       return await executeScriptWithAccessor(accessor, code, globals, options);
