@@ -524,6 +524,13 @@ export async function restoreAccessorFromSession(
           );
         }
 
+        const hasNJava =
+          session.pipeline?.some((p) => p.type === 'NJavaAccessor') ||
+          Boolean(baseOptions.njava);
+        if (hasNJava) {
+          await attachNJava(accessor);
+        }
+
         (accessor as any)._options = baseOptions;
         if (session.metadata) {
           for (const [key, value] of Object.entries(session.metadata)) {

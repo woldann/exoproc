@@ -555,6 +555,37 @@ export function createJavaObjectProxy(
       if (prop === '$ptr' || prop === '$address' || prop === 'address')
         return objPtr;
       if (prop === '$className') return deobfClassName;
+      if (prop === '$field' || prop === '$getField') {
+        return (fieldName: string) => {
+          const actName = mapper
+            ? mapper.resolveObfField(
+                reflectedClass.name,
+                fieldName,
+                superclassChain,
+              )
+            : fieldName;
+          let f =
+            fieldCache.get(actName) ??
+            (actName !== fieldName ? fieldCache.get(fieldName) : undefined);
+          if (!f && sync && reflectedClass.findFieldSync) {
+            f =
+              reflectedClass.findFieldSync(actName) ??
+              (actName !== fieldName
+                ? reflectedClass.findFieldSync(fieldName)
+                : undefined);
+            if (f) fieldCache.set(actName, f);
+          }
+          if (f && !f.isStatic) {
+            const val = bridge.readFieldSync?.(
+              reflectedClass.classObj,
+              f.name,
+              objPtr,
+            );
+            return wrapJavaReturnValue(val, f.type, bridge, true, mapper);
+          }
+          return undefined;
+        };
+      }
       if (prop === '$class' || prop === 'class') {
         return createJavaClassProxy(
           reflectedClass,

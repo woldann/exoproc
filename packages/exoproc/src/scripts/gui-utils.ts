@@ -37,7 +37,21 @@ export interface ClickResult {
  * Resolves the active Minecraft client instance canonically
  */
 export function getMinecraft(): any {
-  if (typeof mc !== 'undefined' && mc) return mc;
+  if (
+    typeof (globalThis as any).rawMc !== 'undefined' &&
+    (globalThis as any).rawMc
+  )
+    return (globalThis as any).rawMc;
+  if (typeof mc !== 'undefined' && mc) {
+    if (
+      mc.$ptr ||
+      mc.$address ||
+      mc.$class ||
+      mc.thePlayer !== undefined ||
+      mc.h !== undefined
+    )
+      return mc;
+  }
   if (typeof Java !== 'undefined' && (Java as any).Minecraft)
     return (Java as any).Minecraft;
   if (typeof Java !== 'undefined' && (Java as any).theMinecraft)
@@ -56,6 +70,13 @@ export function getMinecraft(): any {
         }
         if (MC.theMinecraft && typeof MC.theMinecraft !== 'function')
           return MC.theMinecraft;
+      }
+    } catch (e) {}
+    try {
+      const ave = Java.type('ave');
+      if (ave) {
+        const res = ave.S || (typeof ave.A === 'function' ? ave.A() : null);
+        if (res) return res;
       }
     } catch (e) {}
   }

@@ -258,30 +258,30 @@ export const PlayerCard: React.FC<{ player: any }> = ({ player }) => {
         <Box justifyContent="space-between">
           <Text color="gray">Position (X, Y, Z):</Text>
           <Text bold color="white">
-            {typeof player.x === 'number'
-              ? player.x.toFixed(2)
-              : (player.x ?? '0.00')}
+            {typeof (player.coords?.x ?? player.x) === 'number'
+              ? (player.coords?.x ?? player.x)!.toFixed(2)
+              : (player.coords?.x ?? player.x ?? '0.00')}
             ,{' '}
-            {typeof player.y === 'number'
-              ? player.y.toFixed(2)
-              : (player.y ?? '0.00')}
+            {typeof (player.coords?.y ?? player.y) === 'number'
+              ? (player.coords?.y ?? player.y)!.toFixed(2)
+              : (player.coords?.y ?? player.y ?? '0.00')}
             ,{' '}
-            {typeof player.z === 'number'
-              ? player.z.toFixed(2)
-              : (player.z ?? '0.00')}
+            {typeof (player.coords?.z ?? player.z) === 'number'
+              ? (player.coords?.z ?? player.z)!.toFixed(2)
+              : (player.coords?.z ?? player.z ?? '0.00')}
           </Text>
         </Box>
 
         <Box justifyContent="space-between">
           <Text color="gray">Rotation (Yaw / Pitch):</Text>
           <Text color="cyan">
-            {typeof player.yaw === 'number'
-              ? player.yaw.toFixed(1)
-              : (player.yaw ?? '0.0')}
+            {typeof (player.rotation?.yaw ?? player.yaw) === 'number'
+              ? (player.rotation?.yaw ?? player.yaw)!.toFixed(1)
+              : (player.rotation?.yaw ?? player.yaw ?? '0.0')}
             °,{' '}
-            {typeof player.pitch === 'number'
-              ? player.pitch.toFixed(1)
-              : (player.pitch ?? '0.0')}
+            {typeof (player.rotation?.pitch ?? player.pitch) === 'number'
+              ? (player.rotation?.pitch ?? player.pitch)!.toFixed(1)
+              : (player.rotation?.pitch ?? player.pitch ?? '0.0')}
             °
           </Text>
         </Box>

@@ -160,8 +160,8 @@ export async function createStealthJavaAccessor(
     // 2. Spawn dedicated worker thread in Java without class definition
     const { osTid: workerTid } = await spawnStealthWorkerThread(bootstrapHost);
 
-    // 3. Close bootstrap host
-    bootstrapHost.close();
+    // 3. Deinitialize and release bootstrap host thread back to normal execution
+    await bootstrapHost.deinit();
 
     // 4. Return accessor directly attached to the dedicated worker thread
     return await createAccessor(workerTid, {
@@ -170,7 +170,7 @@ export async function createStealthJavaAccessor(
       njava: true,
     });
   } catch (err) {
-    bootstrapHost.close();
+    await bootstrapHost.deinit().catch(() => {});
     throw err;
   }
 }

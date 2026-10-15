@@ -8,7 +8,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { getCacheDir } from 'exoproc-utils';
-import { HostAccessor, withFileLockSync } from 'bun-xffi';
+import { HostAccessor, withFileLock, withFileLockSync } from 'bun-xffi';
 
 // ── Agent Slots (Max 3 slots, sequential ports) ──────────────────────
 export const AGENT_SLOTS = [43378, 43379, 43380] as const;
@@ -334,16 +334,33 @@ export async function withActiveAccessor<T>(
     );
   }
 
-  // Load accessor: acquires lock, consumes session file, rehydrates instance
-  const { createAccessorFromFile } = await import('exoproc-accessors');
-  const accessor = await createAccessorFromFile(sessionPath);
+  return await withFileLock(
+    sessionPath + '.lock',
+    async () => {
+      const sessionBackup = readFileSync(sessionPath, 'utf8');
 
-  try {
-    return await fn(accessor, sessionPath);
-  } finally {
-    if (accessor && !(accessor as any).isSealed) {
-      // Re-save & hibernate the accessor stack back to the session path under file lock
-      await (accessor as any).save(sessionPath);
-    }
-  }
+      // Load accessor: acquires lock without consuming session file, rehydrates instance
+      const { createAccessorFromFile } = await import('exoproc-accessors');
+      const accessor = await createAccessorFromFile(sessionPath, {
+        consume: false,
+      } as any);
+
+      try {
+        return await fn(accessor, sessionPath);
+      } finally {
+        if (accessor && !(accessor as any).isSealed) {
+          try {
+            await (accessor as any).save(sessionPath);
+          } catch {
+            if (!existsSync(sessionPath)) {
+              writeFileSync(sessionPath, sessionBackup, 'utf8');
+            }
+          }
+        } else if (!existsSync(sessionPath)) {
+          writeFileSync(sessionPath, sessionBackup, 'utf8');
+        }
+      }
+    },
+    30000,
+  );
 }

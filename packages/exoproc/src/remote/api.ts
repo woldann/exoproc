@@ -70,7 +70,12 @@ export interface PlayerInfo {
   inGame: boolean;
   screenName?: string;
   coords?: { x: number; y: number; z: number };
+  x?: number;
+  y?: number;
+  z?: number;
   rotation?: { yaw: number; pitch: number };
+  yaw?: number;
+  pitch?: number;
   onGround?: boolean;
   health?: number;
   air?: number;
@@ -556,17 +561,28 @@ export async function inspectPlayer(): Promise<PlayerInfo> {
         creative,
         allowFly,
       ] = log.split('|');
+      const posX = parseFloat(x || '0');
+      const posY = parseFloat(y || '0');
+      const posZ = parseFloat(z || '0');
+      const rotYaw = parseFloat(yaw || '0');
+      const rotPitch = parseFloat(pitch || '0');
+
       return {
         inGame: true,
         coords: {
-          x: parseFloat(x || '0'),
-          y: parseFloat(y || '0'),
-          z: parseFloat(z || '0'),
+          x: posX,
+          y: posY,
+          z: posZ,
         },
+        x: posX,
+        y: posY,
+        z: posZ,
         rotation: {
-          yaw: parseFloat(yaw || '0'),
-          pitch: parseFloat(pitch || '0'),
+          yaw: rotYaw,
+          pitch: rotPitch,
         },
+        yaw: rotYaw,
+        pitch: rotPitch,
         onGround: onGround === 'true',
         health:
           health && health !== 'N/A' && !isNaN(parseFloat(health))
