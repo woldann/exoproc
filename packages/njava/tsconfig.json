@@ -12,6 +12,7 @@
     { "path": "../winapi" },
     { "path": "../xffi" },
     { "path": "../jjit" },
-    { "path": "../njava-agent" }
+    { "path": "../njava-agent" },
+    { "path": "../njava-mappings" }
   ]
 }

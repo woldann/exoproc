@@ -4,6 +4,7 @@ import { type IMemoryAccessor, type ISyncMemoryAccessor } from './iaccessor.js';
 let defaultAccessor: any = null;
 export function setDefaultAccessor(accessor: any) {
   defaultAccessor = accessor;
+  (globalThis as any).__localMemoryAccessor = accessor;
 }
 export const localMemoryAccessor = new Proxy(
   {},

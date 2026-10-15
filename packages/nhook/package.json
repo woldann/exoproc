@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Cross-process function hooking for Bun using thread redirection and instruction simulation.",
   "main": "./dist/index.js",
   "exports": {
@@ -54,6 +54,5 @@
     "exoproc-accessors": "workspace:*",
     "exoproc-utils": "workspace:*",
     "bun-capstone": "workspace:*"
-  },
-  "private": true
+  }
 }

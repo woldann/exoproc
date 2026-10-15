@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Universal dynamic in-process Java instrumentation agent and headless reflection bridge builder.",
   "main": "./dist/index.js",
   "exports": {
@@ -61,6 +61,5 @@
   },
   "devDependencies": {
     "typescript": "^5.8.2"
-  },
-  "private": true
+  }
 }

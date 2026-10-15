@@ -1,5 +1,15 @@
 # exoproc
 
+## 0.4.0
+
+### Minor Changes
+
+- Multi-package ecosystem release: un-privated all modular packages (`bun-njava`, `bun-winapi`, `bun-xffi`, `exoproc-accessors`, `exoproc-mappings`, `exoproc-minecraft`, `exoproc-utils`, etc.) for public package publishing.
+- Added in-process Java Agent hot-upgrade mechanism via `exoproc upgrade-agent` (`upgrade`) to inject and execute compiled bytecode into running targets.
+- Removed legacy daemon requirement in favor of direct cache-backed sessions and active agent slot routing.
+- Fixed `exoproc-mappings` dependency and project reference resolution across `bun-njava` and TypeScript monorepo builds.
+- Fixed ESM/bundle `__localMemoryAccessor` resolution in `bun-xffi` for reliable cross-process string reading.
+
 ## 0.3.1
 
 ### Patch Changes

@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Hand-assembled x64 Win64-calling-convention machine code thunks for Bun — call arbitrary function pointers with dynamic argument lists without a remote trampoline.",
   "main": "./dist/index.js",
   "exports": {
@@ -54,6 +54,5 @@
   "dependencies": {
     "bun-xffi": "workspace:*",
     "exoproc-asm": "workspace:*"
-  },
-  "private": true
+  }
 }

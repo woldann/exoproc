@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Cross-process JVM access (JavaVM/JNIEnv discovery) for Bun using thread redirection -- no DLL injection.",
   "main": "./dist/index.js",
   "exports": {
@@ -58,7 +58,7 @@
     "bun-xffi": "workspace:*",
     "exoproc-utils": "workspace:*",
     "exoproc-jjit": "workspace:*",
+    "exoproc-mappings": "workspace:*",
     "njava-agent": "workspace:*"
-  },
-  "private": true
+  }
 }

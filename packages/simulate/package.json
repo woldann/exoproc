@@ -1,6 +1,6 @@
 {
   "name": "@exoproc/simulate",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Virtual Windows OS simulation engine and browser mock FFI layer for Exoproc.",
   "type": "module",
   "packageManager": "npm@12.0.1",
@@ -61,5 +61,7 @@
     "tsx": "^4.20.6",
     "typescript": "^6.0.3"
   },
-  "private": true
+  "publishConfig": {
+    "access": "public"
+  }
 }

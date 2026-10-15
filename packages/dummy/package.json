@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A single shared, long-lived dummy Windows process (default: ping.exe) other exoproc packages and tests spawn once and reuse as a lightweight cross-process target.",
   "main": "./dist/index.js",
   "exports": {
@@ -48,6 +48,5 @@
   },
   "dependencies": {
     "bun-xffi": "workspace:*"
-  },
-  "private": true
+  }
 }

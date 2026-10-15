@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "TypeScript/FFI bindings for the Capstone disassembly engine with full OOP support",
   "main": "./dist/index.js",
   "exports": {
@@ -55,6 +55,5 @@
   "dependencies": {
     "bun-capstone-abi": "workspace:*",
     "bun-xffi": "workspace:*"
-  },
-  "private": true
+  }
 }

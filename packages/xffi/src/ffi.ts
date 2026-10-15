@@ -258,16 +258,20 @@ let cachedLocalMemoryAccessor: any = null;
 
 function getLocalMemoryAccessor(): any {
   if (!cachedLocalMemoryAccessor) {
-    try {
-      // Use globalThis or require to dynamically resolve without circular module compilation error
-      const req =
-        (globalThis as any).require ||
-        (typeof require !== 'undefined' ? require : null);
-      if (req) {
-        cachedLocalMemoryAccessor = req('./pointer.js').localMemoryAccessor;
+    if ((globalThis as any).__localMemoryAccessor) {
+      cachedLocalMemoryAccessor = (globalThis as any).__localMemoryAccessor;
+    } else {
+      try {
+        // Use globalThis or require to dynamically resolve without circular module compilation error
+        const req =
+          (globalThis as any).require ||
+          (typeof require !== 'undefined' ? require : null);
+        if (req) {
+          cachedLocalMemoryAccessor = req('./pointer.js').localMemoryAccessor;
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      // Fallback
     }
   }
   return cachedLocalMemoryAccessor;
