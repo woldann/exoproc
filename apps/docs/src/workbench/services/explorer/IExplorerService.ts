@@ -37,6 +37,8 @@ export interface IExplorerService {
   readFileText(file: ExplorerItem): Promise<string>;
   /** Creates an empty file inside `directory`. Rejects if an entry with that name already exists there. */
   createFile(directory: ExplorerItem, name: string): Promise<void>;
+  /** Creates an empty directory inside `directory`. Rejects if an entry with that name already exists there. */
+  createFolder(directory: ExplorerItem, name: string): Promise<void>;
   /** Deletes a file, or a directory and everything under it. */
   delete(item: ExplorerItem): Promise<void>;
   refresh(): void;
@@ -127,6 +129,17 @@ export class ExplorerService implements IExplorerService {
       throw new Error(`"${name}" zaten mevcut.`);
     }
     await this.fileService.writeFileText(joinPath(directory.path, name), '');
+  }
+
+  public async createFolder(
+    directory: ExplorerItem,
+    name: string,
+  ): Promise<void> {
+    const siblings = await this.resolveChildren(directory);
+    if (siblings.some((entry) => entry.name === name)) {
+      throw new Error(`"${name}" zaten mevcut.`);
+    }
+    await this.fileService.createDirectory(joinPath(directory.path, name));
   }
 
   public delete(item: ExplorerItem): Promise<void> {

@@ -1,3 +1,4 @@
+import { transform } from 'sucrase';
 import { toWindowsPath } from '../fs/workspace-paths';
 import { getMachine } from './machine';
 import { getWorkspaceRoot } from './workspace';
@@ -202,7 +203,26 @@ function resolveSpecifier(
 ): string {
   if (specifier === NODE_FS_SPECIFIER) return NODE_FS_ENTRY_PATH;
   if (specifier.startsWith('./') || specifier.startsWith('../')) {
-    return resolveRelative(fromPath, specifier);
+    const raw = resolveRelative(fromPath, specifier);
+    const fileSystem = getMachine().fileSystem;
+    const candidates = [
+      raw,
+      raw.endsWith('.js') ? raw.slice(0, -3) + '.ts' : undefined,
+      `${raw}.ts`,
+      `${raw}.js`,
+      `${raw}/index.ts`,
+      `${raw}/index.js`,
+    ].filter((c): c is string => c !== undefined);
+
+    for (const cand of candidates) {
+      try {
+        if (fileSystem.getEntry(windowsPath(cand))?.kind === 'file')
+          return cand;
+      } catch {
+        // try next
+      }
+    }
+    return raw;
   }
   const resolved = packages.get(specifier);
   if (resolved) return resolved;
@@ -220,6 +240,22 @@ function resolveRelative(fromPath: string, specifier: string): string {
     else segments.push(part);
   }
   return `/${segments.join('/')}`;
+}
+
+function transpileCodeIfTs(source: string, path: string): string {
+  if (
+    path.endsWith('.ts') ||
+    path.endsWith('.tsx') ||
+    path.endsWith('.mts') ||
+    path === EVAL_ENTRY_PATH
+  ) {
+    try {
+      return transform(source, { transforms: ['typescript'] }).code;
+    } catch {
+      return source;
+    }
+  }
+  return source;
 }
 
 function loadModuleGraph(
@@ -253,6 +289,10 @@ function loadModuleGraph(
           throw new Error(`Dosya bulunamadı: ${path}`);
         }
       }
+      source = transpileCodeIfTs(source, path);
+      sources.set(path, source);
+    } else if (path === EVAL_ENTRY_PATH) {
+      source = transpileCodeIfTs(source, path);
       sources.set(path, source);
     }
 

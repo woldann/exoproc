@@ -12,15 +12,18 @@ import {
   IOutputService,
   type OutputChannelId,
 } from '@/workbench/services/output/IOutputService';
+import type { DebugSessionValue } from '@/components/debugger/DebugSessionScope';
+import { MemoryPanel, TracePanel } from '@/components/debugger/panels';
 import { IdeTerminalPanel, type IdeTerminalHandle } from './IdeTerminalPanel';
 
 export interface IdeBottomPanelProps {
   readonly terminalRef: RefObject<IdeTerminalHandle | null>;
+  readonly debugSession?: DebugSessionValue;
 }
 
-type BottomTab = 'terminal' | 'debug' | 'output';
+type BottomTab = 'terminal' | 'debug' | 'output' | 'memory' | 'trace';
 
-const TABS: ReadonlyArray<{ id: BottomTab; label: string }> = [
+const BASE_TABS: ReadonlyArray<{ id: BottomTab; label: string }> = [
   { id: 'terminal', label: 'Terminal' },
   { id: 'debug', label: 'Debug Logs' },
   { id: 'output', label: 'Output' },
@@ -28,26 +31,35 @@ const TABS: ReadonlyArray<{ id: BottomTab; label: string }> = [
 
 /**
  * The bottom panel below the editor, tabbed like VS Code's own (Terminal /
- * Debug Console / Output) -- previously just a bare terminal. All three
- * tabs' content stays mounted at all times and is only hidden via CSS when
- * inactive, same reasoning as `FileTree`'s persistent nav: `IdeTerminalPanel`
- * wraps a real xterm.js session that must not remount (or lose scrollback/
- * the running shell) just because the user looked at another tab.
+ * Debug Console / Output / Memory / Trace) -- previously just a bare terminal.
  */
-export function IdeBottomPanel({ terminalRef }: IdeBottomPanelProps) {
+export function IdeBottomPanel({
+  terminalRef,
+  debugSession,
+}: IdeBottomPanelProps) {
   const [activeTab, setActiveTab] = useState<BottomTab>('terminal');
+
+  const tabs: ReadonlyArray<{ id: BottomTab; label: string }> = [
+    ...BASE_TABS,
+    ...(debugSession
+      ? [
+          { id: 'memory' as const, label: 'Memory' },
+          { id: 'trace' as const, label: 'Trace' },
+        ]
+      : []),
+  ];
 
   return (
     <div className="flex h-full flex-col border-t border-[#2b2b2b] bg-[#181818]">
       <div className="flex h-7 shrink-0 items-center gap-1 border-b border-[#2b2b2b] px-2 text-[11px]">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={`h-full border-b px-2.5 uppercase tracking-wide ${
               activeTab === tab.id
-                ? 'border-b-[#e7e7e7] text-[#e7e7e7]'
+                ? 'border-b-[#007acc] text-white font-semibold'
                 : 'border-b-transparent text-[#9d9d9d] hover:text-white'
             }`}
           >
@@ -65,6 +77,28 @@ export function IdeBottomPanel({ terminalRef }: IdeBottomPanelProps) {
         <div className={activeTab === 'output' ? 'h-full' : 'hidden h-full'}>
           <OutputLogView channel="output" />
         </div>
+        {debugSession ? (
+          <>
+            <div
+              className={
+                activeTab === 'memory'
+                  ? 'h-full overflow-y-auto bg-[#1e1e1e]'
+                  : 'hidden h-full'
+              }
+            >
+              <MemoryPanel session={debugSession.session} />
+            </div>
+            <div
+              className={
+                activeTab === 'trace'
+                  ? 'h-full overflow-y-auto bg-[#1e1e1e]'
+                  : 'hidden h-full'
+              }
+            >
+              <TracePanel session={debugSession.session} />
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );

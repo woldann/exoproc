@@ -24,25 +24,34 @@ export interface OpenEditorInput {
  */
 export interface IEditorService {
   readonly activeEditor: OpenEditorInput | undefined;
+  readonly openEditors: readonly OpenEditorInput[];
   openFile(item: ExplorerItem): Promise<void>;
+  selectEditor(item: ExplorerItem): void;
+  closeEditor(item: ExplorerItem): void;
   /** Re-reads the active document's content in place (e.g. after an external filesystem change). */
   reloadActiveEditor(): Promise<void>;
   /** Writes `content` to the active document's file and adopts it as the new clean baseline. */
   saveActiveEditor(content: string): Promise<void>;
   closeActiveEditor(): void;
   readonly onDidActiveEditorChange: Event<OpenEditorInput | undefined>;
+  readonly onDidOpenEditorsChange: Event<readonly OpenEditorInput[]>;
 }
 
 export const IEditorService = createDecorator<IEditorService>('editorService');
 
 export class EditorService implements IEditorService {
   private current: OpenEditorInput | undefined;
+  private readonly editors: OpenEditorInput[] = [];
   private readonly activeEditorChangeEmitter = new Emitter<
     OpenEditorInput | undefined
+  >();
+  private readonly openEditorsChangeEmitter = new Emitter<
+    readonly OpenEditorInput[]
   >();
 
   public readonly onDidActiveEditorChange =
     this.activeEditorChangeEmitter.event;
+  public readonly onDidOpenEditorsChange = this.openEditorsChangeEmitter.event;
 
   public constructor(private readonly fileService: IFileService) {}
 
@@ -50,19 +59,57 @@ export class EditorService implements IEditorService {
     return this.current;
   }
 
+  public get openEditors(): readonly OpenEditorInput[] {
+    return this.editors;
+  }
+
   public async openFile(item: ExplorerItem): Promise<void> {
     if (item.isDirectory) {
       throw new Error('Klasörler düzenleyicide açılamaz.');
     }
+    const existing = this.editors.find((e) => e.item.path === item.path);
+    if (existing) {
+      this.current = existing;
+      this.activeEditorChangeEmitter.fire(this.current);
+      return;
+    }
     const content = await this.fileService.readFileText(item.path);
-    this.current = { item, content };
+    const entry: OpenEditorInput = { item, content };
+    this.editors.push(entry);
+    this.current = entry;
+    this.openEditorsChangeEmitter.fire(this.editors);
     this.activeEditorChangeEmitter.fire(this.current);
+  }
+
+  public selectEditor(item: ExplorerItem): void {
+    const existing = this.editors.find((e) => e.item.path === item.path);
+    if (existing && existing !== this.current) {
+      this.current = existing;
+      this.activeEditorChangeEmitter.fire(this.current);
+    }
+  }
+
+  public closeEditor(item: ExplorerItem): void {
+    const index = this.editors.findIndex((e) => e.item.path === item.path);
+    if (index === -1) return;
+    const isClosingActive = this.current?.item.path === item.path;
+    this.editors.splice(index, 1);
+    this.openEditorsChangeEmitter.fire(this.editors);
+    if (isClosingActive) {
+      this.current = this.editors[Math.min(index, this.editors.length - 1)];
+      this.activeEditorChangeEmitter.fire(this.current);
+    }
   }
 
   public async reloadActiveEditor(): Promise<void> {
     if (!this.current) return;
     const content = await this.fileService.readFileText(this.current.item.path);
     this.current = { ...this.current, content };
+    const index = this.editors.findIndex(
+      (e) => e.item.path === this.current!.item.path,
+    );
+    if (index !== -1) this.editors[index] = this.current;
+    this.openEditorsChangeEmitter.fire(this.editors);
     this.activeEditorChangeEmitter.fire(this.current);
   }
 
@@ -70,12 +117,16 @@ export class EditorService implements IEditorService {
     if (!this.current) return;
     await this.fileService.writeFileText(this.current.item.path, content);
     this.current = { ...this.current, content };
+    const index = this.editors.findIndex(
+      (e) => e.item.path === this.current!.item.path,
+    );
+    if (index !== -1) this.editors[index] = this.current;
+    this.openEditorsChangeEmitter.fire(this.editors);
     this.activeEditorChangeEmitter.fire(this.current);
   }
 
   public closeActiveEditor(): void {
     if (!this.current) return;
-    this.current = undefined;
-    this.activeEditorChangeEmitter.fire(undefined);
+    this.closeEditor(this.current.item);
   }
 }

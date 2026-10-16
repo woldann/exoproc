@@ -229,17 +229,37 @@ export interface Win64FindObject {
   findEntries: Win64FindEntry[];
 }
 
+export interface Win64SnapshotProcessEntry {
+  pid: number;
+  parentPid: number;
+  threadsCount: number;
+  name: string;
+}
+
 export interface Win64SnapshotThreadEntry {
   tid: number;
   ownerPid: number;
   basePriority: number;
 }
 
+export interface Win64SnapshotModuleEntry {
+  base: bigint;
+  size: number;
+  name: string;
+  path: string;
+}
+
 export interface Win64SnapshotObject {
   id: number;
   kind: 'snapshot';
-  position: number;
+  flags: number;
+  pid: number;
+  processPosition: number;
+  processes: Win64SnapshotProcessEntry[];
+  threadPosition: number;
   threads: Win64SnapshotThreadEntry[];
+  modulePosition: number;
+  modules: Win64SnapshotModuleEntry[];
 }
 
 export interface Win64HeapObject {

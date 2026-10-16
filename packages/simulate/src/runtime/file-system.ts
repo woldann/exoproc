@@ -150,6 +150,14 @@ export class Win32FileSystem {
       'C:\\Users\\Serkan\\Documents\\notes.txt',
       'Win64 ABI experiments\r\n',
     );
+    this.writeTextFile(
+      `${WIN32_WORKSPACE_PATH}\\01-hello.ts`,
+      `// 01-hello.ts - Win32 Simülasyonu & TypeScript Testi\nimport { dlopen, FFIType } from 'bun:ffi';\n\nconsole.log('🚀 Merhaba! Exoproc Win32 Simülasyonu çalışıyor.');\nconsole.log('PID:', process.pid);\n\nconst kernel32 = dlopen('kernel32', {\n  GetCurrentProcessId: { args: [], returns: FFIType.u32 },\n  GetCurrentThreadId: { args: [], returns: FFIType.u32 },\n});\n\nconsole.log('kernel32!GetCurrentProcessId() ->', kernel32.symbols.GetCurrentProcessId());\nconsole.log('kernel32!GetCurrentThreadId()  ->', kernel32.symbols.GetCurrentThreadId());\n`,
+    );
+    this.writeTextFile(
+      `${WIN32_WORKSPACE_PATH}\\02-thread-hijack.ts`,
+      `// 02-thread-hijack.ts - nthread Thread Redirection Demosu\nimport { dlopen, FFIType } from 'bun:ffi';\n\nconst kernel32 = dlopen('kernel32', {\n  GetCurrentThread: { args: [], returns: FFIType.u64 },\n  GetCurrentThreadId: { args: [], returns: FFIType.u32 },\n  GetThreadContext: { args: [FFIType.u64, FFIType.ptr], returns: FFIType.bool },\n  SetThreadContext: { args: [FFIType.u64, FFIType.ptr], returns: FFIType.bool },\n});\n\nconsole.log('=== nthread: x64 Thread Redirection ===');\nconst tid = kernel32.symbols.GetCurrentThreadId();\nconsole.log('[1] Thread ID:', tid);\n\nconst hThread = kernel32.symbols.GetCurrentThread();\nconsole.log('[2] Thread Handle: 0x' + hThread.toString(16));\n\nconst context = Buffer.alloc(1232);\ncontext.writeUInt32LE(0x00100003, 0x30); // CONTROL | INTEGER\n\nconst ok = kernel32.symbols.GetThreadContext(hThread, context);\nconsole.log('[3] GetThreadContext:', ok);\nconsole.log('[4] RIP:', '0x' + context.readBigUInt64LE(0xf8).toString(16));\nconsole.log('[5] RSP:', '0x' + context.readBigUInt64LE(0x98).toString(16));\nconsole.log('[6] RAX:', '0x' + context.readBigUInt64LE(0x78).toString(16));\nconsole.log('✅ İşlem tamamlandı!');\n`,
+    );
     this.bindWorkspace();
   }
 

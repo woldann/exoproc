@@ -54,6 +54,10 @@ import {
   type Win64KernelObject,
   type Win64KernelObjectDefinition,
   type Win64Module,
+  type Win64SnapshotModuleEntry,
+  type Win64SnapshotObject,
+  type Win64SnapshotProcessEntry,
+  type Win64SnapshotThreadEntry,
   type Win64SocketObject,
   type Win64ThreadState,
   type X64Registers,
@@ -420,6 +424,10 @@ export class Win64Process {
   public mainArguments?: Win32MainArguments;
   public lastError = 0;
   public lastChildExitCode = 0;
+  public parentPid = 0;
+  public get name(): string {
+    return this.image;
+  }
   /**
    * Set once every thread in this process has terminated. Distinct from
    * `lastChildExitCode`, which is this process's bookkeeping about the last
@@ -630,16 +638,6 @@ export class Win64Process {
       // `marshalArgument`).
       for (const { view, address } of writeBacks) {
         const bytes = this.memory.read(address, view.byteLength);
-        // eslint-disable-next-line no-console
-        if (view.byteLength >= 100) {
-          console.log('[WB]', {
-            addr: address.toString(16),
-            bytes_16_28: Array.from(bytes.slice(16, 28)),
-            viewBefore: Array.from(
-              new Uint8Array(view.buffer, view.byteOffset, 28),
-            ),
-          });
-        }
         new Uint8Array(view.buffer, view.byteOffset, view.byteLength).set(
           bytes,
         );
@@ -1795,7 +1793,8 @@ export class Win64Machine {
       const symbols = Object.values(definition.functions);
       const imageSize =
         Math.ceil(
-          Math.max(1, symbols.length * WIN32_EXPORT_SLOT_SIZE) / DLL_PAGE_SIZE,
+          Math.max(1, symbols.length * WIN32_EXPORT_SLOT_SIZE + 256) /
+            DLL_PAGE_SIZE,
         ) * DLL_PAGE_SIZE;
       const compiled = symbols.map((entry) => ({
         entry,
@@ -1868,6 +1867,101 @@ export class Win64Machine {
         page.set(thunk, offset);
         exports.set(symbol.name, codeAddress);
       });
+      if (
+        definition.name === 'kernel32.dll' ||
+        definition.name === 'ntdll.dll'
+      ) {
+        const gadgets = new Uint8Array([
+          0xeb,
+          0xfe, // EB FE (jmp $)
+          0xc3, // C3 (ret)
+          0x48,
+          0x83,
+          0xc4,
+          0x28,
+          0xc3, // 48 83 C4 28 C3 (add rsp, 0x28; ret)
+          0x50,
+          0xc3, // push rax; ret
+          0x51,
+          0xc3, // push rcx; ret
+          0x52,
+          0xc3, // push rdx; ret
+          0x53,
+          0xc3, // push rbx; ret
+          0x55,
+          0xc3, // push rbp; ret
+          0x56,
+          0xc3, // push rsi; ret
+          0x57,
+          0xc3, // push rdi; ret
+          0x41,
+          0x50,
+          0xc3, // push r8; ret
+          0x41,
+          0x51,
+          0xc3, // push r9; ret
+          0x41,
+          0x52,
+          0xc3, // push r10; ret
+          0x41,
+          0x53,
+          0xc3, // push r11; ret
+          0x41,
+          0x54,
+          0xc3, // push r12; ret
+          0x41,
+          0x55,
+          0xc3, // push r13; ret
+          0x41,
+          0x56,
+          0xc3, // push r14; ret
+          0x41,
+          0x57,
+          0xc3, // push r15; ret
+          0xff,
+          0xe0, // jmp rax
+          0xff,
+          0xe1, // jmp rcx
+          0xff,
+          0xe2, // jmp rdx
+          0xff,
+          0xe3, // jmp rbx
+          0xff,
+          0xe5, // jmp rbp
+          0xff,
+          0xe6, // jmp rsi
+          0xff,
+          0xe7, // jmp rdi
+          0x41,
+          0xff,
+          0xe0, // jmp r8
+          0x41,
+          0xff,
+          0xe1, // jmp r9
+          0x41,
+          0xff,
+          0xe2, // jmp r10
+          0x41,
+          0xff,
+          0xe3, // jmp r11
+          0x41,
+          0xff,
+          0xe4, // jmp r12
+          0x41,
+          0xff,
+          0xe5, // jmp r13
+          0x41,
+          0xff,
+          0xe6, // jmp r14
+          0x41,
+          0xff,
+          0xe7, // jmp r15
+        ]);
+        const gadgetOffset = compiled.length * WIN32_EXPORT_SLOT_SIZE + 16;
+        if (gadgetOffset + gadgets.length <= imageSize) {
+          page.set(gadgets, gadgetOffset);
+        }
+      }
       process.memory.map(
         `module:${definition.name}`,
         `${definition.name} / generated JS-kernel syscall thunks`,
@@ -2280,19 +2374,6 @@ export class Win64Machine {
           registers.RCX,
           registers.RDX,
         );
-        // eslint-disable-next-line no-console
-        {
-          const lpAddress = registers.RCX;
-          const mapping = process.memory.findMapping(lpAddress);
-          console.log('[VQ]', {
-            pid: process.pid,
-            lpAddress: lpAddress.toString(16),
-            mapping: mapping
-              ? { base: mapping.base.toString(16), size: mapping.size }
-              : null,
-            result: result.toString(),
-          });
-        }
         return result;
       },
     );
@@ -3243,17 +3324,185 @@ export class Win64Machine {
       thread.state = 'terminated';
       return 0n;
     });
-    const resolveThreadHandle = (process: Win64Process, rawHandle: bigint) => {
+    const encodeUtf16LE = (str: string, maxBytes: number): Uint8Array => {
+      const result = new Uint8Array(maxBytes);
+      const view = new DataView(result.buffer);
+      const maxChars = Math.floor(maxBytes / 2);
+      const len = Math.min(str.length, maxChars - 1);
+      for (let i = 0; i < len; i++) {
+        view.setUint16(i * 2, str.charCodeAt(i), true);
+      }
+      return result;
+    };
+    const encodeAnsi = (str: string, maxBytes: number): Uint8Array => {
+      const result = new Uint8Array(maxBytes);
+      const len = Math.min(str.length, maxBytes - 1);
+      for (let i = 0; i < len; i++) {
+        result[i] = str.charCodeAt(i) & 0xff;
+      }
+      return result;
+    };
+    const writeProcessEntry32W = (
+      memory: Win64AddressSpace,
+      address: bigint,
+      entry: Win64SnapshotProcessEntry,
+    ) => {
+      const data = new Uint8Array(568);
+      const view = new DataView(data.buffer);
+      view.setUint32(0, 568, true);
+      view.setUint32(4, 0, true);
+      view.setUint32(8, entry.pid, true);
+      view.setUint32(12, 0, true);
+      view.setBigUint64(16, 0n, true);
+      view.setUint32(24, 0, true);
+      view.setUint32(28, entry.threadsCount, true);
+      view.setUint32(32, entry.parentPid, true);
+      view.setInt32(36, 8, true);
+      view.setUint32(40, 0, true);
+      data.set(encodeUtf16LE(entry.name, 520), 44);
+      memory.write(address, data);
+    };
+    const writeProcessEntry32A = (
+      memory: Win64AddressSpace,
+      address: bigint,
+      entry: Win64SnapshotProcessEntry,
+    ) => {
+      const data = new Uint8Array(304);
+      const view = new DataView(data.buffer);
+      view.setUint32(0, 304, true);
+      view.setUint32(4, 0, true);
+      view.setUint32(8, entry.pid, true);
+      view.setUint32(12, 0, true);
+      view.setBigUint64(16, 0n, true);
+      view.setUint32(24, 0, true);
+      view.setUint32(28, entry.threadsCount, true);
+      view.setUint32(32, entry.parentPid, true);
+      view.setInt32(36, 8, true);
+      view.setUint32(40, 0, true);
+      data.set(encodeAnsi(entry.name, 260), 44);
+      memory.write(address, data);
+    };
+    const writeThreadEntry32 = (
+      memory: Win64AddressSpace,
+      address: bigint,
+      entry: Win64SnapshotThreadEntry,
+    ) => {
+      const data = new Uint8Array(28);
+      const view = new DataView(data.buffer);
+      view.setUint32(0, 28, true);
+      view.setUint32(4, 0, true);
+      view.setUint32(8, entry.tid, true);
+      view.setUint32(12, entry.ownerPid, true);
+      view.setInt32(16, entry.basePriority, true);
+      view.setInt32(20, 0, true);
+      view.setUint32(24, 0, true);
+      memory.write(address, data);
+    };
+    const writeModuleEntry32W = (
+      memory: Win64AddressSpace,
+      address: bigint,
+      entry: Win64SnapshotModuleEntry,
+      pid: number,
+    ) => {
+      const data = new Uint8Array(1080);
+      const view = new DataView(data.buffer);
+      view.setUint32(0, 1080, true);
+      view.setUint32(4, 1, true);
+      view.setUint32(8, pid, true);
+      view.setUint32(12, 0xffff, true);
+      view.setUint32(16, 0xffff, true);
+      view.setUint32(20, 0, true);
+      view.setBigUint64(24, entry.base, true);
+      view.setUint32(32, entry.size, true);
+      view.setUint32(36, 0, true);
+      view.setBigUint64(40, entry.base, true);
+      data.set(encodeUtf16LE(entry.name, 512), 48);
+      data.set(encodeUtf16LE(entry.path, 520), 560);
+      memory.write(address, data);
+    };
+    const writeModuleEntry32A = (
+      memory: Win64AddressSpace,
+      address: bigint,
+      entry: Win64SnapshotModuleEntry,
+      pid: number,
+    ) => {
+      const data = new Uint8Array(564);
+      const view = new DataView(data.buffer);
+      view.setUint32(0, 564, true);
+      view.setUint32(4, 1, true);
+      view.setUint32(8, pid, true);
+      view.setUint32(12, 0xffff, true);
+      view.setUint32(16, 0xffff, true);
+      view.setUint32(20, 0, true);
+      view.setBigUint64(24, entry.base, true);
+      view.setUint32(32, entry.size, true);
+      view.setUint32(36, 0, true);
+      view.setBigUint64(40, entry.base, true);
+      data.set(encodeAnsi(entry.name, 256), 48);
+      data.set(encodeAnsi(entry.path, 260), 304);
+      memory.write(address, data);
+    };
+    const resolveThreadHandle = (
+      process: Win64Process,
+      rawHandle: bigint,
+      callingThread?: Win64Thread,
+    ): Win64Thread | undefined => {
+      if (rawHandle === -2n || rawHandle === 0xfffffffffffffffen) {
+        return callingThread;
+      }
       const handle = process.handles.get(Number(rawHandle));
       const object = handle ? this.getKernelObject(handle.objectId) : undefined;
       if (!handle || !object || object.kind !== 'thread') return undefined;
       return this.getProcess(object.targetPid)?.getThread(object.targetTid);
     };
+    const resolveSnapshot = (
+      process: Win64Process,
+      rawHandle: bigint,
+    ): Win64SnapshotObject | undefined => {
+      const handle = process.handles.get(Number(rawHandle));
+      const object = handle ? this.getKernelObject(handle.objectId) : undefined;
+      return object?.kind === 'snapshot' ? object : undefined;
+    };
+    this.registerHandler(
+      'kernel32.dll',
+      'OpenThread',
+      (process, _thread, registers) => {
+        const tid = Number(registers.R8);
+        for (const targetProcess of this.processes.values()) {
+          const targetThread = targetProcess.getThread(tid);
+          if (targetThread) {
+            process.lastError = 0;
+            return BigInt(
+              process.allocateHandle({
+                kind: 'thread',
+                targetPid: targetProcess.pid,
+                targetTid: targetThread.tid,
+              }),
+            );
+          }
+        }
+        process.lastError = 87; // ERROR_INVALID_PARAMETER
+        return 0n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'GetThreadId',
+      (process, thread, registers) => {
+        const target = resolveThreadHandle(process, registers.RCX, thread);
+        if (!target) {
+          process.lastError = 6; // ERROR_INVALID_HANDLE
+          return 0n;
+        }
+        process.lastError = 0;
+        return BigInt(target.tid);
+      },
+    );
     this.registerHandler(
       'kernel32.dll',
       'SuspendThread',
-      (process, _thread, registers) => {
-        const target = resolveThreadHandle(process, registers.RCX);
+      (process, thread, registers) => {
+        const target = resolveThreadHandle(process, registers.RCX, thread);
         if (!target) {
           process.lastError = 6;
           return 0xffffffffn;
@@ -3266,8 +3515,8 @@ export class Win64Machine {
     this.registerHandler(
       'kernel32.dll',
       'ResumeThread',
-      (process, _thread, registers) => {
-        const target = resolveThreadHandle(process, registers.RCX);
+      (process, thread, registers) => {
+        const target = resolveThreadHandle(process, registers.RCX, thread);
         if (!target) {
           process.lastError = 6;
           return 0xffffffffn;
@@ -3279,6 +3528,364 @@ export class Win64Machine {
           this.pumpScheduler();
         }
         return BigInt(previousCount);
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'GetThreadContext',
+      (process, thread, registers) => {
+        const target = resolveThreadHandle(process, registers.RCX, thread);
+        const lpContext = registers.RDX;
+        if (!target || lpContext === 0n) {
+          process.lastError = !target ? 6 : 87;
+          return 0n;
+        }
+        const contextFlags = process.memory.readU32(lpContext + 0x30n);
+        // CONTEXT_CONTROL: RSP, RIP, RFLAGS
+        if ((contextFlags & 0x01) !== 0) {
+          process.memory.writeU64(lpContext + 0x98n, target.cpu.registers.RSP);
+          process.memory.writeU64(lpContext + 0xf8n, target.cpu.registers.RIP);
+          process.memory.writeU32(
+            lpContext + 0x44n,
+            Number(target.cpu.registers.RFLAGS & 0xffffffffn),
+          );
+        }
+        // CONTEXT_INTEGER: RAX, RCX, RDX, RBX, RBP, RSI, RDI, R8-R15
+        if ((contextFlags & 0x02) !== 0) {
+          process.memory.writeU64(lpContext + 0x78n, target.cpu.registers.RAX);
+          process.memory.writeU64(lpContext + 0x80n, target.cpu.registers.RCX);
+          process.memory.writeU64(lpContext + 0x88n, target.cpu.registers.RDX);
+          process.memory.writeU64(lpContext + 0x90n, target.cpu.registers.RBX);
+          process.memory.writeU64(lpContext + 0xa0n, target.cpu.registers.RBP);
+          process.memory.writeU64(lpContext + 0xa8n, target.cpu.registers.RSI);
+          process.memory.writeU64(lpContext + 0xb0n, target.cpu.registers.RDI);
+          process.memory.writeU64(lpContext + 0xb8n, target.cpu.registers.R8);
+          process.memory.writeU64(lpContext + 0xc0n, target.cpu.registers.R9);
+          process.memory.writeU64(lpContext + 0xc8n, target.cpu.registers.R10);
+          process.memory.writeU64(lpContext + 0xd0n, target.cpu.registers.R11);
+          process.memory.writeU64(lpContext + 0xd8n, target.cpu.registers.R12);
+          process.memory.writeU64(lpContext + 0xe0n, target.cpu.registers.R13);
+          process.memory.writeU64(lpContext + 0xe8n, target.cpu.registers.R14);
+          process.memory.writeU64(lpContext + 0xf0n, target.cpu.registers.R15);
+        }
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'SetThreadContext',
+      (process, thread, registers) => {
+        const target = resolveThreadHandle(process, registers.RCX, thread);
+        const lpContext = registers.RDX;
+        if (!target || lpContext === 0n) {
+          process.lastError = !target ? 6 : 87;
+          return 0n;
+        }
+        const contextFlags = process.memory.readU32(lpContext + 0x30n);
+        // CONTEXT_CONTROL: RSP, RIP, RFLAGS
+        if ((contextFlags & 0x01) !== 0) {
+          target.cpu.registers.RSP = process.memory.readU64(lpContext + 0x98n);
+          target.cpu.registers.RIP = process.memory.readU64(lpContext + 0xf8n);
+          target.cpu.registers.RFLAGS = BigInt(
+            process.memory.readU32(lpContext + 0x44n),
+          );
+        }
+        // CONTEXT_INTEGER: RAX, RCX, RDX, RBX, RBP, RSI, RDI, R8-R15
+        if ((contextFlags & 0x02) !== 0) {
+          target.cpu.registers.RAX = process.memory.readU64(lpContext + 0x78n);
+          target.cpu.registers.RCX = process.memory.readU64(lpContext + 0x80n);
+          target.cpu.registers.RDX = process.memory.readU64(lpContext + 0x88n);
+          target.cpu.registers.RBX = process.memory.readU64(lpContext + 0x90n);
+          target.cpu.registers.RBP = process.memory.readU64(lpContext + 0xa0n);
+          target.cpu.registers.RSI = process.memory.readU64(lpContext + 0xa8n);
+          target.cpu.registers.RDI = process.memory.readU64(lpContext + 0xb0n);
+          target.cpu.registers.R8 = process.memory.readU64(lpContext + 0xb8n);
+          target.cpu.registers.R9 = process.memory.readU64(lpContext + 0xc0n);
+          target.cpu.registers.R10 = process.memory.readU64(lpContext + 0xc8n);
+          target.cpu.registers.R11 = process.memory.readU64(lpContext + 0xd0n);
+          target.cpu.registers.R12 = process.memory.readU64(lpContext + 0xd8n);
+          target.cpu.registers.R13 = process.memory.readU64(lpContext + 0xe0n);
+          target.cpu.registers.R14 = process.memory.readU64(lpContext + 0xe8n);
+          target.cpu.registers.R15 = process.memory.readU64(lpContext + 0xf0n);
+        }
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'GetExitCodeThread',
+      (process, thread, registers) => {
+        const target = resolveThreadHandle(process, registers.RCX, thread);
+        if (!target) {
+          process.lastError = 6;
+          return 0n;
+        }
+        if (registers.RDX !== 0n) {
+          process.memory.writeU32(
+            registers.RDX,
+            target.state === 'terminated' ? 0 : 259, // 259 = STILL_ACTIVE
+          );
+        }
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'CreateToolhelp32Snapshot',
+      (process, _thread, registers) => {
+        const flags = Number(registers.RCX);
+        const targetPid = Number(
+          registers.RDX === 0n ? BigInt(process.pid) : registers.RDX,
+        );
+        const processes: Win64SnapshotProcessEntry[] = [];
+        const threads: Win64SnapshotThreadEntry[] = [];
+        const modules: Win64SnapshotModuleEntry[] = [];
+
+        // TH32CS_SNAPPROCESS = 0x00000002
+        if ((flags & 0x02) !== 0 || (flags & 0x0f) === 0x0f) {
+          for (const p of this.processes.values()) {
+            processes.push({
+              pid: p.pid,
+              parentPid: p.parentPid ?? 0,
+              threadsCount: p.threads.size,
+              name: p.name,
+            });
+          }
+        }
+
+        // TH32CS_SNAPTHREAD = 0x00000004
+        if ((flags & 0x04) !== 0 || (flags & 0x0f) === 0x0f) {
+          for (const p of this.processes.values()) {
+            for (const t of p.threads.values()) {
+              threads.push({
+                tid: t.tid,
+                ownerPid: p.pid,
+                basePriority: 8,
+              });
+            }
+          }
+        }
+
+        // TH32CS_SNAPMODULE = 0x00000008, TH32CS_SNAPMODULE32 = 0x00000010
+        if (
+          (flags & 0x08) !== 0 ||
+          (flags & 0x10) !== 0 ||
+          (flags & 0x0f) === 0x0f
+        ) {
+          const modProcess = this.processes.get(targetPid);
+          if (modProcess) {
+            for (const m of modProcess.modules) {
+              modules.push({
+                base: m.base,
+                size: m.size,
+                name: m.name,
+                path: m.name.includes('\\')
+                  ? m.name
+                  : `C:\\Windows\\System32\\${m.name}`,
+              });
+            }
+          }
+        }
+
+        process.lastError = 0;
+        return BigInt(
+          process.allocateHandle({
+            kind: 'snapshot',
+            flags,
+            pid: targetPid,
+            processPosition: 0,
+            processes,
+            threadPosition: 0,
+            threads,
+            modulePosition: 0,
+            modules,
+          }),
+        );
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Process32FirstW',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.processes.length === 0) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        snap.processPosition = 0;
+        writeProcessEntry32W(process.memory, registers.RDX, snap.processes[0]!);
+        snap.processPosition = 1;
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Process32NextW',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.processPosition >= snap.processes.length) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        writeProcessEntry32W(
+          process.memory,
+          registers.RDX,
+          snap.processes[snap.processPosition++]!,
+        );
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Process32First',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.processes.length === 0) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        snap.processPosition = 0;
+        writeProcessEntry32A(process.memory, registers.RDX, snap.processes[0]!);
+        snap.processPosition = 1;
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Process32Next',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.processPosition >= snap.processes.length) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        writeProcessEntry32A(
+          process.memory,
+          registers.RDX,
+          snap.processes[snap.processPosition++]!,
+        );
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Thread32First',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.threads.length === 0) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        snap.threadPosition = 0;
+        writeThreadEntry32(process.memory, registers.RDX, snap.threads[0]!);
+        snap.threadPosition = 1;
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Thread32Next',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.threadPosition >= snap.threads.length) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        writeThreadEntry32(
+          process.memory,
+          registers.RDX,
+          snap.threads[snap.threadPosition++]!,
+        );
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Module32FirstW',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.modules.length === 0) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        snap.modulePosition = 0;
+        writeModuleEntry32W(
+          process.memory,
+          registers.RDX,
+          snap.modules[0]!,
+          snap.pid,
+        );
+        snap.modulePosition = 1;
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Module32NextW',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.modulePosition >= snap.modules.length) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        writeModuleEntry32W(
+          process.memory,
+          registers.RDX,
+          snap.modules[snap.modulePosition++]!,
+          snap.pid,
+        );
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Module32First',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.modules.length === 0) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        snap.modulePosition = 0;
+        writeModuleEntry32A(
+          process.memory,
+          registers.RDX,
+          snap.modules[0]!,
+          snap.pid,
+        );
+        snap.modulePosition = 1;
+        process.lastError = 0;
+        return 1n;
+      },
+    );
+    this.registerHandler(
+      'kernel32.dll',
+      'Module32Next',
+      (process, _thread, registers) => {
+        const snap = resolveSnapshot(process, registers.RCX);
+        if (!snap || snap.modulePosition >= snap.modules.length) {
+          process.lastError = snap ? 18 : 6;
+          return 0n;
+        }
+        writeModuleEntry32A(
+          process.memory,
+          registers.RDX,
+          snap.modules[snap.modulePosition++]!,
+          snap.pid,
+        );
+        process.lastError = 0;
+        return 1n;
       },
     );
     this.registerHandler(

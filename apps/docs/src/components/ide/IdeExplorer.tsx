@@ -8,14 +8,19 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import {
+  FilePlus,
   Files,
   FileText,
   FolderOpen,
+  FolderPlus,
+  LogOut,
   Play,
   RefreshCw,
   Save,
   UploadCloud,
+  X,
 } from 'lucide-react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import { CodeEditor } from '@/components/editor/CodeEditor';
@@ -53,6 +58,7 @@ const SEPARATOR_Y_CLASS =
 export function useExplorerView(
   debugSession?: DebugSessionValue,
 ): ExplorerView {
+  const router = useRouter();
   const service = useService(IExplorerService);
   const editorService = useService(IEditorService);
   const fileService = useService(IFileService);
@@ -88,26 +94,23 @@ export function useExplorerView(
     (onStoreChange) =>
       editorService.onDidActiveEditorChange(onStoreChange).dispose,
     () => editorService.activeEditor,
-    // No document is ever open at SSR time (the service is freshly
-    // constructed per request in `ide/layout.tsx`) -- required so React
-    // doesn't fall back to client-only rendering for this component.
     () => undefined,
   );
-  // Locally edited buffer for the active document. Reset (render-time, same
-  // idiom as `SimulateFolderPicker`'s open/close reset -- required by the
-  // React Compiler's `set-state-in-effect` rule) only when the *identity*
-  // of the open file changes, never when its content does -- so neither a
-  // successful save nor an unrelated filesystem refresh (both of which
-  // replace `document` with a new object of equal content) clobbers
-  // in-progress edits.
-  const [draftContent, setDraftContent] = useState<string>();
-  const [draftForId, setDraftForId] = useState<string>();
-  if (document?.item.id !== draftForId) {
-    setDraftForId(document?.item.id);
-    setDraftContent(document?.content);
-  }
+
+  const openEditors = useSyncExternalStore(
+    (onStoreChange) =>
+      editorService.onDidOpenEditorsChange(onStoreChange).dispose,
+    () => editorService.openEditors,
+    () => [],
+  );
+
+  // Locally edited drafts per document ID (path), so multi-tab editing preserves
+  // unsaved edits across tab switches.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const isDirty =
-    draftContent !== undefined && draftContent !== document?.content;
+    document !== undefined &&
+    drafts[document.item.id] !== undefined &&
+    drafts[document.item.id] !== document.content;
 
   // Forces a re-render whenever the explorer tree changes (workspace
   // rebound, filesystem refreshed) -- IExplorerService has no queryable
@@ -125,13 +128,6 @@ export function useExplorerView(
   const openFile = useCallback(
     async (item: ExplorerItem) => {
       if (item.id === document?.item.id) return;
-      if (isDirty) {
-        const proceed = window.confirm(
-          `"${document?.item.name}" için kaydedilmemiş değişiklikler var. Yine de başka bir dosya açılsın mı?`,
-        );
-        if (!proceed) return;
-      }
-
       const request = ++openRequest.current;
       setOpeningId(item.id);
       setError(undefined);
@@ -149,24 +145,88 @@ export function useExplorerView(
         if (request === openRequest.current) setOpeningId(undefined);
       }
     },
-    [editorService, document, isDirty],
+    [editorService, document],
+  );
+
+  const closeEditor = useCallback(
+    (item: ExplorerItem) => {
+      const tabDraft = drafts[item.id];
+      const targetEditor = openEditors.find((e) => e.item.id === item.id);
+      const isTabDirty =
+        tabDraft !== undefined &&
+        targetEditor !== undefined &&
+        tabDraft !== targetEditor.content;
+
+      if (isTabDirty) {
+        const proceed = window.confirm(
+          `"${item.name}" için kaydedilmemiş değişiklikler var. Yine de kapatılsın mı?`,
+        );
+        if (!proceed) return;
+      }
+
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+      editorService.closeEditor(item);
+    },
+    [drafts, openEditors, editorService],
   );
 
   const saveDocument = useCallback(async () => {
-    if (
-      !document ||
-      draftContent === undefined ||
-      draftContent === document.content
-    ) {
+    if (!document) return;
+    const currentDraft = drafts[document.item.id];
+    if (currentDraft === undefined || currentDraft === document.content) {
       return;
     }
     setError(undefined);
     try {
-      await editorService.saveActiveEditor(draftContent);
+      await editorService.saveActiveEditor(currentDraft);
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[document.item.id];
+        return next;
+      });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Dosya kaydedilemedi.');
     }
-  }, [document, draftContent, editorService]);
+  }, [document, drafts, editorService]);
+
+  const handleCreateFile = useCallback(async () => {
+    const name = window.prompt('Yeni dosya adı (örn: test.ts):');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    try {
+      await service.createFile(service.root, trimmed);
+      service.refresh();
+      const path = `${service.root.path.replace(/\/$/, '')}/${trimmed}`;
+      await editorService.openFile({
+        id: path,
+        name: trimmed,
+        path,
+        isDirectory: false,
+      });
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : 'Dosya oluşturulamadı.',
+      );
+    }
+  }, [service, editorService]);
+
+  const handleCreateFolder = useCallback(async () => {
+    const name = window.prompt('Yeni klasör adı:');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    try {
+      await service.createFolder(service.root, trimmed);
+      service.refresh();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : 'Klasör oluşturulamadı.',
+      );
+    }
+  }, [service]);
 
   // Standard Ctrl/Cmd+S, wired at the window level (not just while the
   // editor itself has focus) since this is the only editable surface in
@@ -242,6 +302,20 @@ export function useExplorerView(
         </span>
         <div className="ml-auto flex shrink-0 items-center">
           <ExplorerAction
+            label="Yeni Dosya"
+            onClick={() => void handleCreateFile()}
+          >
+            <FilePlus aria-hidden="true" className="size-3.5" />
+          </ExplorerAction>
+
+          <ExplorerAction
+            label="Yeni Klasör"
+            onClick={() => void handleCreateFolder()}
+          >
+            <FolderPlus aria-hidden="true" className="size-3.5" />
+          </ExplorerAction>
+
+          <ExplorerAction
             label="Klasör Aç"
             onClick={() => setFolderPickerOpen(true)}
           >
@@ -299,11 +373,24 @@ export function useExplorerView(
         <div className="flex h-full min-h-0 flex-col">
           {debugSession ? (
             <>
-              <DebugToolbar
-                session={debugSession.session}
-                tid={debugSession.tid}
-                selectedAddress={debugSession.selectedAddress}
-              />
+              <div className="flex shrink-0 items-center justify-between border-b border-[#2d2d2d] bg-[#252526] pr-2">
+                <div className="min-w-0 flex-1">
+                  <DebugToolbar
+                    session={debugSession.session}
+                    tid={debugSession.tid}
+                    selectedAddress={debugSession.selectedAddress}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push('/ide?view=explorer')}
+                  className="flex items-center gap-1.5 rounded border border-[#3c3c3c] bg-[#1e1e1e] px-2.5 py-1 text-xs text-[#b8b8b8] hover:bg-[#2a2d2e] hover:text-white"
+                  title="Hata ayıklayıcıdan ayrıl ve kod düzenleyiciye dön"
+                >
+                  <LogOut aria-hidden="true" className="size-3.5" />
+                  Koda Dön
+                </button>
+              </div>
               <div className="min-h-0 flex-1">
                 <DisassemblyView
                   session={debugSession.session}
@@ -314,47 +401,79 @@ export function useExplorerView(
             </>
           ) : document ? (
             <>
-              <div className="flex h-9 shrink-0 border-b border-[#252525] bg-[#181818]">
-                <div className="flex min-w-0 max-w-60 items-center gap-2 border-r border-[#252525] border-t border-t-[#007acc] bg-[#1e1e1e] px-3 text-xs text-white">
-                  <FileText
-                    aria-hidden="true"
-                    className="size-3.5 shrink-0 text-[#75beff]"
-                  />
-                  <span className="truncate" title={document.item.path}>
-                    {document.item.name}
-                  </span>
-                  {isDirty ? (
-                    <span
-                      aria-label="Kaydedilmemiş değişiklikler"
-                      title="Kaydedilmemiş değişiklikler"
-                      className="size-2 shrink-0 rounded-full bg-[#cccccc]"
-                    />
-                  ) : null}
+              <div className="flex h-9 shrink-0 border-b border-[#252525] bg-[#181818] overflow-x-auto no-scrollbar">
+                <div className="flex min-w-0 flex-1 items-stretch">
+                  {openEditors.map((editor) => {
+                    const isActive = editor.item.path === document.item.path;
+                    const tabDraft = drafts[editor.item.id];
+                    const isTabDirty =
+                      tabDraft !== undefined && tabDraft !== editor.content;
+                    return (
+                      <div
+                        key={editor.item.path}
+                        onClick={() => editorService.selectEditor(editor.item)}
+                        className={`group flex min-w-0 max-w-60 cursor-pointer items-center gap-2 border-r border-[#252525] px-3 text-xs transition-colors ${
+                          isActive
+                            ? 'border-t-2 border-t-[#007acc] bg-[#1e1e1e] text-white'
+                            : 'bg-[#181818] text-[#969696] hover:bg-[#1f1f1f] hover:text-[#cccccc]'
+                        }`}
+                      >
+                        <FileText
+                          aria-hidden="true"
+                          className={`size-3.5 shrink-0 ${isActive ? 'text-[#75beff]' : 'text-[#858585]'}`}
+                        />
+                        <span className="truncate" title={editor.item.path}>
+                          {editor.item.name}
+                        </span>
+                        {isTabDirty ? (
+                          <span
+                            aria-label="Kaydedilmemiş değişiklikler"
+                            title="Kaydedilmemiş değişiklikler"
+                            className="size-2 shrink-0 rounded-full bg-[#cccccc]"
+                          />
+                        ) : null}
+                        <button
+                          type="button"
+                          aria-label={`${editor.item.name} sekmesini kapat`}
+                          title="Kapat"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closeEditor(editor.item);
+                          }}
+                          className="ml-auto rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-[#333333] hover:text-white"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void saveDocument()}
-                  disabled={!isDirty}
-                  className="ml-auto flex items-center gap-1.5 px-3 text-xs text-[#b8b8b8] hover:bg-[#2a2d2e] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                  title="Kaydet (Ctrl+S)"
-                >
-                  <Save aria-hidden="true" className="size-3.5" />
-                  Kaydet
-                </button>
-                {isRunnableJavaScript(document.item.name) ? (
+                <div className="flex shrink-0 items-center">
                   <button
                     type="button"
-                    onClick={runDocument}
-                    className="flex items-center gap-1.5 px-3 text-xs text-[#b8b8b8] hover:bg-[#2a2d2e] hover:text-white"
-                    title="JavaScript dosyasını terminalde çalıştır"
+                    onClick={() => void saveDocument()}
+                    disabled={!isDirty}
+                    className="flex items-center gap-1.5 px-3 text-xs text-[#b8b8b8] hover:bg-[#2a2d2e] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                    title="Kaydet (Ctrl+S)"
                   >
-                    <Play
-                      aria-hidden="true"
-                      className="size-3.5 fill-current text-[#89d185]"
-                    />
-                    Çalıştır
+                    <Save aria-hidden="true" className="size-3.5" />
+                    Kaydet
                   </button>
-                ) : null}
+                  {isRunnableJavaScript(document.item.name) ? (
+                    <button
+                      type="button"
+                      onClick={runDocument}
+                      className="flex items-center gap-1.5 px-3 text-xs text-[#b8b8b8] hover:bg-[#2a2d2e] hover:text-white"
+                      title="Dosyayı terminalde çalıştır (Node/TS)"
+                    >
+                      <Play
+                        aria-hidden="true"
+                        className="size-3.5 fill-current text-[#89d185]"
+                      />
+                      Çalıştır
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <div className="flex h-7 shrink-0 items-center border-b border-[#252525] px-4 text-[11px] text-[#8c8c8c]">
                 <span className="truncate" title={document.item.path}>
@@ -378,8 +497,14 @@ export function useExplorerView(
                   height="100%"
                   path={document.item.path}
                   language={languageForFile(document.item.name)}
-                  value={draftContent ?? document.content}
-                  onChange={(value) => setDraftContent(value ?? '')}
+                  value={drafts[document.item.id] ?? document.content}
+                  onChange={(value) => {
+                    const text = value ?? '';
+                    setDrafts((prev) => ({
+                      ...prev,
+                      [document.item.id]: text,
+                    }));
+                  }}
                   options={{
                     automaticLayout: true,
                     scrollBeyondLastLine: false,
@@ -419,7 +544,7 @@ export function useExplorerView(
       <Separator className={SEPARATOR_Y_CLASS} />
 
       <Panel id="ide-terminal" defaultSize="30" minSize="10">
-        <IdeBottomPanel terminalRef={terminalRef} />
+        <IdeBottomPanel terminalRef={terminalRef} debugSession={debugSession} />
       </Panel>
     </Group>
   );
@@ -461,7 +586,7 @@ function rootRelativePath(item: ExplorerItem, root: ExplorerItem): string {
 }
 
 function isRunnableJavaScript(name: string): boolean {
-  return /\.(?:cjs|js|mjs)$/i.test(name);
+  return /\.(?:cjs|js|mjs|ts|mts|tsx)$/i.test(name);
 }
 
 function languageForFile(name: string): string {
